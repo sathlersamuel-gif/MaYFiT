@@ -1,0 +1,13 @@
+{
+  "name": "MaYFiT",
+  "short_name": "MaYFiT",
+  "description": "Treinos, evolução corporal e gestão de alunos.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090d17",
+  "theme_color": "#70f0b3",
+  "orientation": "portrait-primary",
+  "icons": []
+}
