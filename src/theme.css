@@ -1,0 +1,66 @@
+/* Alternância global de tema MaYFiT — mantém proporções e melhora contraste em todas as telas. */
+:root{color-scheme:dark}
+body{transition:background .2s ease,color .2s ease}
+#mayfit-theme-toggle{position:fixed;right:14px;bottom:calc(146px + env(safe-area-inset-bottom));z-index:10001;min-width:112px;height:42px;border:1px solid #365742;border-radius:999px;padding:0 13px;background:#101c15;color:#f7fff9;display:flex;align-items:center;justify-content:center;gap:7px;font:850 12px system-ui,-apple-system,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.32)}
+#mayfit-theme-toggle span{font-size:17px;line-height:1}
+
+/* Tema escuro: contraste reforçado em todas as abas e no painel administrativo. */
+body:not(.theme-light){background:radial-gradient(circle at top,#173421 0,#06100b 42%);color:#f8fbf9}
+body:not(.theme-light) header{background:rgba(6,16,11,.96)}
+body:not(.theme-light) main,body:not(.theme-light) section,body:not(.theme-light) .profile{color:#f8fbf9}
+body:not(.theme-light) .hero,body:not(.theme-light) .summary article,body:not(.theme-light) .admin-card,body:not(.theme-light) .preview-list article,body:not(.theme-light) .login-card{background:#101a14;color:#f8fbf9;border-color:#355341}
+body:not(.theme-light) .admin-card strong,body:not(.theme-light) .preview-list strong,body:not(.theme-light) .section-title h1,body:not(.theme-light) .profile h1{color:#fff}
+body:not(.theme-light) .muted,body:not(.theme-light) .admin-head span,body:not(.theme-light) .preview-list span,body:not(.theme-light) .profile p{color:#b9c7be}
+body:not(.theme-light) input,body:not(.theme-light) select,body:not(.theme-light) textarea{background:#0a140e;color:#fff;border-color:#466451}
+body:not(.theme-light) input::placeholder,body:not(.theme-light) textarea::placeholder{color:#9eb0a4}
+body:not(.theme-light) .icon{color:#fff;background:#101c15;border-color:#3b5b46}
+body:not(.theme-light) nav{background:rgba(7,14,10,.98);border-color:#38503f}
+body:not(.theme-light) nav button{color:#a4b1a9}
+body:not(.theme-light) nav button.active{color:#8be441}
+body:not(.theme-light) .sheet{background:#111914;color:#f7faf8;border-color:#d8e0da}
+body:not(.theme-light) .sheet-head{background:#1c2920;color:#fff}
+body:not(.theme-light) .sheet-head span,body:not(.theme-light) .sheet-row>div{border-color:#7f9185}
+body:not(.theme-light) .sheet-row{background:#111914;color:#fff}
+body:not(.theme-light) .sheet-row.done{background:#17321e}
+body:not(.theme-light) .exercise-col small{color:#d2ddd6}
+body:not(.theme-light) .sheet-row input{background:#f8faf8;color:#101510;border-color:#a8b1ab}
+body:not(.theme-light) .positive{color:#82e34a}
+body:not(.theme-light) .negative{color:#ff8d8d}
+body:not(.theme-light) .time-strip{background:#f2f4f1;color:#101510}
+body:not(.theme-light) .time-strip input{color:#101510}
+
+/* Tema claro: mesma escala visual, superfícies claras e textos escuros legíveis. */
+body.theme-light{color-scheme:light;background:linear-gradient(180deg,#edf4ef 0,#f8faf8 45%,#eef3ef 100%);color:#122017}
+body.theme-light header{background:rgba(247,250,248,.96);border-bottom:1px solid #d7e1da}
+body.theme-light .logo span{color:#15231a}
+body.theme-light .logo small{color:#617168}
+body.theme-light main,body.theme-light section,body.theme-light .profile{color:#15231a}
+body.theme-light .hero{background:linear-gradient(145deg,#f8fbf9,#e3eee6);border-color:#bfd0c4;color:#15231a}
+body.theme-light .hero p,body.theme-light .muted{color:#5d6e64}
+body.theme-light .summary article,body.theme-light .admin-card,body.theme-light .preview-list article,body.theme-light .login-card{background:#fff;color:#15231a;border-color:#cbd8cf;box-shadow:0 7px 20px rgba(24,54,35,.07)}
+body.theme-light .admin-card strong,body.theme-light .preview-list strong,body.theme-light .section-title h1,body.theme-light .profile h1{color:#122017}
+body.theme-light .admin-head span,body.theme-light .preview-list span,body.theme-light .profile p{color:#596a60}
+body.theme-light input,body.theme-light select,body.theme-light textarea{background:#fff;color:#111b15;border-color:#9eaea3}
+body.theme-light input::placeholder,body.theme-light textarea::placeholder{color:#6f7e74}
+body.theme-light .icon{background:#fff;color:#193020;border-color:#b9c8be}
+body.theme-light .small{background:#e6f0e8;color:#286f22;border-color:#a9c5ad}
+body.theme-light .danger{background:#fee9e9;color:#9b2020}
+body.theme-light nav{background:rgba(250,252,250,.98);border-color:#cbd8cf}
+body.theme-light nav button{color:#5f7066}
+body.theme-light nav button.active{color:#3f9e27}
+body.theme-light .avatar{background:#e3eee6;color:#348c25}
+body.theme-light .workout-top{background:linear-gradient(#edf4ef 78%,transparent)}
+body.theme-light .sheet{background:#fbfcfb;color:#111;border-color:#202820}
+body.theme-light .sheet-head{background:#e6ebe7;color:#101510}
+body.theme-light .sheet-row{background:#fbfcfb;color:#111}
+body.theme-light .sheet-row.done{background:#e4f6dc}
+body.theme-light .exercise-col small{color:#353f38}
+body.theme-light .sheet-row input{background:#fff;color:#111;border-color:#7d857f}
+body.theme-light .positive{color:#2f8a20}
+body.theme-light .negative{color:#b12f2f}
+body.theme-light .time-strip{background:#fff;color:#111;border:1px solid #c8d2cb}
+body.theme-light .time-strip input{color:#111}
+body.theme-light #mayfit-theme-toggle{background:#fff;color:#15231a;border-color:#b9c8be;box-shadow:0 10px 28px rgba(30,55,38,.15)}
+body.theme-light #mayfit-role-switch{box-shadow:0 10px 25px rgba(30,55,38,.18)}
+
+@media(max-width:620px){#mayfit-theme-toggle{right:10px;bottom:calc(142px + env(safe-area-inset-bottom));min-width:102px;height:39px;font-size:11px;padding:0 10px}}
