@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v10';
+const VERSION='mayfit-sw-v15';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
