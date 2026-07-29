@@ -18,6 +18,17 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
       }
+
+      // Abre automaticamente a versão completa enquanto o banco online não está configurado.
+      const openCompleteApp = setInterval(() => {
+        const button = [...document.querySelectorAll('button')]
+          .find((item) => item.textContent.includes('Visualizar demonstração completa'));
+        if (button) {
+          clearInterval(openCompleteApp);
+          button.click();
+        }
+      }, 120);
+      setTimeout(() => clearInterval(openCompleteApp), 10000);
     </script>
   </body>
 </html>
