@@ -69,6 +69,37 @@
       if(checks>=20)clearInterval(guard)
     },100)
   }
+  function resetExercise(button){
+    const row=button.closest('.sheet-row');if(!row)return;
+    stopPauseCounter();lastPhase='';
+    const label=button.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
+    const wasStarted=label.includes('EM ANDAMENTO')||label.includes('CONCLUÍDO')||!!row.querySelector('.series-cell input:disabled');
+    if(wasStarted){bypassComplete=true;button.click();forceTimerStopped()}
+    setTimeout(()=>{
+      row.querySelectorAll('input').forEach(input=>{
+        const field=inputField(input);
+        if(field&&field!=='previousLoad')setNativeValue(input,'0')
+      });
+      row.querySelector('.time-button')?.click();
+      requestAnimationFrame(()=>enterEditMode(row.querySelector('.complete-button')||button))
+    },80)
+  }
+  function startSelected(){
+    if(!selectedButton)return;
+    const row=selectedButton.closest('.sheet-row');if(!row)return;
+    const current=row.querySelector('.complete-button')||selectedButton;
+    const label=current.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
+    if(label.includes('CONCLUÍDO')){
+      bypassComplete=true;current.click();
+      setTimeout(()=>{
+        const fresh=row.querySelector('.complete-button');if(!fresh)return;
+        selectedButton=fresh;row.classList.add('mayfit-selected');fresh.classList.add('mayfit-selected');
+        bypassComplete=true;fresh.click()
+      },60);
+      return
+    }
+    bypassComplete=true;current.click()
+  }
 
   document.addEventListener('beforeinput',event=>{const input=event.target.closest?.(inputSelector);if(!input||input.disabled||!String(event.inputType||'').startsWith('delete'))return;event.preventDefault();event.stopPropagation();makeInputBlank(input)},true);
   document.addEventListener('keydown',event=>{const input=event.target.closest?.(inputSelector);if(!input||input.disabled||!['Backspace','Delete'].includes(event.key))return;event.preventDefault();event.stopPropagation();makeInputBlank(input)},true);
@@ -81,23 +112,16 @@
     if(button){
       if(bypassComplete){bypassComplete=false;return}
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      const row=button.closest('.sheet-row');
-      const label=button.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
       const alreadySelected=button===selectedButton&&button.classList.contains('mayfit-selected');
       if(!alreadySelected){selectExercise(button);return}
-      const wasStarted=label.includes('EM ANDAMENTO')||label.includes('CONCLUÍDO')||!!row?.querySelector('.series-cell input:disabled');
-      stopPauseCounter();lastPhase='';
-      if(wasStarted){bypassComplete=true;button.click();forceTimerStopped()}
-      row?.querySelector('.time-button')?.click();
-      requestAnimationFrame(()=>enterEditMode(button));
-      return
+      resetExercise(button);return
     }
     const start=event.target.closest?.('.workout-screen .timer-control');
     if(!start||start.textContent.trim().toUpperCase()!=='START')return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
     if(!selectedButton){start.classList.add('mayfit-attention');start.textContent='SELECIONE';setTimeout(()=>{start.classList.remove('mayfit-attention');if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START'},900);return}
     if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}
-    const selected=selectedButton;bypassComplete=true;selected.click()
+    startSelected()
   },true);
 
   setInterval(()=>{prepareInputs();restoreInputs();getPauseParts();syncPausePhase();if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!=='')setNativeValue(blankInput,'',false)},100);
