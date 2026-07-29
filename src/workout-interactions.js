@@ -14,6 +14,7 @@
     .workout-screen .exercise-photo img{object-fit:cover!important;object-position:center!important;background:#050706!important}
     .workout-screen .sheet-row{height:auto!important}
     .workout-screen .timer-control{box-sizing:border-box!important;max-width:100%!important;overflow:hidden!important;text-overflow:clip!important}
+    .workout-screen input{user-select:text!important;-webkit-user-select:text!important;touch-action:manipulation!important}
     @media(max-width:620px){
       .workout-screen .sheet-row{min-height:0!important}
       .workout-screen .exercise-photo{aspect-ratio:1.55/1!important}
@@ -29,6 +30,14 @@
       input.dispatchEvent(new Event('input',{bubbles:true}));
       input.dispatchEvent(new Event('change',{bubbles:true}));
     }
+  }
+
+  function prepareInputs(){
+    document.querySelectorAll(inputSelector).forEach(input=>{
+      input.setAttribute('inputmode','numeric');
+      input.setAttribute('pattern','[0-9]*');
+      input.setAttribute('autocomplete','off');
+    });
   }
 
   function clearSelection(){
@@ -47,14 +56,6 @@
     button.classList.add('mayfit-selected');
   }
 
-  function selectInputValue(input){
-    if(!input||input.disabled)return;
-    window.setTimeout(()=>{
-      try{input.focus({preventScroll:true})}catch{input.focus()}
-      try{input.select()}catch{}
-    },0);
-  }
-
   function makeInputBlank(input){
     if(!input||input.disabled)return;
     blankInput=input;
@@ -67,7 +68,8 @@
 
   document.addEventListener('focusin',event=>{
     const input=event.target.closest?.(inputSelector);
-    selectInputValue(input);
+    if(!input||input.disabled)return;
+    input.setAttribute('inputmode','numeric');
   },true);
 
   document.addEventListener('beforeinput',event=>{
@@ -106,10 +108,11 @@
   },true);
 
   window.setInterval(()=>{
+    prepareInputs();
     if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!==''){
       setNativeValue(blankInput,'',false);
     }
-  },30);
+  },300);
 
   document.addEventListener('pointerdown',event=>{
     const complete=event.target.closest?.('.workout-screen .complete-button');
@@ -119,10 +122,7 @@
       event.stopImmediatePropagation();
       blockNextClick=true;
       selectExercise(complete);
-      return;
     }
-    const input=event.target.closest?.(inputSelector);
-    if(input)selectInputValue(input);
   },true);
 
   document.addEventListener('click',event=>{
@@ -159,4 +159,6 @@
     bypassComplete=true;
     button.click();
   },true);
+
+  prepareInputs();
 })();
