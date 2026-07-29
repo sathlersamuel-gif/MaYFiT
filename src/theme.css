@@ -3,8 +3,6 @@
 body{transition:background .2s ease,color .2s ease}
 #mayfit-theme-toggle{position:fixed;right:12px;top:max(12px,env(safe-area-inset-top));z-index:10001;min-width:82px;height:38px;border:1px solid #365742;border-radius:999px;padding:0 11px;background:#101c15;color:#f7fff9;display:flex;align-items:center;justify-content:center;gap:6px;font:850 11px system-ui,-apple-system,sans-serif;box-shadow:0 8px 22px rgba(0,0,0,.3)}
 #mayfit-theme-toggle span{font-size:15px;line-height:1}
-
-/* Tema escuro: contraste reforçado em todas as abas e no painel administrativo. */
 body:not(.theme-light){background:radial-gradient(circle at top,#173421 0,#06100b 42%);color:#f8fbf9}
 body:not(.theme-light) header{background:rgba(6,16,11,.96);padding-right:108px}
 body:not(.theme-light) main,body:not(.theme-light) section,body:not(.theme-light) .profile{color:#f8fbf9}
@@ -17,21 +15,6 @@ body:not(.theme-light) .icon{color:#fff;background:#101c15;border-color:#3b5b46}
 body:not(.theme-light) nav{background:rgba(7,14,10,.98);border-color:#38503f}
 body:not(.theme-light) nav button{color:#a4b1a9}
 body:not(.theme-light) nav button.active{color:#8be441}
-body:not(.theme-light) .sheet{background:#111914;color:#f7faf8;border-color:#d8e0da}
-body:not(.theme-light) .sheet-head{background:#1c2920;color:#fff}
-body:not(.theme-light) .sheet-head span,body:not(.theme-light) .sheet-row>div{border-color:#7f9185}
-body:not(.theme-light) .sheet-row{background:#111914;color:#fff}
-body:not(.theme-light) .sheet-row.done{background:#17321e}
-body:not(.theme-light) .exercise-col small{color:#d2ddd6}
-body:not(.theme-light) .sheet-row input{background:#f8faf8;color:#101510;border-color:#a8b1ab}
-body:not(.theme-light) .positive{color:#82e34a}
-body:not(.theme-light) .negative{color:#ff8d8d}
-body:not(.theme-light) .time-strip{background:#171b18;color:#fff;border:2px solid #ff4b4b}
-body:not(.theme-light) .time-strip>span{color:#fff}
-body:not(.theme-light) .time-strip input{color:#ff3b3b!important;background:transparent!important;font-weight:1000!important;text-shadow:0 0 12px rgba(255,45,45,.28)}
-body:not(.theme-light) .timer-control{box-shadow:0 0 0 1px rgba(130,223,57,.25)}
-
-/* Tema claro: mesma escala visual, superfícies claras e textos escuros legíveis. */
 body.theme-light{color-scheme:light;background:linear-gradient(180deg,#edf4ef 0,#f8faf8 45%,#eef3ef 100%);color:#122017}
 body.theme-light header{background:rgba(247,250,248,.96);border-bottom:1px solid #d7e1da;padding-right:108px}
 body.theme-light .logo span{color:#15231a}
@@ -51,21 +34,8 @@ body.theme-light nav{background:rgba(250,252,250,.98);border-color:#cbd8cf}
 body.theme-light nav button{color:#5f7066}
 body.theme-light nav button.active{color:#3f9e27}
 body.theme-light .avatar{background:#e3eee6;color:#348c25}
-body.theme-light .workout-top{background:linear-gradient(#edf4ef 78%,transparent)}
-body.theme-light .sheet{background:#fbfcfb;color:#111;border-color:#202820}
-body.theme-light .sheet-head{background:#e6ebe7;color:#101510}
-body.theme-light .sheet-row{background:#fbfcfb;color:#111}
-body.theme-light .sheet-row.done{background:#e4f6dc}
-body.theme-light .exercise-col small{color:#353f38}
-body.theme-light .sheet-row input{background:#fff;color:#111;border-color:#7d857f}
-body.theme-light .positive{color:#2f8a20}
-body.theme-light .negative{color:#b12f2f}
-body.theme-light .time-strip{background:#fff;color:#111;border:1px solid #c8d2cb}
-body.theme-light .time-strip input{color:#c81e1e!important;font-weight:1000!important}
 body.theme-light #mayfit-theme-toggle{background:#fff;color:#15231a;border-color:#b9c8be;box-shadow:0 8px 22px rgba(30,55,38,.15)}
 body.theme-light #mayfit-role-switch{box-shadow:0 10px 25px rgba(30,55,38,.18)}
-
-/* Catálogo para seleção individual ou em massa. */
 #exercise-picker-overlay{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:max(12px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom))}
 .exercise-picker-card{width:min(720px,100%);height:min(88vh,820px);display:grid;grid-template-rows:auto auto 1fr auto;background:#0f1913;color:#f8fbf9;border:1px solid #385342;border-radius:22px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.55)}
 .exercise-picker-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px;border-bottom:1px solid #304437}
@@ -75,4 +45,62 @@ body.theme-light #mayfit-role-switch{box-shadow:0 10px 25px rgba(30,55,38,.18)}
 .exercise-picker-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid #304437;background:#0b140f}.exercise-picker-footer strong{color:#c9d5cd;font-size:13px}
 body.theme-light .exercise-picker-card{background:#fff;color:#142019;border-color:#c5d3c9}.theme-light .exercise-picker-head,.theme-light .exercise-picker-tools,.theme-light .exercise-picker-footer{border-color:#d2ddd5}.theme-light .exercise-picker-head p,.theme-light .exercise-picker-footer strong{color:#596a60}.theme-light .picker-search{background:#f3f7f4;border-color:#b9c9be}.theme-light .exercise-choice{background:#f8faf8;border-color:#c9d6cd}.theme-light .picker-close{background:#e6eee8;color:#132018}.theme-light .exercise-picker-footer{background:#f5f8f6}
 
+/* Tela de treino aprovada — somente aparência, preservando toda a lógica existente. */
+.workout-screen{width:100%;max-width:820px;margin:0 auto;padding:clamp(6px,2vw,16px);padding-bottom:110px;background:#030504;color:#fff}
+.workout-screen .workout-top{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:clamp(42px,10vw,68px) 1fr;gap:10px;margin:0;background:#030504;padding:6px 0 0}
+.workout-screen .back-button{width:100%;height:clamp(54px,11vw,78px);border:1px solid #414b45;border-radius:22px;background:#080b09;color:#fff}
+.workout-screen .time-strip{min-width:0;display:grid;grid-template-columns:auto minmax(90px,1fr) minmax(110px,.65fr);align-items:center;gap:clamp(6px,2vw,18px);height:clamp(78px,15vw,112px);padding:10px clamp(10px,2vw,22px);background:linear-gradient(180deg,#0d100e,#050706);border:1px solid #3a433d;border-radius:28px;color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.05)}
+.workout-screen .time-strip span{font-size:clamp(16px,3.3vw,26px);font-weight:950;letter-spacing:.5px}
+.workout-screen .time-strip input{height:auto!important;padding:0!important;border:0!important;background:transparent!important;color:#9df20f!important;text-align:center;font-size:clamp(38px,9vw,74px)!important;font-weight:1000!important;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 18px rgba(139,242,15,.22)}
+.workout-screen .timer-control{min-width:0;height:clamp(54px,10vw,78px);border:1px solid #9cf20e!important;border-radius:20px!important;background:linear-gradient(180deg,#7fff13,#28c70d)!important;color:#fff!important;font-size:clamp(18px,4vw,32px)!important;font-weight:1000!important;box-shadow:0 0 18px rgba(84,255,17,.55),inset 0 1px rgba(255,255,255,.4)!important}
+.workout-screen .timer-control.running{background:linear-gradient(180deg,#52d918,#178b0b)!important}
+#mayfit-pause-control{position:sticky;top:clamp(84px,17vw,120px);z-index:19;width:calc(100% - clamp(52px,11vw,78px))!important;margin:0 0 18px clamp(52px,11vw,78px)!important;min-height:clamp(64px,12vw,92px);display:flex!important;align-items:center;justify-content:center;gap:clamp(8px,2.2vw,24px)!important;padding:10px clamp(10px,3vw,26px)!important;background:linear-gradient(180deg,#101411,#050706)!important;border:1px solid #3a433d!important;border-bottom:2px solid #7ee312!important;border-radius:0 0 70px 70px!important;color:#fff!important;box-sizing:border-box}
+#mayfit-pause-control strong{font-size:clamp(13px,3vw,23px)!important;font-weight:950!important;white-space:nowrap}
+#mayfit-pause-control .pause-stepper{display:flex!important;align-items:center;gap:clamp(6px,1.5vw,14px)!important}
+#mayfit-pause-control button{width:clamp(38px,8vw,58px)!important;height:clamp(38px,8vw,58px)!important;border:1px solid #69b915!important;border-radius:50%!important;background:#090c0a!important;color:#9df20f!important;font-size:clamp(23px,5vw,36px)!important;font-weight:1000!important}
+#mayfit-pause-control input{width:clamp(72px,16vw,124px)!important;height:clamp(42px,8vw,62px)!important;border:1px solid #69b915!important;border-radius:12px!important;background:#090c0a!important;color:#fff!important;text-align:center!important;font-size:clamp(26px,6vw,46px)!important;font-weight:1000!important;padding:0!important}
+#mayfit-pause-control small{font-size:clamp(10px,2.4vw,17px)!important;font-weight:900!important;color:#fff!important;white-space:nowrap}
+.workout-screen .sheet{width:100%;overflow:hidden;border:1px solid #626b65;border-radius:18px;background:#050706!important;color:#fff!important}
+.workout-screen .sheet-head,.workout-screen .sheet-row{display:grid!important;grid-template-columns:minmax(130px,2fr) minmax(74px,.9fr) minmax(72px,.82fr) minmax(68px,.76fr) minmax(78px,.9fr)!important;width:100%}
+.workout-screen .sheet-head{position:relative;background:linear-gradient(180deg,#111512,#090c0a)!important;color:#fff!important;font-size:clamp(9px,2.2vw,16px)!important;font-weight:950!important}
+.workout-screen .sheet-head span{min-width:0;padding:clamp(9px,2vw,18px) 3px!important;border-right:1px solid #444d47!important;text-align:center;white-space:normal;overflow-wrap:anywhere}
+.workout-screen .sheet-head span:nth-child(3){grid-column:3}
+.workout-screen .sheet-head span:nth-child(3)::after{content:' x REPS';display:inline}
+.workout-screen .sheet-head span:nth-child(3)::before{content:''}
+.workout-screen .sheet-head span:nth-child(4){grid-column:5;grid-row:1}
+.workout-screen .sheet-head::after{content:'TEMPO\A(s)';white-space:pre;grid-column:4;grid-row:1;display:grid;place-items:center;border-right:1px solid #444d47;padding:clamp(9px,2vw,18px) 2px}
+.workout-screen .sheet-row{min-height:clamp(210px,48vw,380px);background:#050706!important;color:#fff!important;border-top:1px solid #424a45;transition:.2s ease}
+.workout-screen .sheet-row.done{background:linear-gradient(90deg,#102316,#173b1c 50%,#102316)!important;box-shadow:inset 0 0 28px rgba(100,230,55,.12)}
+.workout-screen .sheet-row>div{min-width:0;padding:clamp(7px,1.8vw,16px)!important;border-right:1px solid #424a45!important;border-top:0!important}
+.workout-screen .exercise-col{grid-column:1;display:flex;flex-direction:column;justify-content:flex-start}
+.workout-screen .exercise-col>strong{font-size:clamp(15px,3.4vw,27px)!important;line-height:1.05;text-transform:uppercase;margin:0 0 10px!important;color:#fff}
+.workout-screen .exercise-photo{width:100%;aspect-ratio:1.7/1;min-height:0;border:1px solid #344239;border-radius:13px;background:#0b0e0c;overflow:hidden}
+.workout-screen .exercise-photo>span{left:6px;bottom:6px;background:rgba(4,9,6,.92);border:1px solid #78d832;color:#96eb50;font-size:clamp(7px,1.7vw,11px)}
+.workout-screen .exercise-photo>em{display:none!important}
+.workout-screen .exercise-col>small{display:none!important}
+.workout-screen .load-cell{grid-column:2;display:grid!important;grid-template-rows:1fr 1fr;align-content:stretch;gap:0!important;text-align:center}
+.workout-screen .load-cell label{display:flex!important;flex-direction:column;justify-content:center;gap:2px;font-size:clamp(9px,2vw,14px)!important;text-transform:uppercase}
+.workout-screen .load-cell label+label{border-top:1px solid #303631}
+.workout-screen .load-cell input,.workout-screen .series-cell input{border:0!important;background:transparent!important;color:#fff!important;padding:0!important;text-align:center;font-size:clamp(28px,7vw,58px)!important;font-weight:1000!important;line-height:1;font-variant-numeric:tabular-nums}
+.workout-screen .load-cell>span{display:none}
+.workout-screen .series-cell{grid-column:3/5;display:grid!important;grid-template-columns:1fr 1fr;gap:0!important;padding:0!important}
+.workout-screen .series-pair{grid-column:1;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:1fr auto 1fr;align-items:center;justify-items:center;gap:0!important;padding:clamp(8px,1.8vw,14px);border-right:1px solid #424a45}
+.workout-screen .series-pair label{display:grid!important;place-items:center;align-content:center;font-size:clamp(8px,1.8vw,12px)!important}
+.workout-screen .series-pair label:first-child::before{content:'SÉRIES';margin-bottom:3px}
+.workout-screen .series-pair label:last-child::before{content:'REPS';margin-bottom:3px}
+.workout-screen .series-pair label{font-size:0!important}
+.workout-screen .series-pair b{padding:0!important;font-size:clamp(20px,4vw,34px)!important;color:#9df20f}
+.workout-screen .rest-label{grid-column:2;grid-row:1;display:flex!important;align-items:center;justify-content:center;font-size:0!important;padding:clamp(8px,1.8vw,14px)}
+.workout-screen .rest-label input{font-size:clamp(34px,8vw,66px)!important;cursor:text}
+.workout-screen .time-button{display:none!important}
+.workout-screen .progress-cell{grid-column:5;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:clamp(18px,5vw,42px)!important}
+.workout-screen .progress-cell>strong{font-size:clamp(24px,6vw,48px)!important;line-height:1;color:#9df20f!important;white-space:normal!important;text-align:center}
+.workout-screen .complete-button{width:clamp(38px,8vw,58px)!important;height:clamp(38px,8vw,58px)!important;padding:0!important;border:2px solid #d7ddd9!important;border-radius:10px!important;background:transparent!important;color:#9df20f!important;font-size:0!important;box-shadow:none!important}
+.workout-screen .complete-button svg{width:70%;height:70%;margin:auto}
+.workout-screen .sheet-row.done .complete-button{background:#6fdb29!important;border-color:#9df20f!important;color:#061006!important}
+.workout-screen .finish{margin-top:16px}
+.workout-screen+nav,.app:has(.workout-screen) nav{background:#050706!important}
+
 @media(max-width:620px){#mayfit-theme-toggle{right:8px;top:max(8px,env(safe-area-inset-top));min-width:74px;height:35px;font-size:10px;padding:0 9px}body header{padding-right:92px!important}.exercise-picker-card{height:92vh;border-radius:18px}.exercise-picker-head{padding:14px}.exercise-picker-tools{grid-template-columns:1fr;padding:10px 12px}.exercise-picker-tools button{width:100%}.exercise-picker-list{padding:8px 10px}.exercise-choice{padding:10px}.exercise-picker-footer{padding:11px 12px}}
+@media(max-width:430px){.workout-screen{padding:5px;padding-bottom:100px}.workout-screen .workout-top{grid-template-columns:42px 1fr;gap:5px}.workout-screen .back-button{height:58px;border-radius:16px}.workout-screen .time-strip{height:66px;grid-template-columns:auto minmax(76px,1fr) minmax(72px,.7fr);gap:4px;padding:6px 7px;border-radius:18px}.workout-screen .time-strip span{font-size:13px}.workout-screen .time-strip input{font-size:32px!important}.workout-screen .timer-control{height:48px;font-size:17px!important;border-radius:14px!important}#mayfit-pause-control{top:70px;width:calc(100% - 47px)!important;margin-left:47px!important;min-height:57px;gap:5px!important;padding:6px 8px!important;border-radius:0 0 38px 38px!important}#mayfit-pause-control strong{font-size:11px!important}#mayfit-pause-control button{width:32px!important;height:32px!important;font-size:20px!important}#mayfit-pause-control input{width:56px!important;height:34px!important;font-size:22px!important}#mayfit-pause-control small{font-size:9px!important}.workout-screen .sheet{border-radius:10px}.workout-screen .sheet-head,.workout-screen .sheet-row{grid-template-columns:minmax(104px,1.72fr) minmax(54px,.76fr) minmax(48px,.68fr) minmax(48px,.68fr) minmax(55px,.75fr)!important}.workout-screen .sheet-row{min-height:205px}.workout-screen .sheet-row>div{padding:5px!important}.workout-screen .exercise-col>strong{font-size:12px!important;margin-bottom:6px!important}.workout-screen .exercise-photo{border-radius:8px}.workout-screen .load-cell input,.workout-screen .series-cell input{font-size:25px!important}.workout-screen .progress-cell>strong{font-size:20px!important}.workout-screen .complete-button{width:34px!important;height:34px!important;border-radius:7px!important}.workout-screen .sheet-head{font-size:7px!important}.workout-screen .sheet-head span,.workout-screen .sheet-head::after{padding:8px 1px!important}}
+@media(max-width:350px){.workout-screen .sheet-head,.workout-screen .sheet-row{grid-template-columns:minmax(92px,1.6fr) minmax(48px,.72fr) minmax(44px,.64fr) minmax(44px,.64fr) minmax(49px,.7fr)!important}.workout-screen .time-strip span{display:none}.workout-screen .time-strip{grid-template-columns:1fr 76px}.workout-screen .time-strip input{font-size:29px!important}#mayfit-pause-control strong{font-size:9px!important}#mayfit-pause-control small{display:none!important}.workout-screen .sheet-row{min-height:190px}.workout-screen .load-cell input,.workout-screen .series-cell input{font-size:22px!important}.workout-screen .progress-cell>strong{font-size:18px!important}}
