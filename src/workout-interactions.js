@@ -1,11 +1,11 @@
-/* Fluxo da tela de treino: editar -> selecionar exercício -> START. */
+/* Interações da tela de treino — cronômetro e pausa independentes na interface. */
 (function(){
   let selectedButton=null;
   let bypassComplete=false;
   let blockNextClick=false;
   let blankInput=null;
   let editingRow=null;
-  let lastPhase='';
+  let pauseActive=false;
 
   const inputSelector='.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input';
   const nativeValueSetter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
@@ -19,6 +19,10 @@
     .workout-screen input{user-select:text!important;-webkit-user-select:text!important;touch-action:manipulation!important}
     .workout-screen .sheet-row.mayfit-editing{box-shadow:inset 0 0 0 2px #e2b32c!important}
     .workout-screen .sheet-row.mayfit-editing input{opacity:1!important;pointer-events:auto!important}
+    .workout-screen.mayfit-pause-phase .time-strip input{visibility:hidden!important}
+    .workout-screen.mayfit-pause-phase .time-strip span{color:#9aa39d!important}
+    #mayfit-pause-control.mayfit-counting{border-color:#9df20f!important;box-shadow:0 0 18px rgba(141,242,11,.35)!important}
+    #mayfit-pause-control.mayfit-counting input{color:#9df20f!important;background:#071008!important}
     @media(max-width:620px){
       .workout-screen .sheet-row{min-height:0!important}
       .workout-screen .exercise-photo{aspect-ratio:1.55/1!important}
@@ -90,17 +94,38 @@
     });
   }
 
-  function ensureAutomaticPhaseStart(){
-    const phase=document.querySelector('.workout-screen .time-strip span')?.textContent.trim().toUpperCase()||'';
-    if(!phase||phase===lastPhase)return;
-    const previous=lastPhase;
-    lastPhase=phase;
-    if(!previous)return;
-    window.setTimeout(()=>{
-      const active=[...document.querySelectorAll('.workout-screen .complete-button')].some(btn=>btn.textContent.replace(/\s+/g,' ').trim().toUpperCase().includes('EM ANDAMENTO'));
-      const timer=document.querySelector('.workout-screen .timer-control');
-      if(active&&timer&&timer.textContent.trim().toUpperCase()==='CONTINUAR')timer.click();
-    },1100);
+  function timeToSeconds(value){
+    const parts=String(value||'').split(':').map(Number);
+    return parts.length===2?Math.max(0,(parts[0]||0)*60+(parts[1]||0)):Math.max(0,Number(value)||0);
+  }
+
+  function syncPauseDisplay(){
+    const screen=document.querySelector('.workout-screen');
+    const phase=document.querySelector('.workout-screen .time-strip span')?.textContent.trim().toUpperCase();
+    const mainTimer=document.querySelector('.workout-screen .time-strip input');
+    const pauseBox=document.getElementById('mayfit-pause-control');
+    const pauseInput=pauseBox?.querySelector('input');
+    const pauseButtons=pauseBox?.querySelectorAll('button');
+    if(!screen||!phase||!mainTimer||!pauseBox||!pauseInput)return;
+
+    const isPause=phase==='PAUSA';
+    if(isPause){
+      pauseActive=true;
+      screen.classList.add('mayfit-pause-phase');
+      pauseBox.classList.add('mayfit-counting');
+      pauseInput.value=String(timeToSeconds(mainTimer.value));
+      pauseInput.disabled=true;
+      pauseButtons?.forEach(button=>button.disabled=true);
+    }else{
+      if(pauseActive){
+        pauseActive=false;
+        pauseInput.value=String(Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||0));
+      }
+      screen.classList.remove('mayfit-pause-phase');
+      pauseBox.classList.remove('mayfit-counting');
+      pauseInput.disabled=false;
+      pauseButtons?.forEach(button=>button.disabled=false);
+    }
   }
 
   document.addEventListener('focusin',event=>{
@@ -143,14 +168,6 @@
     blankInput=null;
     setNativeValue(input,isSeriesOrReps?'1':'0');
   },true);
-
-  window.setInterval(()=>{
-    prepareInputs();
-    ensureAutomaticPhaseStart();
-    if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!==''){
-      setNativeValue(blankInput,'',false);
-    }
-  },200);
 
   document.addEventListener('pointerdown',event=>{
     const complete=event.target.closest?.('.workout-screen .complete-button');
@@ -202,6 +219,12 @@
     bypassComplete=true;
     button.click();
   },true);
+
+  window.setInterval(()=>{
+    prepareInputs();
+    syncPauseDisplay();
+    if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!=='')setNativeValue(blankInput,'',false);
+  },100);
 
   prepareInputs();
 })();
