@@ -4,6 +4,7 @@
   let bypassComplete=false;
   let blockNextClick=false;
   let blankInput=null;
+  let editingRow=null;
 
   const inputSelector='.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input';
   const nativeValueSetter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
@@ -15,6 +16,8 @@
     .workout-screen .sheet-row{height:auto!important}
     .workout-screen .timer-control{box-sizing:border-box!important;max-width:100%!important;overflow:hidden!important;text-overflow:clip!important}
     .workout-screen input{user-select:text!important;-webkit-user-select:text!important;touch-action:manipulation!important}
+    .workout-screen .sheet-row.mayfit-editing{box-shadow:inset 0 0 0 2px #e2b32c!important}
+    .workout-screen .sheet-row.mayfit-editing input{opacity:1!important;pointer-events:auto!important}
     @media(max-width:620px){
       .workout-screen .sheet-row{min-height:0!important}
       .workout-screen .exercise-photo{aspect-ratio:1.55/1!important}
@@ -37,7 +40,12 @@
       input.setAttribute('inputmode','numeric');
       input.setAttribute('pattern','[0-9]*');
       input.setAttribute('autocomplete','off');
+      if(editingRow&&editingRow.contains(input))input.disabled=false;
     });
+    if(editingRow&&editingRow.isConnected){
+      const timer=document.querySelector('.workout-screen .timer-control');
+      if(timer&&!selectedButton&&['CONTINUAR','PAUSAR'].includes(timer.textContent.trim().toUpperCase()))timer.textContent='START';
+    }
   }
 
   function clearSelection(){
@@ -45,12 +53,35 @@
     document.querySelectorAll('.complete-button.mayfit-selected').forEach(btn=>btn.classList.remove('mayfit-selected'));
   }
 
+  function enterEditMode(button){
+    const row=button.closest('.sheet-row');
+    if(!row)return;
+    const timer=document.querySelector('.workout-screen .timer-control');
+    if(timer&&timer.textContent.trim().toUpperCase()==='PAUSAR')timer.click();
+    clearSelection();
+    selectedButton=null;
+    if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');
+    editingRow=row;
+    row.classList.add('mayfit-editing');
+    row.querySelectorAll('input').forEach(input=>input.disabled=false);
+    window.setTimeout(()=>{
+      const current=document.querySelector('.workout-screen .timer-control');
+      if(current)current.textContent='START';
+    },0);
+  }
+
   function selectExercise(button){
     const row=button.closest('.sheet-row');
     if(!row)return;
     const already=button===selectedButton&&button.classList.contains('mayfit-selected');
     clearSelection();
-    if(already){selectedButton=null;return;}
+    if(already){
+      selectedButton=null;
+      row.classList.add('mayfit-editing');
+      editingRow=row;
+      return;
+    }
+    if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null;}
     selectedButton=button;
     row.classList.add('mayfit-selected');
     button.classList.add('mayfit-selected');
@@ -112,7 +143,7 @@
     if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!==''){
       setNativeValue(blankInput,'',false);
     }
-  },300);
+  },200);
 
   document.addEventListener('pointerdown',event=>{
     const complete=event.target.closest?.('.workout-screen .complete-button');
@@ -121,7 +152,11 @@
       event.stopPropagation();
       event.stopImmediatePropagation();
       blockNextClick=true;
-      selectExercise(complete);
+      const row=complete.closest('.sheet-row');
+      const activeText=complete.textContent.replace(/\s+/g,' ').trim().toUpperCase();
+      const timerText=document.querySelector('.workout-screen .timer-control')?.textContent.trim().toUpperCase();
+      if(row&&(activeText.includes('EM ANDAMENTO')||((timerText==='PAUSAR'||timerText==='CONTINUAR')&&!complete.classList.contains('mayfit-selected'))))enterEditMode(complete);
+      else selectExercise(complete);
     }
   },true);
 
@@ -153,6 +188,7 @@
       return;
     }
 
+    if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null;}
     const button=selectedButton;
     selectedButton=null;
     clearSelection();
