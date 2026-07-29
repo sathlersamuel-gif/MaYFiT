@@ -51,7 +51,7 @@
   function prepareInputs(){document.querySelectorAll(inputSelector).forEach(input=>{input.setAttribute('inputmode','numeric');input.setAttribute('pattern','[0-9]*');input.setAttribute('autocomplete','off');if(editingRow&&editingRow.contains(input))input.disabled=false})}
   function clearSelection(){document.querySelectorAll('.sheet-row.mayfit-selected,.complete-button.mayfit-selected').forEach(el=>el.classList.remove('mayfit-selected'))}
   function enterEditMode(button){const row=button.closest('.sheet-row');if(!row)return;clearSelection();selectedButton=null;if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');editingRow=row;row.classList.add('mayfit-editing');row.querySelectorAll('input').forEach(input=>input.disabled=false)}
-  function selectExercise(button){const row=button.closest('.sheet-row');if(!row)return;const already=button===selectedButton&&button.classList.contains('mayfit-selected');clearSelection();if(already){selectedButton=null;enterEditMode(button);return}if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}selectedButton=button;row.classList.add('mayfit-selected');button.classList.add('mayfit-selected')}
+  function selectExercise(button){const row=button.closest('.sheet-row');if(!row)return;if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}clearSelection();selectedButton=button;row.classList.add('mayfit-selected');button.classList.add('mayfit-selected')}
   function makeInputBlank(input){if(!input||input.disabled)return;blankInput=input;input.dataset.mayfitBlank='1';setNativeValue(input,'');requestAnimationFrame(()=>{if(input.dataset.mayfitBlank==='1')setNativeValue(input,'',false)})}
 
   function getPauseParts(){const box=document.getElementById('mayfit-pause-control'),stepper=box?.querySelector('.pause-stepper'),input=stepper?.querySelector('input');if(box&&stepper&&!stepper.querySelector('.mayfit-pause-display')){const display=document.createElement('span');display.className='mayfit-pause-display';display.setAttribute('aria-live','polite');display.textContent='0';stepper.insertBefore(display,stepper.querySelector('button[data-step="5"]'))}return{box,input,display:stepper?.querySelector('.mayfit-pause-display'),buttons:box?.querySelectorAll('button')}}
@@ -81,18 +81,15 @@
     if(button){
       if(bypassComplete){bypassComplete=false;return}
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      const label=button.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
-      const timerLabel=document.querySelector('.workout-screen .timer-control')?.textContent.trim().toUpperCase()||'';
       const row=button.closest('.sheet-row');
-      const active=label.includes('EM ANDAMENTO')||timerLabel==='PAUSAR'||timerLabel==='CONTINUAR'||!!row?.querySelector('.series-cell input:disabled');
-      if(active){
-        stopPauseCounter();lastPhase='';clearSelection();selectedButton=null;
-        bypassComplete=true;button.click();
-        forceTimerStopped();
-        requestAnimationFrame(()=>enterEditMode(button));
-        return
-      }
-      selectExercise(button);return
+      const label=button.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
+      const alreadySelected=button===selectedButton&&button.classList.contains('mayfit-selected');
+      if(!alreadySelected){selectExercise(button);return}
+      const wasStarted=label.includes('EM ANDAMENTO')||label.includes('CONCLUÍDO')||!!row?.querySelector('.series-cell input:disabled');
+      stopPauseCounter();lastPhase='';clearSelection();selectedButton=null;
+      if(wasStarted){bypassComplete=true;button.click();forceTimerStopped()}
+      requestAnimationFrame(()=>enterEditMode(button));
+      return
     }
     const start=event.target.closest?.('.workout-screen .timer-control');
     if(!start||start.textContent.trim().toUpperCase()!=='START')return;
