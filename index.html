@@ -22,7 +22,14 @@
       #mayfit-pause-control small{color:#b9c8be;font:750 11px system-ui,-apple-system,sans-serif;white-space:nowrap}
       body.theme-light #mayfit-pause-control{background:#fff;color:#15231a;border-color:#c7d5cb}
       body.theme-light #mayfit-pause-control small{color:#64746a}
-      @media(max-width:620px){#mayfit-pause-control{width:calc(100% - 50px);margin-left:50px;gap:8px;padding:8px 10px}#mayfit-pause-control strong{font-size:11px}#mayfit-pause-control input{width:66px;height:36px;font-size:18px}#mayfit-pause-control button{width:34px;height:36px}#mayfit-pause-control small{font-size:10px}}
+      .exercise-picker-footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .exercise-picker-footer #selected-count{margin-right:auto}
+      #remove-selected,#remove-all-assigned{border:0;border-radius:12px;padding:11px 13px;background:#7a2020;color:#fff;font:850 13px system-ui,-apple-system,sans-serif}
+      #remove-all-assigned{background:#421616}
+      #assign-selected{border:0;border-radius:12px;padding:11px 13px;background:#7ed832;color:#07120d;font:900 13px system-ui,-apple-system,sans-serif}
+      .exercise-choice.assigned{border-color:#7a3d3d}
+      .exercise-choice small{display:block;margin-top:2px;font-size:11px;opacity:.72}
+      @media(max-width:620px){#mayfit-pause-control{width:calc(100% - 50px);margin-left:50px;gap:8px;padding:8px 10px}#mayfit-pause-control strong{font-size:11px}#mayfit-pause-control input{width:66px;height:36px;font-size:18px}#mayfit-pause-control button{width:34px;height:36px}#mayfit-pause-control small{font-size:10px}.exercise-picker-footer{position:sticky;bottom:0;padding-bottom:max(14px,env(safe-area-inset-bottom))}.exercise-picker-footer button{flex:1 1 calc(50% - 6px)}.exercise-picker-footer #selected-count{flex:1 1 100%;margin:0}}
     </style>
     <script>
       (function(){const savedTheme=localStorage.getItem('mayfit_theme')||'dark';if(savedTheme==='light')document.documentElement.classList.add('pre-theme-light')})();
@@ -139,24 +146,46 @@
       const STORE='mayfit_v8';
       let exerciseCatalog=[];
       function closeExercisePicker(){document.getElementById('exercise-picker-overlay')?.remove()}
+      function readTrainingData(){try{return JSON.parse(localStorage.getItem(STORE))}catch{return null}}
       function addSelectedExercises(ids){
         if(!ids.length)return alert('Selecione pelo menos um exercício.');
-        let data;try{data=JSON.parse(localStorage.getItem(STORE))}catch{}
+        const data=readTrainingData();
         if(!data||!Array.isArray(data.exercises))return alert('Não foi possível acessar o treino atual.');
         const used=new Set(data.exercises.map(e=>e.type));let nextId=Math.max(0,...data.exercises.map(e=>Number(e.id)||0))+1;let added=0;
         ids.forEach(type=>{if(used.has(type))return;const item=exerciseCatalog.find(x=>x.id===type);if(!item)return;data.exercises.push({id:nextId++,type:item.id,name:item.name,sets:3,reps:12,load:0,previousLoad:0,rest:60,tip:'Descreva a execução correta.'});used.add(type);added++});
         localStorage.setItem(STORE,JSON.stringify(data));closeExercisePicker();alert(`${added} exercício(s) atribuído(s) ao aluno.`);location.reload();
       }
+      function removeSelectedExercises(ids){
+        if(!ids.length)return alert('Selecione os exercícios que deseja excluir.');
+        const data=readTrainingData();
+        if(!data||!Array.isArray(data.exercises))return alert('Não foi possível acessar o treino atual.');
+        const assignedSelected=ids.filter(type=>data.exercises.some(e=>e.type===type));
+        if(!assignedSelected.length)return alert('Os exercícios selecionados ainda não estão atribuídos ao aluno.');
+        if(!confirm(`Excluir ${assignedSelected.length} exercício(s) da área do aluno?`))return;
+        const removing=new Set(assignedSelected);
+        data.exercises=data.exercises.filter(e=>!removing.has(e.type));
+        localStorage.setItem(STORE,JSON.stringify(data));closeExercisePicker();alert(`${assignedSelected.length} exercício(s) excluído(s) da área do aluno.`);location.reload();
+      }
+      function removeAllAssignedExercises(){
+        const data=readTrainingData();
+        if(!data||!Array.isArray(data.exercises)||!data.exercises.length)return alert('O aluno não possui exercícios atribuídos.');
+        if(!confirm(`Excluir todos os ${data.exercises.length} exercícios da área do aluno?`))return;
+        data.exercises=[];
+        localStorage.setItem(STORE,JSON.stringify(data));closeExercisePicker();alert('Todos os exercícios foram excluídos da área do aluno.');location.reload();
+      }
       function openExercisePicker(){
         if(document.getElementById('exercise-picker-overlay'))return;
         const overlay=document.createElement('div');overlay.id='exercise-picker-overlay';
-        overlay.innerHTML='<div class="exercise-picker-card"><div class="exercise-picker-head"><div><h2>Selecionar exercícios</h2><p>Marque um, vários ou todos para atribuir ao aluno.</p></div><button class="picker-close" type="button">×</button></div><div class="exercise-picker-tools"><label class="picker-search"><span>🔎</span><input id="exercise-picker-search" placeholder="Buscar exercício"></label><button id="select-all-exercises" type="button">Selecionar todos</button></div><div id="exercise-picker-list" class="exercise-picker-list"><p>Carregando exercícios...</p></div><div class="exercise-picker-footer"><strong id="selected-count">0 selecionados</strong><button id="assign-selected" type="button">Atribuir selecionados</button></div></div>';
+        overlay.innerHTML='<div class="exercise-picker-card"><div class="exercise-picker-head"><div><h2>Selecionar exercícios</h2><p>Marque um, vários ou todos para atribuir ou excluir.</p></div><button class="picker-close" type="button">×</button></div><div class="exercise-picker-tools"><label class="picker-search"><span>🔎</span><input id="exercise-picker-search" placeholder="Buscar exercício"></label><button id="select-all-exercises" type="button">Selecionar todos</button></div><div id="exercise-picker-list" class="exercise-picker-list"><p>Carregando exercícios...</p></div><div class="exercise-picker-footer"><strong id="selected-count">0 selecionados</strong><button id="remove-selected" type="button">Excluir selecionados</button><button id="remove-all-assigned" type="button">Excluir todos do aluno</button><button id="assign-selected" type="button">Atribuir selecionados</button></div></div>';
         document.body.appendChild(overlay);overlay.querySelector('.picker-close').onclick=closeExercisePicker;overlay.addEventListener('click',e=>{if(e.target===overlay)closeExercisePicker()});
-        const render=(query='')=>{const list=overlay.querySelector('#exercise-picker-list');const q=query.toLowerCase().trim();const filtered=exerciseCatalog.filter(x=>x.name.toLowerCase().includes(q));list.innerHTML=filtered.map(x=>`<label class="exercise-choice"><input type="checkbox" value="${x.id}"><span>${x.name}</span></label>`).join('')||'<p>Nenhum exercício encontrado.</p>';list.querySelectorAll('input').forEach(i=>i.addEventListener('change',updateCount))};
+        const render=(query='')=>{const list=overlay.querySelector('#exercise-picker-list');const q=query.toLowerCase().trim();const data=readTrainingData();const assigned=new Set(data?.exercises?.map(e=>e.type)||[]);const filtered=exerciseCatalog.filter(x=>x.name.toLowerCase().includes(q));list.innerHTML=filtered.map(x=>`<label class="exercise-choice ${assigned.has(x.id)?'assigned':''}"><input type="checkbox" value="${x.id}"><span>${x.name}<small>${assigned.has(x.id)?'Já atribuído ao aluno':'Disponível para atribuir'}</small></span></label>`).join('')||'<p>Nenhum exercício encontrado.</p>';list.querySelectorAll('input').forEach(i=>i.addEventListener('change',updateCount))};
         const updateCount=()=>{overlay.querySelector('#selected-count').textContent=`${overlay.querySelectorAll('.exercise-choice input:checked').length} selecionados`};
+        const selectedIds=()=>[...overlay.querySelectorAll('.exercise-choice input:checked')].map(i=>i.value);
         overlay.querySelector('#exercise-picker-search').addEventListener('input',e=>render(e.target.value));
         overlay.querySelector('#select-all-exercises').onclick=()=>{overlay.querySelectorAll('.exercise-choice input').forEach(i=>i.checked=true);updateCount()};
-        overlay.querySelector('#assign-selected').onclick=()=>addSelectedExercises([...overlay.querySelectorAll('.exercise-choice input:checked')].map(i=>i.value));
+        overlay.querySelector('#assign-selected').onclick=()=>addSelectedExercises(selectedIds());
+        overlay.querySelector('#remove-selected').onclick=()=>removeSelectedExercises(selectedIds());
+        overlay.querySelector('#remove-all-assigned').onclick=removeAllAssignedExercises;
         if(exerciseCatalog.length)render();else fetch(DB).then(r=>r.json()).then(items=>{exerciseCatalog=items.map(x=>({id:x.id,name:x.name})).filter(x=>x.id&&x.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));render()}).catch(()=>{overlay.querySelector('#exercise-picker-list').innerHTML='<p>Não foi possível carregar o catálogo agora.</p>'})
       }
       function installExercisePickerButton(){
