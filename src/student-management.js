@@ -51,10 +51,7 @@ async function loadStudents(root){
   refresh.disabled=true;
   msg.textContent='Carregando alunos...';
   try{
-    const {data,error}=await supabase
-      .from('profiles')
-      .select('id,full_name,role,status,created_at')
-      .order('created_at',{ascending:false});
+    const {data,error}=await supabase.from('profiles').select('id,full_name,role,status,created_at').order('created_at',{ascending:false});
     if(error)throw error;
     root._students=(data||[]).filter(profile=>profile.role!=='admin');
     const pending=root._students.filter(profile=>normalizedStatus(profile.status)==='pending').length;
@@ -97,6 +94,17 @@ async function createStudent(root){
   await loadStudents(root);
 }
 
+async function deleteStudentAccount(id){
+  const rpc=await supabase.rpc('delete_student_account',{target_user_id:id});
+  if(!rpc.error)return;
+  const missing=/function .*delete_student_account|could not find the function|schema cache/i.test(rpc.error.message||'');
+  if(!missing)throw rpc.error;
+
+  const direct=await supabase.from('profiles').delete().eq('id',id).select('id');
+  if(direct.error)throw direct.error;
+  if(!direct.data?.length)throw new Error('O banco recusou a exclusão. É necessário ativar a permissão segura de exclusão no Supabase.');
+}
+
 async function handleCard(root,button){
   const card=button.closest('.ms-card');
   const id=card?.dataset.id;
@@ -120,15 +128,20 @@ async function handleCard(root,button){
       if(error)throw error;
     }
     if(action==='delete'){
-      if(!confirm(`Excluir o aluno ${student.full_name||''}?`))return;
-      const {error}=await supabase.from('profiles').delete().eq('id',id);
-      if(error)throw error;
+      if(!confirm(`Excluir definitivamente o aluno ${student.full_name||''}?`))return;
+      button.textContent='Excluindo...';
+      await deleteStudentAccount(id);
+      root._students=(root._students||[]).filter(item=>item.id!==id);
+      render(root);
+      alert('Aluno excluído com sucesso.');
     }
-    await loadStudents(root);
+    if(action!=='delete')await loadStudents(root);
   }catch(error){
     alert('Não foi possível concluir: '+error.message);
+    await loadStudents(root);
   }finally{
     button.disabled=false;
+    if(action==='delete')button.textContent='Excluir';
   }
 }
 
