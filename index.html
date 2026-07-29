@@ -9,8 +9,8 @@
     <meta name="apple-mobile-web-app-title" content="MaYFiT" />
     <meta name="description" content="Treinos, evolução corporal e gestão de alunos." />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="stylesheet" href="/src/figures.css?v=5" />
-    <link rel="stylesheet" href="/src/theme.css?v=5" />
+    <link rel="stylesheet" href="/src/figures.css?v=6" />
+    <link rel="stylesheet" href="/src/theme.css?v=6" />
     <title>MaYFiT</title>
     <style>
       #mayfit-pause-control{display:flex;align-items:center;justify-content:center;gap:12px;width:calc(100% - 92px);margin:0 0 14px 92px;padding:10px 14px;border:1px solid #41634d;border-radius:16px;background:#101a14;color:#fff;box-sizing:border-box}
@@ -19,6 +19,8 @@
       #mayfit-pause-control button{width:38px;height:38px;border:1px solid #3f6749;border-radius:12px;background:#17341f;color:#86e044;font:950 22px system-ui,-apple-system,sans-serif}
       #mayfit-pause-control input{width:82px;height:38px;border:1px solid #8b9b90;border-radius:12px;background:#f7faf8;color:#d9262e;text-align:center;font:950 20px system-ui,-apple-system,sans-serif;box-sizing:border-box}
       #mayfit-pause-control small{color:#b9c8be;font:750 11px system-ui,-apple-system,sans-serif;white-space:nowrap}
+      #mayfit-pause-control.counting{border-color:#9df20f!important;box-shadow:0 0 18px rgba(141,242,11,.35)!important}
+      #mayfit-pause-control.counting input{color:#9df20f!important;background:#071108!important}
       .workout-screen .sheet-row.mayfit-selected{box-shadow:inset 0 0 0 2px #8df20b,inset 0 0 24px rgba(141,242,11,.16)!important}
       .workout-screen .complete-button.mayfit-selected{background:#8df20b!important;border-color:#caff63!important;box-shadow:0 0 18px rgba(141,242,11,.75)!important}
       .workout-screen .complete-button.mayfit-selected::after{content:'✓';display:grid;place-items:center;width:100%;height:100%;color:#071108;font-size:25px;font-weight:1000}
@@ -43,14 +45,17 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx?v=5"></script>
-    <script type="module" src="/src/workout-interactions.js?v=5"></script>
+    <script type="module" src="/src/main.jsx?v=6"></script>
+    <script type="module" src="/src/workout-interactions.js?v=6"></script>
     <script>
-      if('serviceWorker' in navigator){window.addEventListener('load',async()=>{const registration=await navigator.serviceWorker.register('/sw.js?v=5');registration.update()})}
+      if('serviceWorker' in navigator){window.addEventListener('load',async()=>{const registration=await navigator.serviceWorker.register('/sw.js?v=6');registration.update()})}
       function applyTheme(theme){const light=theme==='light';document.body.classList.toggle('theme-light',light);localStorage.setItem('mayfit_theme',light?'light':'dark');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=light?'#edf4ef':'#06100b'}
-      function installPauseControl(){const top=document.querySelector('.workout-top');if(!top)return;if(document.getElementById('mayfit-pause-control'))return;const pause=document.createElement('div');pause.id='mayfit-pause-control';const saved=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);pause.innerHTML=`<strong>TEMPO DE PAUSA</strong><div class="pause-stepper"><button type="button" data-step="-5">−</button><input type="number" min="0" step="5" value="${saved}"><button type="button" data-step="5">+</button></div><small>segundos</small>`;top.insertAdjacentElement('afterend',pause);const input=pause.querySelector('input');const save=()=>{const v=Math.max(0,Number(input.value)||0);input.value=v;localStorage.setItem('mayfit_pause_seconds',String(v))};input.onchange=save;input.onblur=save;pause.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{input.value=Math.max(0,(Number(input.value)||0)+Number(btn.dataset.step));save()})}
+      function installPauseControl(){const top=document.querySelector('.workout-top');if(!top)return;if(document.getElementById('mayfit-pause-control'))return;const pause=document.createElement('div');pause.id='mayfit-pause-control';const saved=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);pause.innerHTML=`<strong>TEMPO DE PAUSA</strong><div class="pause-stepper"><button type="button" data-step="-5">−</button><input type="number" min="0" step="5" value="${saved}"><button type="button" data-step="5">+</button></div><small>segundos</small>`;top.insertAdjacentElement('afterend',pause);const input=pause.querySelector('input');const save=()=>{if(pause.classList.contains('counting'))return;const v=Math.max(0,Number(input.value)||0);input.value=v;localStorage.setItem('mayfit_pause_seconds',String(v))};input.onchange=save;input.onblur=save;pause.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{if(pause.classList.contains('counting'))return;input.value=Math.max(0,(Number(input.value)||0)+Number(btn.dataset.step));save()})}
+      function parseClock(value){const parts=String(value||'0').split(':').map(Number);return parts.length>1?Math.max(0,(parts[0]||0)*60+(parts[1]||0)):Math.max(0,parts[0]||0)}
+      let lastExerciseClock='00:00';
+      function separatePauseCountdown(){const screen=document.querySelector('.workout-screen');const pause=document.getElementById('mayfit-pause-control');if(!screen||!pause)return;const phase=screen.querySelector('.time-strip span');const mainInput=screen.querySelector('.time-strip input');const pauseInput=pause.querySelector('input');if(!phase||!mainInput||!pauseInput)return;const isPause=phase.textContent.trim().toUpperCase()==='PAUSA';if(!isPause){lastExerciseClock=mainInput.value||lastExerciseClock;pause.classList.remove('counting');pauseInput.readOnly=false;pause.querySelectorAll('button').forEach(button=>button.disabled=false);const configured=String(Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60));if(document.activeElement!==pauseInput&&pauseInput.value!==configured)pauseInput.value=configured;return}const remaining=parseClock(mainInput.value);pause.classList.add('counting');pauseInput.readOnly=true;pause.querySelectorAll('button').forEach(button=>button.disabled=true);pauseInput.value=String(remaining);if(lastExerciseClock)mainInput.value=lastExerciseClock}
       applyTheme(localStorage.getItem('mayfit_theme')||'dark');
-      window.addEventListener('load',()=>{installPauseControl();setInterval(installPauseControl,700)});
+      window.addEventListener('load',()=>{installPauseControl();setInterval(()=>{installPauseControl();separatePauseCountdown()},100)});
     </script>
   </body>
 </html>
