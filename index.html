@@ -33,14 +33,25 @@
         const meta=document.querySelector('meta[name="theme-color"]');
         if(meta)meta.setAttribute('content',light?'#edf4ef':'#06100b');
         const button=document.getElementById('mayfit-theme-toggle');
-        if(button){button.innerHTML=light?'<span>🌙</span>Escuro':'<span>☀️</span>Claro';button.setAttribute('aria-label',light?'Ativar tema escuro':'Ativar tema claro')}
+        if(button){button.innerHTML=light?'<span>🌙</span><b>Escuro</b>':'<span>☀️</span><b>Claro</b>';button.setAttribute('aria-label',light?'Ativar tema escuro':'Ativar tema claro')}
       }
 
       function installThemeToggle(){
-        const old=document.getElementById('mayfit-theme-toggle');if(old)old.remove();
-        const button=document.createElement('button');button.id='mayfit-theme-toggle';button.type='button';
-        button.addEventListener('click',()=>applyTheme(document.body.classList.contains('theme-light')?'dark':'light'));
-        document.body.appendChild(button);applyTheme(localStorage.getItem('mayfit_theme')||'dark');
+        const header=document.querySelector('.app > header');
+        if(!header)return;
+        let actions=header.querySelector('.mayfit-header-actions');
+        if(!actions){
+          actions=document.createElement('div');actions.className='mayfit-header-actions';
+          const bell=header.querySelector(':scope > .icon');
+          if(bell){header.insertBefore(actions,bell);actions.appendChild(bell)}else header.appendChild(actions)
+        }
+        let button=document.getElementById('mayfit-theme-toggle');
+        if(!button){
+          button=document.createElement('button');button.id='mayfit-theme-toggle';button.type='button';
+          button.addEventListener('click',()=>applyTheme(document.body.classList.contains('theme-light')?'dark':'light'))
+        }
+        if(button.parentElement!==actions)actions.insertBefore(button,actions.firstChild);
+        applyTheme(localStorage.getItem('mayfit_theme')||'dark')
       }
 
       function installRoleSwitch(){
@@ -116,7 +127,7 @@
       applyTheme(localStorage.getItem('mayfit_theme')||'dark');
       window.addEventListener('load',()=>{
         installThemeToggle();installRoleSwitch();installTimerAlarmWatcher();installExercisePickerButton();
-        setInterval(installExercisePickerButton,700);
+        setInterval(()=>{installThemeToggle();installExercisePickerButton()},700);
         setTimeout(()=>{installThemeToggle();installRoleSwitch();installExercisePickerButton()},600)
       });
     </script>
