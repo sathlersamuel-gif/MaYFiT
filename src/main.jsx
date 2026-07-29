@@ -3,15 +3,7 @@ import{createRoot}from'react-dom/client';
 import{Bell,Check,ChevronLeft,Dumbbell,Edit3,Home,LogOut,Play,Plus,Save,Timer,TrendingUp,User,Users,X}from'lucide-react';
 import'./styles.css';
 
-const STORE='mayfit_v5';
-const imageFor=type=>({
- supino:'https://commons.wikimedia.org/wiki/Special:FilePath/Bench%20Press.jpg',
- pelvica:'https://commons.wikimedia.org/wiki/Special:FilePath/Bridge%20%28exercise%29%20-%20USDAgov.jpg',
- legpress:'https://commons.wikimedia.org/wiki/Special:FilePath/Leg%20press%20%28cropped%2C%20flipped%29.jpg',
- flexora:'https://commons.wikimedia.org/wiki/Special:FilePath/LyingLegCurlMachineExercise.JPG',
- panturrilha:'https://commons.wikimedia.org/wiki/Special:FilePath/SeatedCalfRaiseMachineExercise.JPG'
-}[type]);
-
+const STORE='mayfit_v6';
 const seed={users:[
  {id:'admin',name:'Samuel',email:'admin@mayfit.com',password:'123456',role:'admin'},
  {id:'aluno',name:'Aluno Teste',email:'aluno@mayfit.com',password:'123456',role:'student'}
@@ -27,7 +19,13 @@ const save=d=>localStorage.setItem(STORE,JSON.stringify(d));
 
 function Login({data,onLogin}){const[email,setEmail]=useState('aluno@mayfit.com');const[password,setPassword]=useState('123456');const[msg,setMsg]=useState('');const submit=e=>{e.preventDefault();const u=data.users.find(x=>x.email===email&&x.password===password);if(!u)return setMsg('E-mail ou senha incorretos.');onLogin(u)};return <div className="login-page"><div className="login-logo"><span>MaY</span>FiT<small>SEU CORPO. SEU FOCO. SEUS RESULTADOS.</small></div><form className="login-card" onSubmit={submit}><h1>Entrar</h1><label>E-mail<input value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Senha<input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{msg&&<div className="notice">{msg}</div>}<button className="primary">Entrar</button><button type="button" className="demo-switch" onClick={()=>setEmail(email.includes('admin')?'aluno@mayfit.com':'admin@mayfit.com')}>Alternar conta de teste</button></form></div>}
 
-function ExercisePhoto({exercise,compact=false}){return <div className={compact?'exercise-photo compact':'exercise-photo'}><img src={imageFor(exercise.type)} alt={`Execução correta de ${exercise.name}`}/><span>EXECUÇÃO CORRETA</span></div>}
+const Person=({x=0,y=0,rotate=0,scale=1,pose='stand'})=>{const p={stand:{arm1:[0,28,-17,55],arm2:[0,28,18,55],leg1:[-5,63,-18,102],leg2:[6,63,19,102]},press:{arm1:[-2,28,-26,6],arm2:[4,28,30,6],leg1:[-5,62,-23,88],leg2:[6,62,24,88]},bridge:{arm1:[-4,31,-28,49],arm2:[5,31,29,48],leg1:[-4,64,-25,87],leg2:[7,64,28,88]},curl:{arm1:[-1,30,-19,58],arm2:[5,30,25,58],leg1:[-4,63,-30,82],leg2:[7,63,30,82]}}[pose]||null;return <g transform={`translate(${x} ${y}) rotate(${rotate}) scale(${scale})`} className="body-model"><ellipse cx="0" cy="10" rx="9" ry="11"/><path d="M-11 25 Q0 18 11 25 L15 57 Q0 69 -15 57 Z"/><path d={`M0 28 L${p.arm1[2]} ${p.arm1[3]}`}/><path d={`M0 28 L${p.arm2[2]} ${p.arm2[3]}`}/><path d={`M-5 61 L${p.leg1[2]} ${p.leg1[3]}`}/><path d={`M6 61 L${p.leg2[2]} ${p.leg2[3]}`}/><circle cx={p.arm1[2]} cy={p.arm1[3]} r="4"/><circle cx={p.arm2[2]} cy={p.arm2[3]} r="4"/></g>};
+function Pose({type,final=false}){if(type==='supino')return <><rect className="machine" x="18" y="90" width="104" height="9" rx="4"/><Person x="68" y="42" rotate="78" scale=".78" pose="press"/><line className="equipment" x1="47" y1={final?48:29} x2="124" y2={final?48:29}/><circle className="plate" cx="43" cy={final?48:29} r="10"/><circle className="plate" cx="128" cy={final?48:29} r="10"/></>;
+if(type==='pelvica')return <><rect className="machine" x="15" y="95" width="118" height="8" rx="4"/><Person x="68" y={final?23:49} rotate="78" scale=".75" pose="bridge"/><line className="equipment" x1="73" y1={final?69:84} x2="112" y2={final?69:84}/><circle className="plate" cx="116" cy={final?69:84} r="11"/></>;
+if(type==='legpress')return <><path className="machine" d="M128 17 L156 103 L143 108 L115 23 Z"/><rect className="machine" x="25" y="88" width="73" height="10" rx="4" transform="rotate(-22 25 88)"/><Person x="63" y="39" rotate="58" scale=".72" pose="press"/><line className="equipment" x1={final?113:89} y1={final?47:68} x2="143" y2="36"/><circle className="plate" cx="146" cy="35" r="13"/></>;
+if(type==='flexora')return <><rect className="machine" x="20" y="91" width="105" height="10" rx="4"/><Person x="70" y="36" rotate="78" scale=".73" pose="curl"/><line className="equipment" x1="112" y1="75" x2={final?136:153} y2={final?49:77}/><circle className="plate" cx={final?140:157} cy={final?45:78} r="10"/></>;
+return <><rect className="machine" x="25" y="104" width="110" height="8" rx="4"/><Person x="82" y={final?8:16} scale=".88" pose="stand"/><path className="motion" d={final?'M128 86 Q148 70 145 50':'M128 94 Q149 91 151 76'}/><polyline className="motion" points={final?'140,54 146,49 148,57':'146,78 151,74 153,82'}/></>}
+function ExercisePhoto({exercise,compact=false}){return <div className={compact?'exercise-photo compact':'exercise-photo'}><svg viewBox="0 0 360 145" role="img" aria-label={`Execução correta de ${exercise.name}`}><defs><linearGradient id={`bg-${exercise.id}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#edf3ee"/><stop offset="1" stopColor="#d7e2da"/></linearGradient></defs><rect width="360" height="145" rx="12" fill={`url(#bg-${exercise.id})`}/><g transform="translate(0 0)"><text x="83" y="17" className="pose-title">INÍCIO</text><Pose type={exercise.type}/></g><line className="divider" x1="180" y1="12" x2="180" y2="132"/><g transform="translate(180 0)"><text x="78" y="17" className="pose-title">FINAL</text><Pose type={exercise.type} final/></g><path className="arrow" d="M160 72 L176 72 M170 66 L176 72 L170 78"/></svg><span>EXECUÇÃO CORRETA</span></div>}
 const format=s=>`${String(Math.floor(Math.max(0,s)/60)).padStart(2,'0')}:${String(Math.max(0,s)%60).padStart(2,'0')}`;
 const parseTime=value=>{const clean=value.trim();if(clean.includes(':')){const[m,s]=clean.split(':').map(Number);return Math.max(0,(m||0)*60+(s||0))}return Math.max(0,Number(clean)||0)};
 
