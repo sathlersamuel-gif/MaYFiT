@@ -1,4 +1,4 @@
-/* Tela de treino MaYFiT — proporção da referência aprovada, sem cortes. */
+/* Tela de treino MaYFiT — layout único, sem sobreposição de estilos. */
 :root{color-scheme:dark}
 html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
 body{margin:0;background:#020403;color:#fff}
@@ -21,50 +21,50 @@ body{margin:0;background:#020403;color:#fff}
 #mayfit-pause-control small{font-size:18px!important;font-weight:900!important;color:#fff!important;white-space:nowrap}
 
 .workout-screen .sheet{width:100%;overflow:hidden;border:1px solid #606a64;border-radius:18px;background:#040605!important;color:#fff!important}
-.workout-screen .sheet-head,.workout-screen .sheet-row{display:grid!important;grid-template-columns:38% 17% 15% 14% 16%!important;width:100%;min-width:0}
+.workout-screen .sheet-head,.workout-screen .sheet-row{display:grid!important;grid-template-columns:40% 17% 14% 14% 15%!important;width:100%;min-width:0}
 .workout-screen .sheet-head{background:linear-gradient(180deg,#111512,#090c0a)!important;color:#fff!important;font-size:13px!important;font-weight:950!important}
-.workout-screen .sheet-head span{min-width:0;display:grid;place-items:center;padding:12px 3px!important;border-right:1px solid #444d47!important;text-align:center;white-space:normal;overflow:visible;word-break:normal}
+.workout-screen .sheet-head span{min-width:0;display:grid;place-items:center;padding:12px 2px!important;border-right:1px solid #444d47!important;text-align:center;white-space:normal;overflow:visible}
 .workout-screen .sheet-head span:nth-child(3){grid-column:3}
 .workout-screen .sheet-head span:nth-child(3)::after{content:' x REPS'}
 .workout-screen .sheet-head span:nth-child(4){grid-column:5;grid-row:1}
 .workout-screen .sheet-head::after{content:'TEMPO\A(s)';white-space:pre;grid-column:4;grid-row:1;display:grid;place-items:center;border-right:1px solid #444d47;padding:12px 2px}
 
-.workout-screen .sheet-row{min-height:255px;background:#040605!important;color:#fff!important;border-top:1px solid #424a45;transition:.2s ease}
+.workout-screen .sheet-row{min-height:250px;background:#040605!important;color:#fff!important;border-top:1px solid #424a45;transition:.2s ease}
 .workout-screen .sheet-row.done{background:linear-gradient(90deg,#102316,#173b1c 50%,#102316)!important;box-shadow:inset 0 0 28px rgba(100,230,55,.12)}
-.workout-screen .sheet-row>div{min-width:0;overflow:hidden;padding:9px!important;border-right:1px solid #424a45!important;border-top:0!important}
+.workout-screen .sheet-row>div{min-width:0;overflow:hidden;padding:8px!important;border-right:1px solid #424a45!important;border-top:0!important}
 
-.workout-screen .exercise-col{grid-column:1;display:flex;flex-direction:column;justify-content:flex-start}
-.workout-screen .exercise-col>strong{display:block;width:100%;font-size:22px!important;line-height:1.08;text-transform:uppercase;margin:0 0 10px!important;color:#fff;white-space:normal;overflow-wrap:anywhere}
-.workout-screen .exercise-photo{width:100%;aspect-ratio:1.55/1;min-height:0;border:1px solid #344239;border-radius:13px;background:#050706!important;overflow:hidden}
-.workout-screen .exercise-photo .pose-pair{height:100%;display:grid;grid-template-columns:1fr 1fr;background:#050706!important}
-.workout-screen .exercise-photo figure{position:relative;min-width:0;margin:0;overflow:hidden;background:#050706!important}
-.workout-screen .exercise-photo figure+figure{border-left:1px solid #3f4742}
-.workout-screen .exercise-photo figure b{position:absolute;top:0;left:0;right:0;z-index:2;height:28px;display:grid;place-items:center;background:#111512!important;color:#fff!important;font-size:12px;font-weight:950;letter-spacing:.5px;white-space:nowrap}
+.workout-screen .exercise-col{grid-column:1;display:flex;flex-direction:column;justify-content:flex-start;overflow:visible!important}
+.workout-screen .exercise-col>strong{display:block;width:100%;font-size:21px!important;line-height:1.08;text-transform:uppercase;margin:0 0 9px!important;color:#fff;white-space:normal;overflow:visible!important;overflow-wrap:anywhere}
+.workout-screen .exercise-photo{appearance:none!important;display:block!important;width:100%!important;max-width:100%!important;aspect-ratio:1.56/1;min-height:0;margin:0!important;padding:0!important;border:1px solid #344239!important;border-radius:12px!important;background:#050706!important;overflow:hidden!important;text-align:initial!important}
+.workout-screen .exercise-photo .pose-pair{width:100%!important;height:100%!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;background:#050706!important;overflow:hidden!important}
+.workout-screen .exercise-photo figure{position:relative!important;width:100%!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important;background:#050706!important;border:0!important}
+.workout-screen .exercise-photo figure+figure{border-left:1px solid #3f4742!important}
+.workout-screen .exercise-photo figure b{position:absolute!important;inset:0 0 auto 0!important;z-index:2!important;width:100%!important;height:28px!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;display:grid!important;place-items:center!important;background:#111512!important;color:#fff!important;font-size:12px!important;font-weight:950!important;letter-spacing:.4px!important;line-height:28px!important;text-align:center!important;white-space:nowrap!important;overflow:visible!important;transform:none!important}
 .workout-screen .exercise-photo figure:first-child b{background:#83e400!important;color:#071108!important}
-.workout-screen .exercise-photo img{display:block;width:100%;height:100%;object-fit:cover;padding-top:28px;background:#050706!important}
-.workout-screen .exercise-photo>span{left:8px;bottom:7px;background:rgba(4,9,6,.94);border:1px solid #78d832;color:#96eb50;font-size:10px;padding:5px 9px;white-space:nowrap}
+.workout-screen .exercise-photo img{display:block!important;width:100%!important;height:100%!important;margin:0!important;padding:28px 0 0!important;object-fit:cover!important;object-position:center!important;background:#050706!important}
+.workout-screen .exercise-photo>span{left:7px!important;bottom:6px!important;max-width:calc(100% - 14px)!important;background:rgba(4,9,6,.94)!important;border:1px solid #78d832!important;color:#96eb50!important;font-size:10px!important;padding:4px 8px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 .workout-screen .exercise-photo>em,.workout-screen .exercise-col>small{display:none!important}
 
 .workout-screen .load-cell{grid-column:2;display:grid!important;grid-template-rows:1fr 1fr;align-content:stretch;gap:0!important;text-align:center}
 .workout-screen .load-cell label{min-width:0;display:flex!important;flex-direction:column;justify-content:center;gap:4px;font-size:12px!important;text-transform:uppercase;overflow:visible}
 .workout-screen .load-cell label+label{border-top:1px solid #303631}
-.workout-screen .load-cell input,.workout-screen .series-cell input{appearance:textfield;-moz-appearance:textfield;min-width:0;width:100%!important;max-width:100%;border:0!important;background:transparent!important;color:#fff!important;padding:0!important;text-align:center;font-size:46px!important;font-weight:1000!important;line-height:1!important;font-variant-numeric:tabular-nums;overflow:visible}
+.workout-screen .load-cell input,.workout-screen .series-cell input{appearance:textfield;-moz-appearance:textfield;min-width:0;width:100%!important;max-width:100%;border:0!important;background:transparent!important;color:#fff!important;padding:0!important;text-align:center;font-size:44px!important;font-weight:1000!important;line-height:1!important;font-variant-numeric:tabular-nums;overflow:visible}
 .workout-screen input::-webkit-outer-spin-button,.workout-screen input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .workout-screen .load-cell>span{display:none}
 
-.workout-screen .series-cell{grid-column:3/5;display:grid!important;grid-template-columns:15fr 14fr;gap:0!important;padding:0!important;overflow:hidden}
-.workout-screen .series-pair{grid-column:1;min-width:0;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:1fr auto 1fr;align-items:center;justify-items:center;gap:0!important;padding:9px 5px;border-right:1px solid #424a45;overflow:hidden}
+.workout-screen .series-cell{grid-column:3/5;display:grid!important;grid-template-columns:1fr 1fr;gap:0!important;padding:0!important;overflow:hidden}
+.workout-screen .series-pair{grid-column:1;min-width:0;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:1fr auto 1fr;align-items:center;justify-items:center;gap:0!important;padding:8px 4px;border-right:1px solid #424a45;overflow:hidden}
 .workout-screen .series-pair label{min-width:0;width:100%;display:grid!important;place-items:center;align-content:center;font-size:0!important;overflow:visible}
-.workout-screen .series-pair label:first-child::before{content:'SÉRIES';margin-bottom:4px;font-size:11px}
-.workout-screen .series-pair label:last-child::before{content:'REPS';margin-bottom:4px;font-size:11px}
-.workout-screen .series-pair b{padding:0!important;font-size:28px!important;color:#9df20f}
-.workout-screen .rest-label{grid-column:2;grid-row:1;min-width:0;display:flex!important;align-items:center;justify-content:center;font-size:0!important;padding:8px 3px;overflow:hidden}
-.workout-screen .rest-label input{min-width:0;width:100%!important;font-size:46px!important;cursor:text}
+.workout-screen .series-pair label:first-child::before{content:'SÉRIES';margin-bottom:4px;font-size:10px}
+.workout-screen .series-pair label:last-child::before{content:'REPS';margin-bottom:4px;font-size:10px}
+.workout-screen .series-pair b{padding:0!important;font-size:26px!important;color:#9df20f}
+.workout-screen .rest-label{grid-column:2;grid-row:1;min-width:0;display:flex!important;align-items:center;justify-content:center;font-size:0!important;padding:7px 2px;overflow:hidden}
+.workout-screen .rest-label input{min-width:0;width:100%!important;font-size:43px!important;cursor:text}
 .workout-screen .time-button{display:none!important}
 
-.workout-screen .progress-cell{grid-column:5;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:28px!important;overflow:hidden}
-.workout-screen .progress-cell>strong{width:100%;font-size:34px!important;line-height:1.05;color:#9df20f!important;white-space:normal!important;text-align:center;overflow-wrap:anywhere}
-.workout-screen .complete-button{width:54px!important;height:54px!important;flex:0 0 54px;padding:0!important;border:2px solid #d7ddd9!important;border-radius:10px!important;background:transparent!important;color:#9df20f!important;font-size:0!important;box-shadow:none!important}
+.workout-screen .progress-cell{grid-column:5;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:26px!important;overflow:hidden}
+.workout-screen .progress-cell>strong{width:100%;font-size:32px!important;line-height:1.05;color:#9df20f!important;white-space:normal!important;text-align:center;overflow-wrap:anywhere}
+.workout-screen .complete-button{width:52px!important;height:52px!important;flex:0 0 52px;padding:0!important;border:2px solid #d7ddd9!important;border-radius:10px!important;background:transparent!important;color:#9df20f!important;font-size:0!important;box-shadow:none!important}
 .workout-screen .complete-button svg{width:70%;height:70%;margin:auto}
 .workout-screen .sheet-row.done .complete-button{background:#6fdb29!important;border-color:#9df20f!important;color:#061006!important}
 .workout-screen .finish{margin-top:16px}
@@ -85,22 +85,22 @@ body{margin:0;background:#020403;color:#fff}
  .workout-screen .sheet{border-radius:10px}
  .workout-screen .sheet-head{font-size:8px!important}
  .workout-screen .sheet-head span,.workout-screen .sheet-head::after{padding:8px 1px!important}
- .workout-screen .sheet-row{min-height:205px}
- .workout-screen .sheet-row>div{padding:6px!important}
+ .workout-screen .sheet-row{min-height:202px}
+ .workout-screen .sheet-row>div{padding:5px!important}
  .workout-screen .exercise-col>strong{font-size:13px!important;margin-bottom:6px!important}
- .workout-screen .exercise-photo{aspect-ratio:1.42/1;border-radius:8px}
- .workout-screen .exercise-photo figure b{height:22px;font-size:8px}
- .workout-screen .exercise-photo img{padding-top:22px}
- .workout-screen .exercise-photo>span{font-size:7px;padding:3px 5px;left:4px;bottom:4px}
- .workout-screen .load-cell input,.workout-screen .series-cell input{font-size:27px!important}
+ .workout-screen .exercise-photo{aspect-ratio:1.48/1;border-radius:8px!important}
+ .workout-screen .exercise-photo figure b{height:21px!important;font-size:8px!important;line-height:21px!important}
+ .workout-screen .exercise-photo img{padding-top:21px!important}
+ .workout-screen .exercise-photo>span{font-size:7px!important;padding:3px 5px!important;left:4px!important;bottom:4px!important}
+ .workout-screen .load-cell input,.workout-screen .series-cell input{font-size:26px!important}
  .workout-screen .load-cell label{font-size:9px!important}
- .workout-screen .series-pair{padding:6px 2px}
- .workout-screen .series-pair label:first-child::before,.workout-screen .series-pair label:last-child::before{font-size:8px}
- .workout-screen .series-pair b{font-size:19px!important}
- .workout-screen .rest-label input{font-size:29px!important}
- .workout-screen .progress-cell{gap:18px!important}
- .workout-screen .progress-cell>strong{font-size:20px!important}
- .workout-screen .complete-button{width:36px!important;height:36px!important;flex-basis:36px;border-radius:7px!important}
+ .workout-screen .series-pair{padding:5px 1px}
+ .workout-screen .series-pair label:first-child::before,.workout-screen .series-pair label:last-child::before{font-size:7px}
+ .workout-screen .series-pair b{font-size:18px!important}
+ .workout-screen .rest-label input{font-size:28px!important}
+ .workout-screen .progress-cell{gap:17px!important}
+ .workout-screen .progress-cell>strong{font-size:19px!important}
+ .workout-screen .complete-button{width:35px!important;height:35px!important;flex-basis:35px;border-radius:7px!important}
 }
 
 @media(max-width:380px){
@@ -110,9 +110,9 @@ body{margin:0;background:#020403;color:#fff}
  .workout-screen .timer-control{font-size:16px!important}
  #mayfit-pause-control strong{font-size:10px!important}
  #mayfit-pause-control small{font-size:9px!important}
- .workout-screen .sheet-row{min-height:194px}
+ .workout-screen .sheet-row{min-height:190px}
  .workout-screen .exercise-col>strong{font-size:12px!important}
- .workout-screen .load-cell input,.workout-screen .series-cell input{font-size:24px!important}
- .workout-screen .rest-label input{font-size:26px!important}
- .workout-screen .progress-cell>strong{font-size:18px!important}
+ .workout-screen .load-cell input,.workout-screen .series-cell input{font-size:23px!important}
+ .workout-screen .rest-label input{font-size:25px!important}
+ .workout-screen .progress-cell>strong{font-size:17px!important}
 }
