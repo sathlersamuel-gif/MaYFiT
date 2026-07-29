@@ -41,7 +41,6 @@
   function clearSelection(){document.querySelectorAll('.sheet-row.mayfit-selected,.complete-button.mayfit-selected').forEach(el=>el.classList.remove('mayfit-selected'))}
   function enterEditMode(button){
     const row=button.closest('.sheet-row');if(!row)return;
-    const timer=document.querySelector('.workout-screen .timer-control');if(timer&&timer.textContent.trim().toUpperCase()==='PAUSAR')timer.click();
     clearSelection();selectedButton=null;if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');editingRow=row;row.classList.add('mayfit-editing');row.querySelectorAll('input').forEach(input=>input.disabled=false)
   }
   function selectExercise(button){
@@ -95,8 +94,11 @@
   document.addEventListener('pointerdown',event=>{
     const complete=event.target.closest?.('.workout-screen .complete-button');if(!complete||bypassComplete)return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();blockNextClick=true;
-    const row=complete.closest('.sheet-row'),activeText=complete.textContent.replace(/\s+/g,' ').trim().toUpperCase(),timerText=document.querySelector('.workout-screen .timer-control')?.textContent.trim().toUpperCase();
-    if(row&&(activeText.includes('EM ANDAMENTO')||((timerText==='PAUSAR'||timerText==='CONTINUAR')&&!complete.classList.contains('mayfit-selected'))))enterEditMode(complete);else selectExercise(complete)
+    const row=complete.closest('.sheet-row'),activeText=complete.textContent.replace(/\s+/g,' ').trim().toUpperCase();
+    if(activeText.includes('EM ANDAMENTO')){
+      stopPauseCounter();lastPhase='';bypassComplete=true;complete.click();enterEditMode(complete);return;
+    }
+    selectExercise(complete)
   },true);
   document.addEventListener('click',event=>{
     const complete=event.target.closest?.('.workout-screen .complete-button');
