@@ -1,4 +1,4 @@
-/* Fluxo da tela de treino: preencher -> selecionar exercício -> START. */
+/* Fluxo da tela de treino: editar -> selecionar exercício -> START. */
 (function(){
   let selectedButton=null;
   let bypassComplete=false;
@@ -19,17 +19,26 @@
     button.classList.add('mayfit-selected');
   }
 
-  document.addEventListener('focusin',event=>{
-    const input=event.target.closest('.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input');
+  function selectInputValue(input){
     if(!input||input.disabled)return;
     window.setTimeout(()=>{
-      input.value='';
-      try{input.setSelectionRange(0,0)}catch{}
+      try{input.focus({preventScroll:true})}catch{input.focus()}
+      try{input.select()}catch{}
     },0);
+  }
+
+  document.addEventListener('focusin',event=>{
+    const input=event.target.closest?.('.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input');
+    selectInputValue(input);
+  },true);
+
+  document.addEventListener('pointerdown',event=>{
+    const input=event.target.closest?.('.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input');
+    if(input)selectInputValue(input);
   },true);
 
   document.addEventListener('click',event=>{
-    const complete=event.target.closest('.workout-screen .complete-button');
+    const complete=event.target.closest?.('.workout-screen .complete-button');
     if(complete){
       if(bypassComplete){bypassComplete=false;return;}
       if(complete.closest('.sheet-row')?.classList.contains('done'))return;
@@ -40,21 +49,29 @@
       return;
     }
 
-    const start=event.target.closest('.workout-screen .timer-control');
-    if(!start||start.textContent.trim().toUpperCase()!=='START')return;
+    const start=event.target.closest?.('.workout-screen .timer-control');
+    if(!start)return;
+    const label=start.textContent.trim().toUpperCase();
+    if(label!=='START')return;
+
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
+
     if(!selectedButton){
       start.classList.add('mayfit-attention');
       start.textContent='SELECIONE';
-      window.setTimeout(()=>{start.classList.remove('mayfit-attention');start.textContent='START'},900);
+      window.setTimeout(()=>{
+        start.classList.remove('mayfit-attention');
+        if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START';
+      },900);
       return;
     }
-    bypassComplete=true;
+
     const button=selectedButton;
     selectedButton=null;
     clearSelection();
+    bypassComplete=true;
     button.click();
   },true);
 })();
