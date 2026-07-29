@@ -1,14 +1,7 @@
-/* Interações da tela de treino — seleção verde, START exclusivo, reset e pausa independente. */
+/* Interações da tela de treino — seleção, START exclusivo, reset e persistência por aluno. */
 (function(){
-  let selectedButton=null;
-  let allowNativeComplete=false;
-  let ignoreNextClick=false;
-  let editingRow=null;
-  let blankInput=null;
-  let pauseTimer=null;
-  let pauseDeadline=0;
-  let lastPhase='';
-
+  let selectedButton=null,bypassComplete=false,blankInput=null,editingRow=null;
+  let pauseRunning=false,pauseTimer=null,pauseDeadline=0,lastPhase='';
   const inputSelector='.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input';
   const nativeValueSetter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
 
@@ -29,13 +22,6 @@
     #mayfit-pause-control .mayfit-pause-display{display:none;align-items:center;justify-content:center;width:82px;height:38px;border:1px solid #8b9b90;border-radius:12px;background:#071008;color:#9df20f;text-align:center;font:950 20px system-ui,-apple-system,sans-serif;box-sizing:border-box;font-variant-numeric:tabular-nums}
     #mayfit-pause-control.mayfit-counting input{display:none!important}
     #mayfit-pause-control.mayfit-counting .mayfit-pause-display{display:flex!important}
-    @media(max-width:620px){
-      .workout-screen .sheet-row{min-height:0!important}
-      .workout-screen .exercise-photo{aspect-ratio:1.55/1!important}
-      .workout-screen .time-strip{grid-template-columns:auto minmax(66px,1fr) 100px!important}
-      .workout-screen .timer-control{width:100px!important;min-width:100px!important;padding:0 5px!important;font-size:12px!important;letter-spacing:-.35px!important;white-space:nowrap!important}
-      #mayfit-pause-control .mayfit-pause-display{width:58px!important;height:34px!important;font-size:21px!important}
-    }
   `;
   document.head.appendChild(style);
 
@@ -43,198 +29,67 @@
     if(nativeValueSetter)nativeValueSetter.call(input,String(value));else input.value=String(value);
     if(notify){input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}))}
   }
-
-  function prepareInputs(){
-    document.querySelectorAll(inputSelector).forEach(input=>{
-      input.setAttribute('inputmode','numeric');
-      input.setAttribute('pattern','[0-9]*');
-      input.setAttribute('autocomplete','off');
-      if(editingRow&&editingRow.contains(input))input.disabled=false;
-    });
+  function currentUserId(){try{return JSON.parse(sessionStorage.getItem('mayfit_user')||'null')?.id||'aluno'}catch{return'aluno'}}
+  function storageKey(){return`mayfit_workout_${currentUserId()}`}
+  function readSaved(){try{return JSON.parse(localStorage.getItem(storageKey())||'{}')}catch{return{}}}
+  function writeSaved(data){localStorage.setItem(storageKey(),JSON.stringify(data))}
+  function rowIndex(row){return Array.from(document.querySelectorAll('.workout-screen .sheet-row')).indexOf(row)}
+  function inputField(input){
+    if(input.closest('.load-cell'))return input.closest('label')?.textContent.includes('Anterior')?'previousLoad':'load';
+    if(input.closest('.series-pair'))return input.closest('label')?.textContent.includes('Reps')?'reps':'sets';
+    if(input.closest('.rest-label'))return'rest';
+    return null
   }
-
-  function clearSelection(){
-    document.querySelectorAll('.sheet-row.mayfit-selected,.complete-button.mayfit-selected').forEach(el=>el.classList.remove('mayfit-selected'));
+  function saveInput(input){
+    const row=input.closest('.sheet-row'),index=rowIndex(row),field=inputField(input);if(index<0||!field)return;
+    const saved=readSaved();saved[index]={...(saved[index]||{}),[field]:input.value};writeSaved(saved)
   }
-
-  function enterEditMode(button){
-    const row=button.closest('.sheet-row');
-    if(!row)return;
-    clearSelection();
-    selectedButton=null;
-    if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');
-    editingRow=row;
-    row.classList.add('mayfit-editing');
-    row.querySelectorAll('input').forEach(input=>input.disabled=false);
+  function restoreInputs(){
+    const saved=readSaved();
+    document.querySelectorAll('.workout-screen .sheet-row').forEach((row,index)=>{
+      const data=saved[index];if(!data||row.dataset.mayfitRestored==='1')return;
+      row.querySelectorAll('input').forEach(input=>{const field=inputField(input);if(field&&data[field]!==undefined&&String(input.value)!==String(data[field]))setNativeValue(input,data[field])});
+      row.dataset.mayfitRestored='1'
+    })
   }
+  function prepareInputs(){document.querySelectorAll(inputSelector).forEach(input=>{input.setAttribute('inputmode','numeric');input.setAttribute('pattern','[0-9]*');input.setAttribute('autocomplete','off');if(editingRow&&editingRow.contains(input))input.disabled=false})}
+  function clearSelection(){document.querySelectorAll('.sheet-row.mayfit-selected,.complete-button.mayfit-selected').forEach(el=>el.classList.remove('mayfit-selected'))}
+  function enterEditMode(button){const row=button.closest('.sheet-row');if(!row)return;clearSelection();selectedButton=null;if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');editingRow=row;row.classList.add('mayfit-editing');row.querySelectorAll('input').forEach(input=>input.disabled=false)}
+  function selectExercise(button){const row=button.closest('.sheet-row');if(!row)return;const already=button===selectedButton&&button.classList.contains('mayfit-selected');clearSelection();if(already){selectedButton=null;enterEditMode(button);return}if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}selectedButton=button;row.classList.add('mayfit-selected');button.classList.add('mayfit-selected')}
+  function makeInputBlank(input){if(!input||input.disabled)return;blankInput=input;input.dataset.mayfitBlank='1';setNativeValue(input,'');requestAnimationFrame(()=>{if(input.dataset.mayfitBlank==='1')setNativeValue(input,'',false)})}
 
-  function selectOrUnselect(button){
-    const row=button.closest('.sheet-row');
-    if(!row)return;
-    const alreadySelected=button===selectedButton&&button.classList.contains('mayfit-selected');
-    clearSelection();
-    if(alreadySelected){
-      selectedButton=null;
-      enterEditMode(button);
-      return;
-    }
-    if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}
-    selectedButton=button;
-    row.classList.add('mayfit-selected');
-    button.classList.add('mayfit-selected');
-  }
-
-  function timerState(){
-    return document.querySelector('.workout-screen .timer-control')?.textContent.replace(/\s+/g,' ').trim().toUpperCase()||'';
-  }
-
-  function isActiveExercise(button){
-    const text=button.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
-    const row=button.closest('.sheet-row');
-    const locked=!!row?.querySelector('.series-cell input:disabled');
-    return text.includes('EM ANDAMENTO')||((timerState()==='PAUSAR'||timerState()==='CONTINUAR')&&locked);
-  }
-
-  function resetExercise(button){
-    stopPauseCounter();
-    lastPhase='';
-    clearSelection();
-    selectedButton=null;
-    allowNativeComplete=true;
-    button.click();
-    requestAnimationFrame(()=>enterEditMode(button));
-  }
-
-  function getPauseParts(){
-    const box=document.getElementById('mayfit-pause-control');
-    const stepper=box?.querySelector('.pause-stepper');
-    const input=stepper?.querySelector('input');
-    if(box&&stepper&&!stepper.querySelector('.mayfit-pause-display')){
-      const display=document.createElement('span');
-      display.className='mayfit-pause-display';
-      display.setAttribute('aria-live','polite');
-      display.textContent='0';
-      stepper.insertBefore(display,stepper.querySelector('button[data-step="5"]'));
-    }
-    return{box,input,display:stepper?.querySelector('.mayfit-pause-display'),buttons:box?.querySelectorAll('button')};
-  }
-
+  function getPauseParts(){const box=document.getElementById('mayfit-pause-control'),stepper=box?.querySelector('.pause-stepper'),input=stepper?.querySelector('input');if(box&&stepper&&!stepper.querySelector('.mayfit-pause-display')){const display=document.createElement('span');display.className='mayfit-pause-display';display.setAttribute('aria-live','polite');display.textContent='0';stepper.insertBefore(display,stepper.querySelector('button[data-step="5"]'))}return{box,input,display:stepper?.querySelector('.mayfit-pause-display'),buttons:box?.querySelectorAll('button')}}
   function configuredPause(){return Math.max(0,parseInt(localStorage.getItem('mayfit_pause_seconds')||'0',10)||0)}
+  function stopPauseCounter(){if(pauseTimer){clearInterval(pauseTimer);pauseTimer=null}pauseRunning=false;pauseDeadline=0;const{box,input,display,buttons}=getPauseParts();box?.classList.remove('mayfit-counting');document.querySelector('.workout-screen')?.classList.remove('mayfit-pause-phase');if(display)display.textContent=String(configuredPause());if(input)input.disabled=false;buttons?.forEach(button=>button.disabled=false)}
+  function startPauseCounter(){if(pauseRunning)return;const{box,input,display,buttons}=getPauseParts();if(!box||!input||!display)return;const total=configuredPause();pauseRunning=true;pauseDeadline=Date.now()+total*1000;document.querySelector('.workout-screen')?.classList.add('mayfit-pause-phase');box.classList.add('mayfit-counting');input.disabled=true;buttons?.forEach(button=>button.disabled=true);const render=()=>{const remaining=Math.max(0,Math.ceil((pauseDeadline-Date.now())/1000));display.textContent=String(remaining);if(remaining<=0)stopPauseCounter()};render();if(total>0)pauseTimer=setInterval(render,200)}
+  function syncPausePhase(){const phase=document.querySelector('.workout-screen .time-strip span')?.textContent.trim().toUpperCase()||'';if(!phase||phase===lastPhase)return;lastPhase=phase;if(phase==='PAUSA')startPauseCounter();else stopPauseCounter()}
 
-  function stopPauseCounter(){
-    if(pauseTimer){clearInterval(pauseTimer);pauseTimer=null}
-    pauseDeadline=0;
-    const{box,input,display,buttons}=getPauseParts();
-    box?.classList.remove('mayfit-counting');
-    document.querySelector('.workout-screen')?.classList.remove('mayfit-pause-phase');
-    if(display)display.textContent=String(configuredPause());
-    if(input)input.disabled=false;
-    buttons?.forEach(button=>button.disabled=false);
-  }
-
-  function startPauseCounter(){
-    const{box,input,display,buttons}=getPauseParts();
-    if(!box||!input||!display||pauseTimer)return;
-    const total=configuredPause();
-    pauseDeadline=Date.now()+total*1000;
-    document.querySelector('.workout-screen')?.classList.add('mayfit-pause-phase');
-    box.classList.add('mayfit-counting');
-    input.disabled=true;
-    buttons?.forEach(button=>button.disabled=true);
-    const render=()=>{
-      const remaining=Math.max(0,Math.ceil((pauseDeadline-Date.now())/1000));
-      display.textContent=String(remaining);
-      if(remaining<=0)stopPauseCounter();
-    };
-    render();
-    if(total>0)pauseTimer=setInterval(render,200);
-  }
-
-  function syncPausePhase(){
-    const phase=document.querySelector('.workout-screen .time-strip span')?.textContent.trim().toUpperCase()||'';
-    if(!phase||phase===lastPhase)return;
-    lastPhase=phase;
-    if(phase==='PAUSA')startPauseCounter();else stopPauseCounter();
-  }
-
-  function makeInputBlank(input){
-    if(!input||input.disabled)return;
-    blankInput=input;
-    input.dataset.mayfitBlank='1';
-    setNativeValue(input,'');
-    requestAnimationFrame(()=>{if(input.dataset.mayfitBlank==='1')setNativeValue(input,'',false)});
-  }
-
-  document.addEventListener('beforeinput',event=>{
-    const input=event.target.closest?.(inputSelector);
-    if(!input||input.disabled||!String(event.inputType||'').startsWith('delete'))return;
-    event.preventDefault();event.stopPropagation();makeInputBlank(input);
-  },true);
-
-  document.addEventListener('keydown',event=>{
-    const input=event.target.closest?.(inputSelector);
-    if(!input||input.disabled||!['Backspace','Delete'].includes(event.key))return;
-    event.preventDefault();event.stopPropagation();makeInputBlank(input);
-  },true);
-
-  document.addEventListener('input',event=>{
-    const input=event.target.closest?.(inputSelector);
-    if(input&&input.value!==''){delete input.dataset.mayfitBlank;if(blankInput===input)blankInput=null}
-  },true);
-
-  document.addEventListener('focusout',event=>{
-    const input=event.target.closest?.(inputSelector);
-    if(!input||input.dataset.mayfitBlank!=='1')return;
-    const isSeriesOrReps=!!input.closest('.series-pair');
-    delete input.dataset.mayfitBlank;
-    blankInput=null;
-    setNativeValue(input,isSeriesOrReps?'1':'0');
-  },true);
-
-  document.addEventListener('pointerdown',event=>{
-    const button=event.target.closest?.('.workout-screen .complete-button');
-    if(!button||allowNativeComplete)return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    ignoreNextClick=true;
-    if(isActiveExercise(button))resetExercise(button);else selectOrUnselect(button);
-  },true);
+  document.addEventListener('beforeinput',event=>{const input=event.target.closest?.(inputSelector);if(!input||input.disabled||!String(event.inputType||'').startsWith('delete'))return;event.preventDefault();event.stopPropagation();makeInputBlank(input)},true);
+  document.addEventListener('keydown',event=>{const input=event.target.closest?.(inputSelector);if(!input||input.disabled||!['Backspace','Delete'].includes(event.key))return;event.preventDefault();event.stopPropagation();makeInputBlank(input)},true);
+  document.addEventListener('input',event=>{const input=event.target.closest?.(inputSelector);if(!input)return;if(input.value!==''){delete input.dataset.mayfitBlank;if(blankInput===input)blankInput=null}saveInput(input)},true);
+  document.addEventListener('change',event=>{const input=event.target.closest?.(inputSelector);if(input)saveInput(input)},true);
+  document.addEventListener('focusout',event=>{const input=event.target.closest?.(inputSelector);if(!input)return;if(input.dataset.mayfitBlank==='1'){const isSeriesOrReps=!!input.closest('.series-pair');delete input.dataset.mayfitBlank;blankInput=null;setNativeValue(input,isSeriesOrReps?'1':'0')}saveInput(input)},true);
 
   document.addEventListener('click',event=>{
     const button=event.target.closest?.('.workout-screen .complete-button');
     if(button){
-      if(allowNativeComplete){allowNativeComplete=false;return}
+      if(bypassComplete){bypassComplete=false;return}
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      if(ignoreNextClick){ignoreNextClick=false;return}
-      if(isActiveExercise(button))resetExercise(button);else selectOrUnselect(button);
-      return;
+      const label=button.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
+      const timerLabel=document.querySelector('.workout-screen .timer-control')?.textContent.trim().toUpperCase()||'';
+      const row=button.closest('.sheet-row');
+      const active=label.includes('EM ANDAMENTO')||((timerLabel==='PAUSAR'||timerLabel==='CONTINUAR')&&!!row?.querySelector('.series-cell input:disabled'));
+      if(active){stopPauseCounter();lastPhase='';clearSelection();selectedButton=null;bypassComplete=true;button.click();requestAnimationFrame(()=>enterEditMode(button));return}
+      selectExercise(button);return
     }
-
     const start=event.target.closest?.('.workout-screen .timer-control');
     if(!start||start.textContent.trim().toUpperCase()!=='START')return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-    if(!selectedButton){
-      start.classList.add('mayfit-attention');
-      start.textContent='SELECIONE';
-      setTimeout(()=>{start.classList.remove('mayfit-attention');if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START'},900);
-      return;
-    }
+    if(!selectedButton){start.classList.add('mayfit-attention');start.textContent='SELECIONE';setTimeout(()=>{start.classList.remove('mayfit-attention');if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START'},900);return}
     if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}
-    const selected=selectedButton;
-    selectedButton=null;
-    clearSelection();
-    allowNativeComplete=true;
-    selected.click();
+    const selected=selectedButton;selectedButton=null;clearSelection();bypassComplete=true;selected.click()
   },true);
 
-  setInterval(()=>{
-    prepareInputs();
-    getPauseParts();
-    syncPausePhase();
-    if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!=='')setNativeValue(blankInput,'',false);
-  },100);
-
-  prepareInputs();
-  getPauseParts();
+  setInterval(()=>{prepareInputs();restoreInputs();getPauseParts();syncPausePhase();if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!=='')setNativeValue(blankInput,'',false)},100);
+  prepareInputs();restoreInputs();getPauseParts();
 })();
