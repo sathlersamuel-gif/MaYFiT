@@ -1,1 +1,35 @@
 .exercise-modal{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.88);display:grid;place-items:center;padding:12px}.exercise-modal-card{position:relative;width:min(760px,100%);max-height:94vh;overflow:auto;background:#f4f7f5;color:#101510;border-radius:20px;padding:18px}.exercise-modal-card h2{margin:0 46px 14px 0;font-size:22px}.modal-close{position:absolute;right:10px;top:10px;width:40px;height:40px;border:0;border-radius:12px;background:#102017;color:#fff;display:grid;place-items:center}.modal-pose-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.modal-pose-pair figure{margin:0;border:1px solid #bdc8c0;border-radius:14px;overflow:hidden;background:#fff}.modal-pose-pair b{display:block;text-align:center;background:#e5eee7;color:#174525;padding:8px;font-size:13px}.modal-pose-pair img{display:block;width:100%;height:min(48vh,430px);object-fit:contain;background:#fff}.exercise-modal-card p{margin:14px 0 0;line-height:1.45;font-weight:650}.admin-actions{display:flex;gap:7px;flex:0 0 auto}.admin-actions .icon{width:38px;height:38px;border-radius:12px}.delete-exercise{background:#351818!important;border-color:#683131!important;color:#ff9f9f!important}.delete-exercise:active{transform:scale(.96)}.exercise-picker-overlay{position:fixed;inset:0;z-index:12000;background:rgba(0,0,0,.78);display:grid;place-items:center;padding:12px}.exercise-picker{width:min(760px,100%);height:min(88vh,820px);min-height:0;display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;background:#101a14;color:#fff;border:1px solid #3b5b46;border-radius:22px;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,.5)}.picker-head,.picker-tools,.picker-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px}.picker-head{border-bottom:1px solid #30463a}.picker-head h2{margin:0;font-size:21px}.picker-head p{margin:3px 0 0;color:#aebcb3;font-size:12px}.picker-search{margin:12px 14px 4px;display:flex;align-items:center;gap:9px;background:#09110c;border:1px solid #466451;border-radius:14px;padding:0 12px}.picker-search svg{width:18px}.picker-search input{width:100%;height:44px;border:0!important;background:transparent!important;color:#fff!important;outline:0}.picker-tools{justify-content:flex-start;padding-top:8px;padding-bottom:8px}.picker-list{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 12px 18px;display:grid;gap:8px}.picker-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid #385341;border-radius:14px;background:#142219;cursor:pointer}.picker-item input{width:20px;height:20px;accent-color:#7ed832;flex:0 0 auto}.picker-item span{display:grid;gap:2px}.picker-item strong{font-size:14px}.picker-item small{color:#aebcb3;font-size:11px}.picker-item.already{opacity:.48;cursor:not-allowed}.picker-footer{position:relative;z-index:5;flex:0 0 auto;border-top:1px solid #30463a;background:#0c1510;box-shadow:0 -10px 24px rgba(0,0,0,.28)}.picker-footer .primary{width:auto;min-width:145px;margin:0}@media(max-width:620px){.modal-pose-pair{grid-template-columns:1fr}.modal-pose-pair img{height:34vh}.exercise-modal-card{padding:14px}.exercise-modal-card h2{font-size:19px}.admin-actions{gap:5px}.admin-actions .icon{width:36px;height:36px}.exercise-picker-overlay{padding:0}.exercise-picker{width:100%;height:100dvh;max-height:100dvh;border-radius:0;grid-template-rows:auto auto auto minmax(0,1fr) auto}.picker-head{padding-top:max(16px,env(safe-area-inset-top))}.picker-tools{flex-wrap:wrap}.picker-footer{position:sticky;bottom:0;padding:12px 14px max(18px,env(safe-area-inset-bottom));background:#0c1510}}
+
+/* Interação da tela de treino: campos e quadrado sempre clicáveis. */
+.workout-screen .sheet-row input,
+.workout-screen .complete-button{
+  position:relative!important;
+  z-index:6!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+.workout-screen .sheet-row input{
+  -webkit-user-select:text!important;
+  user-select:text!important;
+  cursor:text!important;
+}
+.workout-screen .sheet-row input:focus{
+  outline:2px solid #8df20b!important;
+  outline-offset:2px!important;
+  background:#101610!important;
+}
+.workout-screen .complete-button{
+  cursor:pointer!important;
+  -webkit-tap-highlight-color:rgba(141,242,11,.28)!important;
+}
+.workout-screen .complete-button:active{
+  transform:scale(.92)!important;
+}
+.workout-screen .progress-cell,
+.workout-screen .load-cell,
+.workout-screen .series-cell,
+.workout-screen .rest-label{
+  position:relative!important;
+  z-index:1!important;
+  pointer-events:auto!important;
+}
