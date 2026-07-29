@@ -1,4 +1,4 @@
-const CACHE = 'mayfit-v2';
+const CACHE = 'mayfit-v3';
 const CORE = ['/', '/index.html', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
