@@ -9,8 +9,8 @@
     <meta name="apple-mobile-web-app-title" content="MaYFiT" />
     <meta name="description" content="Treinos, evolução corporal e gestão de alunos." />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="stylesheet" href="/src/figures.css?v=4" />
-    <link rel="stylesheet" href="/src/theme.css?v=4" />
+    <link rel="stylesheet" href="/src/figures.css?v=5" />
+    <link rel="stylesheet" href="/src/theme.css?v=5" />
     <title>MaYFiT</title>
     <style>
       #mayfit-pause-control{display:flex;align-items:center;justify-content:center;gap:12px;width:calc(100% - 92px);margin:0 0 14px 92px;padding:10px 14px;border:1px solid #41634d;border-radius:16px;background:#101a14;color:#fff;box-sizing:border-box}
@@ -25,15 +25,28 @@
       .workout-screen .timer-control.running{animation:mayfitPulse 1s infinite alternate;box-shadow:0 0 24px rgba(84,255,17,.9)!important}
       .workout-screen .timer-control.mayfit-attention{background:#e0a400!important;color:#101000!important}
       @keyframes mayfitPulse{from{filter:brightness(1)}to{filter:brightness(1.25)}}
-      @media(max-width:620px){#mayfit-pause-control{width:calc(100% - 50px);margin-left:50px;gap:8px;padding:8px 10px}#mayfit-pause-control strong{font-size:11px}#mayfit-pause-control input{width:66px;height:36px;font-size:18px}#mayfit-pause-control button{width:34px;height:36px}}
+      @media(max-width:620px){
+        .workout-screen{padding-top:max(12px,env(safe-area-inset-top))!important}
+        .workout-screen .workout-top{position:relative!important;top:auto!important;grid-template-columns:42px minmax(0,1fr)!important;gap:5px!important;padding-top:0!important}
+        .workout-screen .back-button{width:42px!important;height:56px!important}
+        .workout-screen .time-strip{height:56px!important;grid-template-columns:auto minmax(0,1fr) 78px!important;padding:5px 6px!important;gap:4px!important}
+        .workout-screen .time-strip span{font-size:12px!important}
+        .workout-screen .time-strip input{font-size:30px!important}
+        .workout-screen .timer-control{height:44px!important;font-size:16px!important}
+        #mayfit-pause-control{position:relative!important;top:auto!important;width:100%!important;margin:0 0 12px!important;min-height:56px!important;gap:6px!important;padding:6px 7px!important;border-radius:0 0 30px 30px!important}
+        #mayfit-pause-control strong{font-size:10px!important}
+        #mayfit-pause-control input{width:58px!important;height:34px!important;font-size:22px!important}
+        #mayfit-pause-control button{width:32px!important;height:32px!important;flex-basis:32px!important;font-size:20px!important}
+        #mayfit-pause-control small{font-size:9px!important}
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx?v=4"></script>
-    <script type="module" src="/src/workout-interactions.js?v=4"></script>
+    <script type="module" src="/src/main.jsx?v=5"></script>
+    <script type="module" src="/src/workout-interactions.js?v=5"></script>
     <script>
-      if('serviceWorker' in navigator){window.addEventListener('load',async()=>{const registration=await navigator.serviceWorker.register('/sw.js?v=4');registration.update()})}
+      if('serviceWorker' in navigator){window.addEventListener('load',async()=>{const registration=await navigator.serviceWorker.register('/sw.js?v=5');registration.update()})}
       function applyTheme(theme){const light=theme==='light';document.body.classList.toggle('theme-light',light);localStorage.setItem('mayfit_theme',light?'light':'dark');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=light?'#edf4ef':'#06100b'}
       function installPauseControl(){const top=document.querySelector('.workout-top');if(!top)return;if(document.getElementById('mayfit-pause-control'))return;const pause=document.createElement('div');pause.id='mayfit-pause-control';const saved=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);pause.innerHTML=`<strong>TEMPO DE PAUSA</strong><div class="pause-stepper"><button type="button" data-step="-5">−</button><input type="number" min="0" step="5" value="${saved}"><button type="button" data-step="5">+</button></div><small>segundos</small>`;top.insertAdjacentElement('afterend',pause);const input=pause.querySelector('input');const save=()=>{const v=Math.max(0,Number(input.value)||0);input.value=v;localStorage.setItem('mayfit_pause_seconds',String(v))};input.onchange=save;input.onblur=save;pause.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{input.value=Math.max(0,(Number(input.value)||0)+Number(btn.dataset.step));save()})}
       applyTheme(localStorage.getItem('mayfit_theme')||'dark');
