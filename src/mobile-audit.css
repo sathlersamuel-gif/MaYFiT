@@ -1,0 +1,150 @@
+/* Auditoria de responsividade — painel Gerenciador e navegação móvel */
+:root{
+  --mayfit-safe-top: env(safe-area-inset-top, 0px);
+  --mayfit-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,body,#root{
+  min-height:100%;
+  min-height:100dvh;
+  background:#050706!important;
+}
+
+body{
+  min-height:100dvh;
+  overscroll-behavior-y:none;
+}
+
+.app{
+  min-height:100dvh!important;
+  padding-bottom:calc(88px + var(--mayfit-safe-bottom))!important;
+}
+
+.app>header{
+  padding-top:calc(12px + var(--mayfit-safe-top))!important;
+}
+
+.app>main{
+  width:100%;
+  margin:0 auto;
+  padding-top:12px!important;
+}
+
+/* Evita imagem/cartão do gerenciador colado no topo e mantém tudo centralizado */
+.app>main>.hero,
+.app>main>.profile,
+.app>main>.admin-list,
+.app>main>.preview-list,
+.app>main>.section-title{
+  width:100%;
+  max-width:100%;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.admin-card,
+.admin-head,
+.admin-head>div{
+  min-width:0;
+  max-width:100%;
+}
+
+.admin-head .exercise-photo,
+.admin-head img,
+.profile img{
+  max-width:100%;
+  object-position:center center!important;
+}
+
+nav{
+  padding-bottom:calc(11px + var(--mayfit-safe-bottom))!important;
+}
+
+/* A troca de perfil nunca deve revelar um fundo preto diferente do aplicativo */
+#root:empty::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:#050706;
+}
+
+@media (max-width:620px){
+  .app{
+    width:100%!important;
+    max-width:none!important;
+  }
+
+  .app>header{
+    padding-left:16px!important;
+    padding-right:16px!important;
+    padding-bottom:10px!important;
+  }
+
+  .app>main{
+    padding:10px 14px 18px!important;
+  }
+
+  .hero{
+    padding:18px!important;
+    border-radius:22px!important;
+  }
+
+  .hero h1{
+    margin-top:5px!important;
+    font-size:clamp(24px,7vw,30px)!important;
+  }
+
+  .section-title{
+    align-items:center!important;
+    margin-top:4px!important;
+  }
+
+  .section-title h1{
+    font-size:clamp(22px,6vw,28px)!important;
+  }
+
+  .admin-card{
+    padding:12px!important;
+    border-radius:17px!important;
+  }
+
+  .admin-head{
+    align-items:center!important;
+    gap:10px!important;
+  }
+
+  .admin-head .exercise-photo.compact{
+    width:76px!important;
+    height:64px!important;
+    min-height:64px!important;
+    flex-basis:76px!important;
+  }
+
+  .summary{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+
+  .summary article{
+    min-width:0;
+    padding:13px!important;
+  }
+}
+
+@media (max-width:390px){
+  .app>main{
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+
+  .hero{
+    padding:16px!important;
+  }
+
+  .summary{
+    gap:8px!important;
+  }
+
+  .summary article{
+    padding:11px 9px!important;
+  }
+}
