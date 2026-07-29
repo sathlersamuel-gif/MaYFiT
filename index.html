@@ -15,194 +15,58 @@
     <style>
       #mayfit-role-switch{position:fixed;right:14px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:9999;border:0;border-radius:999px;padding:12px 16px;background:#7ed832;color:#07120d;font:800 14px system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)}
       #mayfit-pause-control{display:flex;align-items:center;justify-content:center;gap:12px;width:calc(100% - 92px);margin:0 0 14px 92px;padding:10px 14px;border:1px solid #41634d;border-radius:16px;background:#101a14;color:#fff;box-sizing:border-box}
-      #mayfit-pause-control strong{font:900 13px system-ui,-apple-system,sans-serif;letter-spacing:.3px;white-space:nowrap}
+      #mayfit-pause-control strong{font:900 13px system-ui,-apple-system,sans-serif;white-space:nowrap}
       #mayfit-pause-control .pause-stepper{display:flex;align-items:center;gap:8px}
       #mayfit-pause-control button{width:38px;height:38px;border:1px solid #3f6749;border-radius:12px;background:#17341f;color:#86e044;font:950 22px system-ui,-apple-system,sans-serif}
       #mayfit-pause-control input{width:82px;height:38px;border:1px solid #8b9b90;border-radius:12px;background:#f7faf8;color:#d9262e;text-align:center;font:950 20px system-ui,-apple-system,sans-serif;box-sizing:border-box}
       #mayfit-pause-control small{color:#b9c8be;font:750 11px system-ui,-apple-system,sans-serif;white-space:nowrap}
       body.theme-light #mayfit-pause-control{background:#fff;color:#15231a;border-color:#c7d5cb}
-      body.theme-light #mayfit-pause-control small{color:#64746a}
-      .exercise-picker-footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-      .exercise-picker-footer #selected-count{margin-right:auto}
-      #remove-selected,#remove-all-assigned{border:0;border-radius:12px;padding:11px 13px;background:#7a2020;color:#fff;font:850 13px system-ui,-apple-system,sans-serif}
-      #remove-all-assigned{background:#421616}
-      #assign-selected{border:0;border-radius:12px;padding:11px 13px;background:#7ed832;color:#07120d;font:900 13px system-ui,-apple-system,sans-serif}
-      .exercise-choice.assigned{border-color:#7a3d3d}
-      .exercise-choice small{display:block;margin-top:2px;font-size:11px;opacity:.72}
-      @media(max-width:620px){#mayfit-pause-control{width:calc(100% - 50px);margin-left:50px;gap:8px;padding:8px 10px}#mayfit-pause-control strong{font-size:11px}#mayfit-pause-control input{width:66px;height:36px;font-size:18px}#mayfit-pause-control button{width:34px;height:36px}#mayfit-pause-control small{font-size:10px}.exercise-picker-footer{position:sticky;bottom:0;padding-bottom:max(14px,env(safe-area-inset-bottom))}.exercise-picker-footer button{flex:1 1 calc(50% - 6px)}.exercise-picker-footer #selected-count{flex:1 1 100%;margin:0}}
+      #exercise-picker-overlay{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:12px}
+      .exercise-picker-card{width:min(760px,100%);height:min(90vh,840px);display:grid;grid-template-rows:auto auto 1fr auto;background:#101a14;color:#fff;border:1px solid #3b5b46;border-radius:22px;overflow:hidden}
+      .exercise-picker-head,.exercise-picker-tools,.exercise-picker-footer{display:flex;align-items:center;gap:10px;padding:14px}
+      .exercise-picker-head{justify-content:space-between;border-bottom:1px solid #30463a}
+      .exercise-picker-head h2{margin:0}.exercise-picker-head p{margin:3px 0 0;color:#aebcb3;font-size:12px}
+      .picker-close{width:40px;height:40px;border:0;border-radius:12px;background:#24392b;color:#fff;font-size:26px}
+      .exercise-picker-tools{flex-wrap:wrap;border-bottom:1px solid #30463a}
+      .picker-search{display:flex;align-items:center;gap:8px;flex:1 1 240px;background:#09110c;border:1px solid #466451;border-radius:12px;padding:0 10px}
+      .picker-search input{width:100%;height:42px;border:0;background:transparent;color:#fff;outline:0}
+      .exercise-picker-tools button{border:0;border-radius:11px;padding:11px 12px;background:#213729;color:#fff;font-weight:850}
+      #exercise-picker-list{overflow:auto;padding:12px;display:grid;gap:8px}
+      .exercise-choice{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #385341;border-radius:13px;background:#142219}
+      .exercise-choice.assigned{border-color:#8d4545;background:#271818}
+      .exercise-choice input{width:20px;height:20px;accent-color:#7ed832}
+      .exercise-choice span{display:block}.exercise-choice small{display:block;margin-top:2px;font-size:11px;opacity:.75}
+      .exercise-picker-footer{position:sticky;bottom:0;flex-wrap:wrap;border-top:1px solid #30463a;background:#0c1510;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+      #selected-count{margin-right:auto}
+      #remove-selected,#remove-all-assigned,#assign-selected{border:0;border-radius:12px;padding:11px 13px;color:#fff;font:850 13px system-ui,-apple-system,sans-serif}
+      #remove-selected{background:#8f2424}#remove-all-assigned{background:#4f1717}#assign-selected{background:#7ed832;color:#07120d}
+      @media(max-width:620px){#mayfit-pause-control{width:calc(100% - 50px);margin-left:50px;gap:8px;padding:8px 10px}#mayfit-pause-control strong{font-size:11px}#mayfit-pause-control input{width:66px;height:36px;font-size:18px}#mayfit-pause-control button{width:34px;height:36px}#exercise-picker-overlay{padding:0}.exercise-picker-card{width:100%;height:100%;max-height:none;border-radius:0}.exercise-picker-footer button{flex:1 1 calc(50% - 6px)}#selected-count{flex:1 1 100%;margin:0}}
     </style>
-    <script>
-      (function(){const savedTheme=localStorage.getItem('mayfit_theme')||'dark';if(savedTheme==='light')document.documentElement.classList.add('pre-theme-light')})();
-    </script>
+    <script>(function(){const t=localStorage.getItem('mayfit_theme')||'dark';if(t==='light')document.documentElement.classList.add('pre-theme-light')})();</script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}
-
-      function applyTheme(theme){
-        const light=theme==='light';
-        document.body.classList.toggle('theme-light',light);
-        document.documentElement.classList.remove('pre-theme-light');
-        localStorage.setItem('mayfit_theme',light?'light':'dark');
-        const meta=document.querySelector('meta[name="theme-color"]');
-        if(meta)meta.setAttribute('content',light?'#edf4ef':'#06100b');
-        const button=document.getElementById('mayfit-theme-toggle');
-        if(button){button.innerHTML=light?'<span>🌙</span><b>Escuro</b>':'<span>☀️</span><b>Claro</b>';button.setAttribute('aria-label',light?'Ativar tema escuro':'Ativar tema claro')}
-      }
-
-      function installThemeToggle(){
-        const header=document.querySelector('.app > header');
-        if(!header)return;
-        let actions=header.querySelector('.mayfit-header-actions');
-        if(!actions){
-          actions=document.createElement('div');actions.className='mayfit-header-actions';
-          const bell=header.querySelector(':scope > .icon');
-          if(bell){header.insertBefore(actions,bell);actions.appendChild(bell)}else header.appendChild(actions)
-        }
-        let button=document.getElementById('mayfit-theme-toggle');
-        if(!button){
-          button=document.createElement('button');button.id='mayfit-theme-toggle';button.type='button';
-          button.addEventListener('click',()=>applyTheme(document.body.classList.contains('theme-light')?'dark':'light'))
-        }
-        if(button.parentElement!==actions)actions.insertBefore(button,actions.firstChild);
-        applyTheme(localStorage.getItem('mayfit_theme')||'dark')
-      }
-
-      function installRoleSwitch(){
-        let current=null;try{current=JSON.parse(sessionStorage.getItem('mayfit_user'))}catch{}
-        if(!current)return;const old=document.getElementById('mayfit-role-switch');if(old)old.remove();
-        const button=document.createElement('button');button.id='mayfit-role-switch';button.type='button';
-        if(current.role==='admin'){
-          button.textContent='Ver como aluno';button.addEventListener('click',()=>{sessionStorage.setItem('mayfit_user',JSON.stringify({id:'aluno',name:'Aluno Teste',email:'aluno@mayfit.com',password:'123456',role:'student',status:'active',phone:'(69) 99999-0000'}));location.reload()})
-        }else{
-          button.textContent='Voltar ao gerenciamento';button.addEventListener('click',()=>{sessionStorage.setItem('mayfit_user',JSON.stringify({id:'admin',name:'Samuel',email:'admin@mayfit.com',password:'123456',role:'admin',status:'active',phone:'(69) 98481-0587'}));location.reload()})
-        }
-        document.body.appendChild(button)
-      }
-
-      let alarmActive=false;
-      function requestTimerNotification(){
-        if('Notification'in window&&Notification.permission==='default')Notification.requestPermission().catch(()=>{});
-      }
-      function fireStrongTimerAlarm(){
-        if(alarmActive)return;alarmActive=true;
-        if(navigator.vibrate)navigator.vibrate([500,180,500,180,700]);
-        try{
-          const AudioContext=window.AudioContext||window.webkitAudioContext;
-          if(AudioContext){const ctx=new AudioContext();let count=0;const ring=()=>{if(count++>=8){alarmActive=false;ctx.close();return}const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.setValueAtTime(count%2?920:760,ctx.currentTime);g.gain.setValueAtTime(.34,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.38);o.start();o.stop(ctx.currentTime+.4);setTimeout(ring,520)};ring()}else{alarmActive=false}
-        }catch{alarmActive=false}
-        if('Notification'in window&&Notification.permission==='granted'){try{new Notification('Tempo encerrado — MaYFiT',{body:'O cronômetro chegou a 00:00.',tag:'mayfit-timer',requireInteraction:true})}catch{}}
-      }
-      function installTimerAlarmWatcher(){
-        let previous='';
-        setInterval(()=>{
-          const input=document.querySelector('.time-strip input');
-          const control=document.querySelector('.timer-control');
-          if(control&&!control.dataset.alarmReady){control.dataset.alarmReady='1';control.addEventListener('click',requestTimerNotification,{once:true})}
-          if(!input)return;const now=input.value.trim();
-          if(previous&&previous!=='00:00'&&now==='00:00')fireStrongTimerAlarm();
-          if(now!=='00:00')alarmActive=false;previous=now;
-        },300)
-      }
-
-      function setReactInputValue(input,value){
-        const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
-        if(setter)setter.call(input,String(value));else input.value=String(value);
-        input.dispatchEvent(new Event('input',{bubbles:true}));
-        input.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-      function applyPauseToRow(row){
-        const pause=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);
-        const labels=[...row.querySelectorAll('label')];
-        const label=labels.find(item=>/tempo/i.test(item.textContent));
-        const input=label?.querySelector('input');
-        if(input)setReactInputValue(input,pause)
-      }
-      function installPauseControl(){
-        const top=document.querySelector('.workout-top');
-        if(!top)return;
-        if(!document.getElementById('mayfit-pause-control')){
-          const pause=document.createElement('div');pause.id='mayfit-pause-control';
-          const saved=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);
-          pause.innerHTML=`<strong>TEMPO DE PAUSA</strong><div class="pause-stepper"><button type="button" data-step="-5">−</button><input type="number" min="0" step="5" value="${saved}" aria-label="Tempo de pausa em segundos"><button type="button" data-step="5">+</button></div><small>segundos</small>`;
-          top.insertAdjacentElement('afterend',pause);
-          const input=pause.querySelector('input');
-          const savePause=()=>{const value=Math.max(0,Number(input.value)||0);input.value=value;localStorage.setItem('mayfit_pause_seconds',String(value))};
-          input.addEventListener('change',savePause);input.addEventListener('blur',savePause);
-          pause.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{input.value=Math.max(0,(Number(input.value)||0)+Number(button.dataset.step));savePause()}))
-        }
-        document.querySelectorAll('.sheet-row').forEach(row=>{
-          if(row.dataset.pauseReady)return;row.dataset.pauseReady='1';
-          row.addEventListener('click',event=>{
-            const button=event.target.closest('button');
-            if(button&&(/iniciar|usar tempo/i.test(button.textContent)))applyPauseToRow(row)
-          },true)
-        })
-      }
-
-      const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
       const STORE='mayfit_v8';
+      const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
       let exerciseCatalog=[];
-      function closeExercisePicker(){document.getElementById('exercise-picker-overlay')?.remove()}
-      function readTrainingData(){try{return JSON.parse(localStorage.getItem(STORE))}catch{return null}}
-      function addSelectedExercises(ids){
-        if(!ids.length)return alert('Selecione pelo menos um exercício.');
-        const data=readTrainingData();
-        if(!data||!Array.isArray(data.exercises))return alert('Não foi possível acessar o treino atual.');
-        const used=new Set(data.exercises.map(e=>e.type));let nextId=Math.max(0,...data.exercises.map(e=>Number(e.id)||0))+1;let added=0;
-        ids.forEach(type=>{if(used.has(type))return;const item=exerciseCatalog.find(x=>x.id===type);if(!item)return;data.exercises.push({id:nextId++,type:item.id,name:item.name,sets:3,reps:12,load:0,previousLoad:0,rest:60,tip:'Descreva a execução correta.'});used.add(type);added++});
-        localStorage.setItem(STORE,JSON.stringify(data));closeExercisePicker();alert(`${added} exercício(s) atribuído(s) ao aluno.`);location.reload();
-      }
-      function removeSelectedExercises(ids){
-        if(!ids.length)return alert('Selecione os exercícios que deseja excluir.');
-        const data=readTrainingData();
-        if(!data||!Array.isArray(data.exercises))return alert('Não foi possível acessar o treino atual.');
-        const assignedSelected=ids.filter(type=>data.exercises.some(e=>e.type===type));
-        if(!assignedSelected.length)return alert('Os exercícios selecionados ainda não estão atribuídos ao aluno.');
-        if(!confirm(`Excluir ${assignedSelected.length} exercício(s) da área do aluno?`))return;
-        const removing=new Set(assignedSelected);
-        data.exercises=data.exercises.filter(e=>!removing.has(e.type));
-        localStorage.setItem(STORE,JSON.stringify(data));closeExercisePicker();alert(`${assignedSelected.length} exercício(s) excluído(s) da área do aluno.`);location.reload();
-      }
-      function removeAllAssignedExercises(){
-        const data=readTrainingData();
-        if(!data||!Array.isArray(data.exercises)||!data.exercises.length)return alert('O aluno não possui exercícios atribuídos.');
-        if(!confirm(`Excluir todos os ${data.exercises.length} exercícios da área do aluno?`))return;
-        data.exercises=[];
-        localStorage.setItem(STORE,JSON.stringify(data));closeExercisePicker();alert('Todos os exercícios foram excluídos da área do aluno.');location.reload();
-      }
-      function openExercisePicker(){
-        if(document.getElementById('exercise-picker-overlay'))return;
-        const overlay=document.createElement('div');overlay.id='exercise-picker-overlay';
-        overlay.innerHTML='<div class="exercise-picker-card"><div class="exercise-picker-head"><div><h2>Selecionar exercícios</h2><p>Marque um, vários ou todos para atribuir ou excluir.</p></div><button class="picker-close" type="button">×</button></div><div class="exercise-picker-tools"><label class="picker-search"><span>🔎</span><input id="exercise-picker-search" placeholder="Buscar exercício"></label><button id="select-all-exercises" type="button">Selecionar todos</button></div><div id="exercise-picker-list" class="exercise-picker-list"><p>Carregando exercícios...</p></div><div class="exercise-picker-footer"><strong id="selected-count">0 selecionados</strong><button id="remove-selected" type="button">Excluir selecionados</button><button id="remove-all-assigned" type="button">Excluir todos do aluno</button><button id="assign-selected" type="button">Atribuir selecionados</button></div></div>';
-        document.body.appendChild(overlay);overlay.querySelector('.picker-close').onclick=closeExercisePicker;overlay.addEventListener('click',e=>{if(e.target===overlay)closeExercisePicker()});
-        const render=(query='')=>{const list=overlay.querySelector('#exercise-picker-list');const q=query.toLowerCase().trim();const data=readTrainingData();const assigned=new Set(data?.exercises?.map(e=>e.type)||[]);const filtered=exerciseCatalog.filter(x=>x.name.toLowerCase().includes(q));list.innerHTML=filtered.map(x=>`<label class="exercise-choice ${assigned.has(x.id)?'assigned':''}"><input type="checkbox" value="${x.id}"><span>${x.name}<small>${assigned.has(x.id)?'Já atribuído ao aluno':'Disponível para atribuir'}</small></span></label>`).join('')||'<p>Nenhum exercício encontrado.</p>';list.querySelectorAll('input').forEach(i=>i.addEventListener('change',updateCount))};
-        const updateCount=()=>{overlay.querySelector('#selected-count').textContent=`${overlay.querySelectorAll('.exercise-choice input:checked').length} selecionados`};
-        const selectedIds=()=>[...overlay.querySelectorAll('.exercise-choice input:checked')].map(i=>i.value);
-        overlay.querySelector('#exercise-picker-search').addEventListener('input',e=>render(e.target.value));
-        overlay.querySelector('#select-all-exercises').onclick=()=>{overlay.querySelectorAll('.exercise-choice input').forEach(i=>i.checked=true);updateCount()};
-        overlay.querySelector('#assign-selected').onclick=()=>addSelectedExercises(selectedIds());
-        overlay.querySelector('#remove-selected').onclick=()=>removeSelectedExercises(selectedIds());
-        overlay.querySelector('#remove-all-assigned').onclick=removeAllAssignedExercises;
-        if(exerciseCatalog.length)render();else fetch(DB).then(r=>r.json()).then(items=>{exerciseCatalog=items.map(x=>({id:x.id,name:x.name})).filter(x=>x.id&&x.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));render()}).catch(()=>{overlay.querySelector('#exercise-picker-list').innerHTML='<p>Não foi possível carregar o catálogo agora.</p>'})
-      }
-      function installExercisePickerButton(){
-        let current=null;try{current=JSON.parse(sessionStorage.getItem('mayfit_user'))}catch{}
-        if(current?.role!=='admin')return;
-        document.querySelectorAll('.section-title .small').forEach(button=>{
-          if(button.dataset.pickerReady)return;
-          if(/novo|mais|exerc/i.test(button.textContent)){button.dataset.pickerReady='1';button.onclick=e=>{e.preventDefault();e.stopPropagation();openExercisePicker()}}
-        })
-      }
-
+      function readData(){try{return JSON.parse(localStorage.getItem(STORE))}catch{return null}}
+      function writeData(data){localStorage.setItem(STORE,JSON.stringify(data))}
+      function applyTheme(theme){const light=theme==='light';document.body.classList.toggle('theme-light',light);document.documentElement.classList.remove('pre-theme-light');localStorage.setItem('mayfit_theme',light?'light':'dark');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=light?'#edf4ef':'#06100b';const b=document.getElementById('mayfit-theme-toggle');if(b)b.innerHTML=light?'<span>🌙</span><b>Escuro</b>':'<span>☀️</span><b>Claro</b>'}
+      function installThemeToggle(){const header=document.querySelector('.app > header');if(!header)return;let actions=header.querySelector('.mayfit-header-actions');if(!actions){actions=document.createElement('div');actions.className='mayfit-header-actions';const bell=header.querySelector(':scope > .icon');if(bell){header.insertBefore(actions,bell);actions.appendChild(bell)}else header.appendChild(actions)}let b=document.getElementById('mayfit-theme-toggle');if(!b){b=document.createElement('button');b.id='mayfit-theme-toggle';b.type='button';b.onclick=()=>applyTheme(document.body.classList.contains('theme-light')?'dark':'light')}if(b.parentElement!==actions)actions.insertBefore(b,actions.firstChild);applyTheme(localStorage.getItem('mayfit_theme')||'dark')}
+      function installRoleSwitch(){let current=null;try{current=JSON.parse(sessionStorage.getItem('mayfit_user'))}catch{}if(!current)return;let b=document.getElementById('mayfit-role-switch');if(b)b.remove();b=document.createElement('button');b.id='mayfit-role-switch';b.type='button';if(current.role==='admin'){b.textContent='Ver como aluno';b.onclick=()=>{sessionStorage.setItem('mayfit_user',JSON.stringify({id:'aluno',name:'Aluno Teste',email:'aluno@mayfit.com',password:'123456',role:'student'}));location.reload()}}else{b.textContent='Voltar ao gerenciamento';b.onclick=()=>{sessionStorage.setItem('mayfit_user',JSON.stringify({id:'admin',name:'Samuel',email:'admin@mayfit.com',password:'123456',role:'admin'}));location.reload()}}document.body.appendChild(b)}
+      function setReactInputValue(input,value){const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;if(setter)setter.call(input,String(value));else input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}))}
+      function installPauseControl(){const top=document.querySelector('.workout-top');if(!top)return;if(!document.getElementById('mayfit-pause-control')){const pause=document.createElement('div');pause.id='mayfit-pause-control';const saved=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);pause.innerHTML=`<strong>TEMPO DE PAUSA</strong><div class="pause-stepper"><button type="button" data-step="-5">−</button><input type="number" min="0" step="5" value="${saved}"><button type="button" data-step="5">+</button></div><small>segundos</small>`;top.insertAdjacentElement('afterend',pause);const input=pause.querySelector('input');const save=()=>{const v=Math.max(0,Number(input.value)||0);input.value=v;localStorage.setItem('mayfit_pause_seconds',String(v))};input.onchange=save;input.onblur=save;pause.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{input.value=Math.max(0,(Number(input.value)||0)+Number(btn.dataset.step));save()})}document.querySelectorAll('.sheet-row').forEach(row=>{if(row.dataset.pauseReady)return;row.dataset.pauseReady='1';row.addEventListener('click',e=>{const btn=e.target.closest('button');if(!btn||!/usar tempo|iniciar/i.test(btn.textContent))return;const pause=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);const label=[...row.querySelectorAll('label')].find(x=>/tempo/i.test(x.textContent));const input=label?.querySelector('input');if(input)setReactInputValue(input,pause)},true)})}
+      function closePicker(){document.getElementById('exercise-picker-overlay')?.remove()}
+      function addSelected(ids){if(!ids.length)return alert('Selecione pelo menos um exercício.');const data=readData();if(!data||!Array.isArray(data.exercises))return alert('Não foi possível acessar o treino atual.');const used=new Set(data.exercises.map(e=>e.type));let next=Math.max(0,...data.exercises.map(e=>Number(e.id)||0))+1;let added=0;ids.forEach(type=>{if(used.has(type))return;const item=exerciseCatalog.find(x=>x.id===type);if(!item)return;data.exercises.push({id:next++,type:item.id,name:item.name,sets:3,reps:12,load:0,previousLoad:0,rest:60,tip:'Descreva a execução correta.'});used.add(type);added++});writeData(data);closePicker();alert(`${added} exercício(s) atribuído(s).`);location.reload()}
+      function removeSelected(ids){if(!ids.length)return alert('Selecione os exercícios atribuídos que deseja excluir.');const data=readData();if(!data||!Array.isArray(data.exercises))return alert('Não foi possível acessar o treino atual.');const removing=new Set(ids);const before=data.exercises.length;data.exercises=data.exercises.filter(e=>!removing.has(e.type));const removed=before-data.exercises.length;if(!removed)return alert('Nenhum dos exercícios selecionados está atribuído ao aluno.');if(!confirm(`Excluir ${removed} exercício(s) da área do aluno?`))return;writeData(data);closePicker();alert(`${removed} exercício(s) excluído(s).`);location.reload()}
+      function removeAllAssigned(){const data=readData();if(!data?.exercises?.length)return alert('O aluno não possui exercícios atribuídos.');if(!confirm(`Excluir todos os ${data.exercises.length} exercícios da área do aluno?`))return;data.exercises=[];writeData(data);closePicker();alert('Todos os exercícios foram excluídos.');location.reload()}
+      function openPicker(){if(document.getElementById('exercise-picker-overlay'))return;const overlay=document.createElement('div');overlay.id='exercise-picker-overlay';overlay.innerHTML='<div class="exercise-picker-card"><div class="exercise-picker-head"><div><h2>Selecionar exercícios</h2><p>Selecione para atribuir ou excluir da área do aluno.</p></div><button class="picker-close">×</button></div><div class="exercise-picker-tools"><label class="picker-search"><span>🔎</span><input id="exercise-picker-search" placeholder="Buscar exercício"></label><button id="select-all">Selecionar todos</button><button id="select-assigned">Selecionar atribuídos</button><button id="clear-selection">Limpar</button></div><div id="exercise-picker-list"><p>Carregando exercícios...</p></div><div class="exercise-picker-footer"><strong id="selected-count">0 selecionados</strong><button id="remove-selected">Excluir selecionados</button><button id="remove-all-assigned">Excluir todos do aluno</button><button id="assign-selected">Atribuir selecionados</button></div></div>';document.body.appendChild(overlay);overlay.querySelector('.picker-close').onclick=closePicker;overlay.onclick=e=>{if(e.target===overlay)closePicker()};const count=()=>{overlay.querySelector('#selected-count').textContent=`${overlay.querySelectorAll('.exercise-choice input:checked').length} selecionados`};const selected=()=>[...overlay.querySelectorAll('.exercise-choice input:checked')].map(i=>i.value);const render=(q='')=>{const data=readData();const assigned=new Set(data?.exercises?.map(e=>e.type)||[]);const filtered=exerciseCatalog.filter(x=>x.name.toLowerCase().includes(q.toLowerCase().trim()));overlay.querySelector('#exercise-picker-list').innerHTML=filtered.map(x=>`<label class="exercise-choice ${assigned.has(x.id)?'assigned':''}"><input type="checkbox" value="${x.id}" data-assigned="${assigned.has(x.id)?'1':'0'}"><span>${x.name}<small>${assigned.has(x.id)?'Já atribuído ao aluno':'Disponível para atribuir'}</small></span></label>`).join('')||'<p>Nenhum exercício encontrado.</p>';overlay.querySelectorAll('.exercise-choice input').forEach(i=>i.onchange=count);count()};overlay.querySelector('#exercise-picker-search').oninput=e=>render(e.target.value);overlay.querySelector('#select-all').onclick=()=>{overlay.querySelectorAll('.exercise-choice input').forEach(i=>i.checked=true);count()};overlay.querySelector('#select-assigned').onclick=()=>{overlay.querySelectorAll('.exercise-choice input').forEach(i=>i.checked=i.dataset.assigned==='1');count()};overlay.querySelector('#clear-selection').onclick=()=>{overlay.querySelectorAll('.exercise-choice input').forEach(i=>i.checked=false);count()};overlay.querySelector('#assign-selected').onclick=()=>addSelected(selected());overlay.querySelector('#remove-selected').onclick=()=>removeSelected(selected());overlay.querySelector('#remove-all-assigned').onclick=removeAllAssigned;const loadCatalog=()=>fetch(DB).then(r=>r.json()).then(items=>{exerciseCatalog=items.map(x=>({id:x.id,name:x.name})).filter(x=>x.id&&x.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));render()}).catch(()=>overlay.querySelector('#exercise-picker-list').innerHTML='<p>Não foi possível carregar os exercícios.</p>');exerciseCatalog.length?render():loadCatalog()}
+      function installPickerButton(){let current=null;try{current=JSON.parse(sessionStorage.getItem('mayfit_user'))}catch{}if(current?.role!=='admin')return;document.querySelectorAll('.section-title .small').forEach(btn=>{if(btn.dataset.pickerReady)return;if(/novo|mais|exerc/i.test(btn.textContent)){btn.dataset.pickerReady='1';btn.onclick=e=>{e.preventDefault();e.stopPropagation();openPicker()}}})}
       applyTheme(localStorage.getItem('mayfit_theme')||'dark');
-      window.addEventListener('load',()=>{
-        installThemeToggle();installRoleSwitch();installTimerAlarmWatcher();installExercisePickerButton();installPauseControl();
-        setInterval(()=>{installThemeToggle();installExercisePickerButton();installPauseControl()},700);
-        setTimeout(()=>{installThemeToggle();installRoleSwitch();installExercisePickerButton();installPauseControl()},600)
-      });
+      window.addEventListener('load',()=>{installThemeToggle();installRoleSwitch();installPickerButton();installPauseControl();setInterval(()=>{installThemeToggle();installPickerButton();installPauseControl()},700)});
     </script>
   </body>
 </html>
