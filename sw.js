@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v7';
+const VERSION='mayfit-sw-v9';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
@@ -21,6 +21,21 @@ self.addEventListener('fetch',event=>{
     event.respondWith((async()=>{
       const response=await fetch(event.request,{cache:'no-store'});
       let source=await response.text();
+
+      source=source.replace(
+        "function Workout({data,setData,onBack}){const[entries,setEntries]=useState(()=>Object.fromEntries(data.exercises.map(e=>[e.id,{...e}])));",
+        "function Workout({data,setData,onBack,user}){const progressKey=`mayfit_student_progress_${user?.id||'guest'}`;const[entries,setEntries]=useState(()=>{let saved={};try{saved=JSON.parse(localStorage.getItem(progressKey)||'{}')}catch{}return Object.fromEntries(data.exercises.map(e=>[e.id,{...e,...(saved[e.id]||{})}]))});"
+      );
+
+      source=source.replace(
+        "const[timeText,setTimeText]=useState(format(data.exercises[0]?.rest||60));const zeroHandled=useRef(false);",
+        "const[timeText,setTimeText]=useState(format(data.exercises[0]?.rest||60));const zeroHandled=useRef(false);useEffect(()=>{if(!user||user.role==='admin')return;localStorage.setItem(progressKey,JSON.stringify(entries));setData(current=>({...current,exercises:current.exercises.map(e=>entries[e.id]?{...e,...entries[e.id]}:e)}))},[entries,progressKey,user?.id]);"
+      );
+
+      source=source.replace(
+        "if(workout)return <div className=\"app\"><Workout data={data} setData={setData} onBack={()=>setWorkout(false)}/></div>;",
+        "if(workout)return <div className=\"app\"><Workout data={data} setData={setData} user={user} onBack={()=>setWorkout(false)}/></div>;"
+      );
 
       source=source.replace(
         "const shownSets=done[e.id]?(Number(v.sets)||1):((remainingSets[e.id]??Number(v.sets))||1);",
