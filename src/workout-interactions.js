@@ -2,16 +2,16 @@
 (function(){
   let selectedButton=null;
   let bypassComplete=false;
+  let blockNextClick=false;
 
   const style=document.createElement('style');
   style.textContent=`
-    .workout-screen .exercise-photo{height:auto!important;aspect-ratio:1.7/1!important}
-    .workout-screen .exercise-photo img{object-fit:contain!important;object-position:center!important;background:#050706!important}
-    .workout-screen .exercise-photo .pose-pair{align-items:stretch!important}
+    .workout-screen .exercise-photo{height:auto!important;aspect-ratio:1.58/1!important}
+    .workout-screen .exercise-photo img{object-fit:cover!important;object-position:center!important;background:#050706!important}
+    .workout-screen .sheet-row{height:auto!important}
     @media(max-width:620px){
       .workout-screen .sheet-row{min-height:0!important}
-      .workout-screen .exercise-photo{aspect-ratio:1.62/1!important}
-      .workout-screen .exercise-col{align-self:stretch!important}
+      .workout-screen .exercise-photo{aspect-ratio:1.55/1!important}
     }
   `;
   document.head.appendChild(style);
@@ -46,6 +46,15 @@
   },true);
 
   document.addEventListener('pointerdown',event=>{
+    const complete=event.target.closest?.('.workout-screen .complete-button');
+    if(complete&&!bypassComplete){
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      blockNextClick=true;
+      selectExercise(complete);
+      return;
+    }
     const input=event.target.closest?.('.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input');
     if(input)selectInputValue(input);
   },true);
@@ -54,18 +63,16 @@
     const complete=event.target.closest?.('.workout-screen .complete-button');
     if(complete){
       if(bypassComplete){bypassComplete=false;return;}
-      if(complete.closest('.sheet-row')?.classList.contains('done'))return;
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      if(blockNextClick){blockNextClick=false;return;}
       selectExercise(complete);
       return;
     }
 
     const start=event.target.closest?.('.workout-screen .timer-control');
-    if(!start)return;
-    if(start.textContent.trim().toUpperCase()!=='START')return;
-
+    if(!start||start.textContent.trim().toUpperCase()!=='START')return;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
