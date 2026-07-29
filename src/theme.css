@@ -100,14 +100,41 @@ body{background:#020403;color:#fff}
 }
 
 @media(max-width:360px){
- .workout-screen .time-strip span{display:none}
- .workout-screen .time-strip{grid-template-columns:1fr 76px}
- .workout-screen .time-strip input{font-size:30px!important}
- #mayfit-pause-control strong{font-size:10px!important}
- #mayfit-pause-control small{display:none!important}
- .workout-screen .sheet-head,.workout-screen .sheet-row{grid-template-columns:minmax(96px,1.62fr) minmax(49px,.72fr) minmax(45px,.64fr) minmax(45px,.64fr) minmax(50px,.7fr)!important}
- .workout-screen .sheet-row{min-height:198px}
- .workout-screen .load-cell input,.workout-screen .series-cell input{font-size:24px!important}
- .workout-screen .rest-label input{font-size:28px!important}
- .workout-screen .progress-cell>strong{font-size:19px!important}
+ .workout-screen .time-strip{grid-template-columns:auto minmax(68px,1fr) 72px}
+ .workout-screen .time-strip span{display:block;font-size:11px}
+ .workout-screen .time-strip input{font-size:27px!important}
+ .workout-screen .timer-control{font-size:14px!important}
+ #mayfit-pause-control strong{font-size:9px!important}
+ #mayfit-pause-control small{display:block!important;font-size:8px!important}
+ .workout-screen .sheet-head,.workout-screen .sheet-row{grid-template-columns:minmax(90px,1.55fr) minmax(47px,.74fr) minmax(43px,.66fr) minmax(43px,.66fr) minmax(48px,.72fr)!important}
+ .workout-screen .sheet-row{min-height:195px}
+ .workout-screen .load-cell input,.workout-screen .series-cell input{font-size:22px!important}
+ .workout-screen .rest-label input{font-size:25px!important}
+ .workout-screen .progress-cell>strong{font-size:17px!important}
+}
+
+/* Correção final de enquadramento: nada pode ser cortado em telas pequenas. */
+.workout-screen,.workout-screen *{box-sizing:border-box}
+.workout-screen .sheet-head>*,.workout-screen .sheet-row>*,.workout-screen label,.workout-screen input,.workout-screen button{min-width:0;max-width:100%}
+.workout-screen input{width:100%!important;overflow:visible!important;text-overflow:clip!important}
+.workout-screen .exercise-col>strong{white-space:normal!important;overflow:visible!important;word-break:normal!important;overflow-wrap:break-word!important}
+.workout-screen .sheet-head span{line-height:1.2!important;overflow:visible!important}
+.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input{font-size:clamp(20px,7vw,46px)!important;line-height:1.12!important}
+.workout-screen .progress-cell>strong{font-size:clamp(16px,5.8vw,38px)!important;line-height:1.08!important;overflow:visible!important}
+.workout-screen .time-strip input{font-size:clamp(27px,8.5vw,60px)!important}
+.workout-screen .timer-control{font-size:clamp(14px,4.5vw,30px)!important;padding-inline:clamp(5px,2vw,14px)!important}
+
+@media(max-width:430px){
+ .workout-screen .sheet-head,.workout-screen .sheet-row{grid-template-columns:32% 17% 15% 16% 20%!important}
+ .workout-screen .sheet-row{min-height:clamp(205px,58vw,242px)}
+ .workout-screen .sheet-row>div{padding:5px 3px!important}
+ .workout-screen .exercise-col>strong{font-size:clamp(11px,3.4vw,14px)!important;line-height:1.15!important}
+ .workout-screen .exercise-photo{aspect-ratio:1.32/1}
+ .workout-screen .load-cell label{font-size:clamp(7px,2.2vw,9px)!important}
+ .workout-screen .load-cell input,.workout-screen .series-cell input{font-size:clamp(20px,7.2vw,28px)!important}
+ .workout-screen .rest-label input{font-size:clamp(22px,8vw,32px)!important}
+ .workout-screen .progress-cell>strong{font-size:clamp(16px,6vw,22px)!important}
+ .workout-screen .series-pair{padding:4px 2px!important}
+ .workout-screen .series-pair b{font-size:clamp(16px,5vw,20px)!important}
+ .workout-screen .sheet-head{font-size:clamp(6px,2vw,8px)!important}
 }
