@@ -10,6 +10,21 @@
     <meta name="description" content="Treinos, evolução corporal e gestão de alunos." />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>MaYFiT</title>
+    <style>
+      #mayfit-role-switch {
+        position: fixed;
+        right: 14px;
+        bottom: calc(88px + env(safe-area-inset-bottom));
+        z-index: 9999;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 16px;
+        background: #7ed832;
+        color: #07120d;
+        font: 800 14px system-ui, -apple-system, sans-serif;
+        box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
@@ -19,16 +34,55 @@
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
       }
 
-      // Abre automaticamente a versão completa enquanto o banco online não está configurado.
-      const openCompleteApp = setInterval(() => {
-        const button = [...document.querySelectorAll('button')]
-          .find((item) => item.textContent.includes('Visualizar demonstração completa'));
-        if (button) {
-          clearInterval(openCompleteApp);
-          button.click();
+      function installRoleSwitch() {
+        let current = null;
+        try { current = JSON.parse(sessionStorage.getItem('mayfit_user')); } catch {}
+        if (!current) return;
+
+        const old = document.getElementById('mayfit-role-switch');
+        if (old) old.remove();
+
+        const button = document.createElement('button');
+        button.id = 'mayfit-role-switch';
+        button.type = 'button';
+
+        if (current.role === 'admin') {
+          button.textContent = 'Ver como aluno';
+          button.addEventListener('click', () => {
+            sessionStorage.setItem('mayfit_user', JSON.stringify({
+              id: 'aluno',
+              name: 'Aluno Teste',
+              email: 'aluno@mayfit.com',
+              password: '123456',
+              role: 'student',
+              status: 'active',
+              phone: '(69) 99999-0000'
+            }));
+            location.reload();
+          });
+        } else {
+          button.textContent = 'Voltar ao gerenciamento';
+          button.addEventListener('click', () => {
+            sessionStorage.setItem('mayfit_user', JSON.stringify({
+              id: 'admin',
+              name: 'Samuel',
+              email: 'admin@mayfit.com',
+              password: '123456',
+              role: 'admin',
+              status: 'active',
+              phone: '(69) 98481-0587'
+            }));
+            location.reload();
+          });
         }
-      }, 120);
-      setTimeout(() => clearInterval(openCompleteApp), 10000);
+
+        document.body.appendChild(button);
+      }
+
+      window.addEventListener('load', () => {
+        installRoleSwitch();
+        setTimeout(installRoleSwitch, 600);
+      });
     </script>
   </body>
 </html>
