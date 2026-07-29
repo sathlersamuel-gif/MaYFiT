@@ -3,6 +3,19 @@
   let selectedButton=null;
   let bypassComplete=false;
 
+  const style=document.createElement('style');
+  style.textContent=`
+    .workout-screen .exercise-photo{height:auto!important;aspect-ratio:1.7/1!important}
+    .workout-screen .exercise-photo img{object-fit:contain!important;object-position:center!important;background:#050706!important}
+    .workout-screen .exercise-photo .pose-pair{align-items:stretch!important}
+    @media(max-width:620px){
+      .workout-screen .sheet-row{min-height:0!important}
+      .workout-screen .exercise-photo{aspect-ratio:1.62/1!important}
+      .workout-screen .exercise-col{align-self:stretch!important}
+    }
+  `;
+  document.head.appendChild(style);
+
   function clearSelection(){
     document.querySelectorAll('.sheet-row.mayfit-selected').forEach(row=>row.classList.remove('mayfit-selected'));
     document.querySelectorAll('.complete-button.mayfit-selected').forEach(btn=>btn.classList.remove('mayfit-selected'));
@@ -51,8 +64,7 @@
 
     const start=event.target.closest?.('.workout-screen .timer-control');
     if(!start)return;
-    const label=start.textContent.trim().toUpperCase();
-    if(label!=='START')return;
+    if(start.textContent.trim().toUpperCase()!=='START')return;
 
     event.preventDefault();
     event.stopPropagation();
