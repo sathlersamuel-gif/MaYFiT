@@ -14,6 +14,9 @@
     .workout-screen .complete-button.mayfit-selected{background:#9df20f!important;color:#071008!important;border-color:#9df20f!important;box-shadow:0 0 16px rgba(157,242,15,.35)!important}
     .workout-screen.mayfit-pause-phase .time-strip input{visibility:hidden!important}
     .workout-screen.mayfit-pause-phase .time-strip span{color:#9aa39d!important}
+    .workout-screen .series-cell{position:relative!important}
+    .workout-screen .series-cell .series-pair{border-right:0!important}
+    .workout-screen .series-cell::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:#424a45;pointer-events:none;z-index:2}
     #mayfit-pause-control .pause-stepper{position:relative!important}
     #mayfit-pause-control .mayfit-pause-display{display:none;align-items:center;justify-content:center;width:82px;height:38px;border:1px solid #8b9b90;border-radius:12px;background:#071008;color:#9df20f;text-align:center;font:950 20px system-ui,-apple-system,sans-serif;box-sizing:border-box;font-variant-numeric:tabular-nums}
     #mayfit-pause-control.mayfit-counting input{display:none!important}
@@ -76,11 +79,8 @@
     const wasStarted=label.includes('EM ANDAMENTO')||label.includes('CONCLUÍDO')||!!row.querySelector('.series-cell input:disabled');
     if(wasStarted){bypassComplete=true;button.click();forceTimerStopped()}
     setTimeout(()=>{
-      row.querySelectorAll('input').forEach(input=>{
-        const field=inputField(input);
-        if(field&&field!=='previousLoad')setNativeValue(input,'0')
-      });
-      row.querySelector('.time-button')?.click();
+      const mainTimer=document.querySelector('.workout-screen .time-strip input');
+      if(mainTimer)setNativeValue(mainTimer,'00:00',false);
       requestAnimationFrame(()=>enterEditMode(row.querySelector('.complete-button')||button))
     },80)
   }
