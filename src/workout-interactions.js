@@ -1,16 +1,12 @@
-/* Interações da tela de treino — seleção, START exclusivo, reset e persistência por aluno. */
+/* Interações da tela de treino — seleção, START exclusivo, reset total e persistência por aluno. */
 (function(){
-  let selectedButton=null,bypassComplete=false,blankInput=null,editingRow=null;
+  let selectedButton=null,bypassComplete=false,ignoreNextClick=false,blankInput=null,editingRow=null;
   let pauseRunning=false,pauseTimer=null,pauseDeadline=0,lastPhase='';
   const inputSelector='.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input';
   const nativeValueSetter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
 
   const style=document.createElement('style');
   style.textContent=`
-    .workout-screen .exercise-photo{height:auto!important;aspect-ratio:1.58/1!important}
-    .workout-screen .exercise-photo img{object-fit:cover!important;object-position:center!important;background:#050706!important}
-    .workout-screen .sheet-row{height:auto!important}
-    .workout-screen .timer-control{box-sizing:border-box!important;max-width:100%!important;min-width:96px!important;padding:0 8px!important;overflow:visible!important;text-overflow:clip!important;font-size:13px!important;letter-spacing:-.25px!important;white-space:nowrap!important;line-height:1!important}
     .workout-screen input{user-select:text!important;-webkit-user-select:text!important;touch-action:manipulation!important}
     .workout-screen .sheet-row.mayfit-editing{box-shadow:inset 0 0 0 2px #e2b32c!important}
     .workout-screen .sheet-row.mayfit-editing input{opacity:1!important;pointer-events:auto!important}
@@ -40,18 +36,8 @@
     if(input.closest('.rest-label'))return'rest';
     return null
   }
-  function saveInput(input){
-    const row=input.closest('.sheet-row'),index=rowIndex(row),field=inputField(input);if(index<0||!field)return;
-    const saved=readSaved();saved[index]={...(saved[index]||{}),[field]:input.value};writeSaved(saved)
-  }
-  function restoreInputs(){
-    const saved=readSaved();
-    document.querySelectorAll('.workout-screen .sheet-row').forEach((row,index)=>{
-      const data=saved[index];if(!data||row.dataset.mayfitRestored==='1')return;
-      row.querySelectorAll('input').forEach(input=>{const field=inputField(input);if(field&&data[field]!==undefined&&String(input.value)!==String(data[field]))setNativeValue(input,data[field])});
-      row.dataset.mayfitRestored='1'
-    })
-  }
+  function saveInput(input){const row=input.closest('.sheet-row'),index=rowIndex(row),field=inputField(input);if(index<0||!field)return;const saved=readSaved();saved[index]={...(saved[index]||{}),[field]:input.value};writeSaved(saved)}
+  function restoreInputs(){const saved=readSaved();document.querySelectorAll('.workout-screen .sheet-row').forEach((row,index)=>{const data=saved[index];if(!data||row.dataset.mayfitRestored==='1')return;row.querySelectorAll('input').forEach(input=>{const field=inputField(input);if(field&&data[field]!==undefined&&String(input.value)!==String(data[field]))setNativeValue(input,data[field])});row.dataset.mayfitRestored='1'})}
   function prepareInputs(){document.querySelectorAll(inputSelector).forEach(input=>{input.setAttribute('inputmode','numeric');input.setAttribute('pattern','[0-9]*');input.setAttribute('autocomplete','off');if(editingRow&&editingRow.contains(input))input.disabled=false})}
   function clearSelection(){document.querySelectorAll('.sheet-row.mayfit-selected,.complete-button.mayfit-selected').forEach(el=>el.classList.remove('mayfit-selected'))}
   function enterEditMode(button){const row=button.closest('.sheet-row');if(!row)return;clearSelection();selectedButton=null;if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');editingRow=row;row.classList.add('mayfit-editing');row.querySelectorAll('input').forEach(input=>input.disabled=false)}
@@ -63,6 +49,8 @@
   function stopPauseCounter(){if(pauseTimer){clearInterval(pauseTimer);pauseTimer=null}pauseRunning=false;pauseDeadline=0;const{box,input,display,buttons}=getPauseParts();box?.classList.remove('mayfit-counting');document.querySelector('.workout-screen')?.classList.remove('mayfit-pause-phase');if(display)display.textContent=String(configuredPause());if(input)input.disabled=false;buttons?.forEach(button=>button.disabled=false)}
   function startPauseCounter(){if(pauseRunning)return;const{box,input,display,buttons}=getPauseParts();if(!box||!input||!display)return;const total=configuredPause();pauseRunning=true;pauseDeadline=Date.now()+total*1000;document.querySelector('.workout-screen')?.classList.add('mayfit-pause-phase');box.classList.add('mayfit-counting');input.disabled=true;buttons?.forEach(button=>button.disabled=true);const render=()=>{const remaining=Math.max(0,Math.ceil((pauseDeadline-Date.now())/1000));display.textContent=String(remaining);if(remaining<=0)stopPauseCounter()};render();if(total>0)pauseTimer=setInterval(render,200)}
   function syncPausePhase(){const phase=document.querySelector('.workout-screen .time-strip span')?.textContent.trim().toUpperCase()||'';if(!phase||phase===lastPhase)return;lastPhase=phase;if(phase==='PAUSA')startPauseCounter();else stopPauseCounter()}
+  function isActive(button){const row=button.closest('.sheet-row');const label=button.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();const timer=document.querySelector('.workout-screen .timer-control')?.textContent.trim().toUpperCase()||'';return label.includes('EM ANDAMENTO')||((timer==='PAUSAR'||timer==='CONTINUAR')&&!!row?.querySelector('input:disabled'))}
+  function resetExercise(button){stopPauseCounter();lastPhase='';clearSelection();selectedButton=null;bypassComplete=true;button.click();requestAnimationFrame(()=>{enterEditMode(button);const row=button.closest('.sheet-row');const rest=row?.querySelector('.rest-label input')?.value||'0';const clock=document.querySelector('.workout-screen .time-strip input');if(clock){const total=Math.max(0,Number(rest)||0);setNativeValue(clock,`${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`)}const start=document.querySelector('.workout-screen .timer-control');if(start&&start.textContent.trim().toUpperCase()!=='START')start.textContent='START'})}
 
   document.addEventListener('beforeinput',event=>{const input=event.target.closest?.(inputSelector);if(!input||input.disabled||!String(event.inputType||'').startsWith('delete'))return;event.preventDefault();event.stopPropagation();makeInputBlank(input)},true);
   document.addEventListener('keydown',event=>{const input=event.target.closest?.(inputSelector);if(!input||input.disabled||!['Backspace','Delete'].includes(event.key))return;event.preventDefault();event.stopPropagation();makeInputBlank(input)},true);
@@ -70,25 +58,8 @@
   document.addEventListener('change',event=>{const input=event.target.closest?.(inputSelector);if(input)saveInput(input)},true);
   document.addEventListener('focusout',event=>{const input=event.target.closest?.(inputSelector);if(!input)return;if(input.dataset.mayfitBlank==='1'){const isSeriesOrReps=!!input.closest('.series-pair');delete input.dataset.mayfitBlank;blankInput=null;setNativeValue(input,isSeriesOrReps?'1':'0')}saveInput(input)},true);
 
-  document.addEventListener('click',event=>{
-    const button=event.target.closest?.('.workout-screen .complete-button');
-    if(button){
-      if(bypassComplete){bypassComplete=false;return}
-      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      const label=button.textContent.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
-      const timerLabel=document.querySelector('.workout-screen .timer-control')?.textContent.trim().toUpperCase()||'';
-      const row=button.closest('.sheet-row');
-      const active=label.includes('EM ANDAMENTO')||((timerLabel==='PAUSAR'||timerLabel==='CONTINUAR')&&!!row?.querySelector('.series-cell input:disabled'));
-      if(active){stopPauseCounter();lastPhase='';clearSelection();selectedButton=null;bypassComplete=true;button.click();requestAnimationFrame(()=>enterEditMode(button));return}
-      selectExercise(button);return
-    }
-    const start=event.target.closest?.('.workout-screen .timer-control');
-    if(!start||start.textContent.trim().toUpperCase()!=='START')return;
-    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-    if(!selectedButton){start.classList.add('mayfit-attention');start.textContent='SELECIONE';setTimeout(()=>{start.classList.remove('mayfit-attention');if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START'},900);return}
-    if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}
-    const selected=selectedButton;selectedButton=null;clearSelection();bypassComplete=true;selected.click()
-  },true);
+  document.addEventListener('pointerdown',event=>{const button=event.target.closest?.('.workout-screen .complete-button');if(!button||bypassComplete)return;event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();ignoreNextClick=true;if(isActive(button))resetExercise(button);else selectExercise(button)},true);
+  document.addEventListener('click',event=>{const button=event.target.closest?.('.workout-screen .complete-button');if(button){if(bypassComplete){bypassComplete=false;return}event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();if(ignoreNextClick){ignoreNextClick=false;return}if(isActive(button))resetExercise(button);else selectExercise(button);return}const start=event.target.closest?.('.workout-screen .timer-control');if(!start||start.textContent.trim().toUpperCase()!=='START')return;event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();if(!selectedButton){start.classList.add('mayfit-attention');start.textContent='SELECIONE';setTimeout(()=>{start.classList.remove('mayfit-attention');if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START'},900);return}if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}const selected=selectedButton;selectedButton=null;clearSelection();bypassComplete=true;selected.click()},true);
 
   setInterval(()=>{prepareInputs();restoreInputs();getPauseParts();syncPausePhase();if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!=='')setNativeValue(blankInput,'',false)},100);
   prepareInputs();restoreInputs();getPauseParts();
