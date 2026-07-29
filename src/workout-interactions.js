@@ -51,7 +51,7 @@
   function prepareInputs(){document.querySelectorAll(inputSelector).forEach(input=>{input.setAttribute('inputmode','numeric');input.setAttribute('pattern','[0-9]*');input.setAttribute('autocomplete','off');if(editingRow&&editingRow.contains(input))input.disabled=false})}
   function clearSelection(){document.querySelectorAll('.sheet-row.mayfit-selected,.complete-button.mayfit-selected').forEach(el=>el.classList.remove('mayfit-selected'))}
   function enterEditMode(button){const row=button.closest('.sheet-row');if(!row)return;clearSelection();selectedButton=null;if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');editingRow=row;row.classList.add('mayfit-editing');row.querySelectorAll('input').forEach(input=>input.disabled=false)}
-  function selectExercise(button){const row=button.closest('.sheet-row');if(!row)return;if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}clearSelection();selectedButton=button;row.classList.add('mayfit-selected');button.classList.add('mayfit-selected')}
+  function selectExercise(button){const row=button.closest('.sheet-row');if(!row)return;if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}clearSelection();selectedButton=button;row.classList.add('mayfit-selected');button.classList.add('mayfit-selected');row.querySelector('.time-button')?.click()}
   function makeInputBlank(input){if(!input||input.disabled)return;blankInput=input;input.dataset.mayfitBlank='1';setNativeValue(input,'');requestAnimationFrame(()=>{if(input.dataset.mayfitBlank==='1')setNativeValue(input,'',false)})}
 
   function getPauseParts(){const box=document.getElementById('mayfit-pause-control'),stepper=box?.querySelector('.pause-stepper'),input=stepper?.querySelector('input');if(box&&stepper&&!stepper.querySelector('.mayfit-pause-display')){const display=document.createElement('span');display.className='mayfit-pause-display';display.setAttribute('aria-live','polite');display.textContent='0';stepper.insertBefore(display,stepper.querySelector('button[data-step="5"]'))}return{box,input,display:stepper?.querySelector('.mayfit-pause-display'),buttons:box?.querySelectorAll('button')}}
@@ -86,8 +86,9 @@
       const alreadySelected=button===selectedButton&&button.classList.contains('mayfit-selected');
       if(!alreadySelected){selectExercise(button);return}
       const wasStarted=label.includes('EM ANDAMENTO')||label.includes('CONCLUÍDO')||!!row?.querySelector('.series-cell input:disabled');
-      stopPauseCounter();lastPhase='';clearSelection();selectedButton=null;
+      stopPauseCounter();lastPhase='';
       if(wasStarted){bypassComplete=true;button.click();forceTimerStopped()}
+      row?.querySelector('.time-button')?.click();
       requestAnimationFrame(()=>enterEditMode(button));
       return
     }
@@ -96,7 +97,7 @@
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
     if(!selectedButton){start.classList.add('mayfit-attention');start.textContent='SELECIONE';setTimeout(()=>{start.classList.remove('mayfit-attention');if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START'},900);return}
     if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}
-    const selected=selectedButton;selectedButton=null;clearSelection();bypassComplete=true;selected.click()
+    const selected=selectedButton;bypassComplete=true;selected.click()
   },true);
 
   setInterval(()=>{prepareInputs();restoreInputs();getPauseParts();syncPausePhase();if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!=='')setNativeValue(blankInput,'',false)},100);
