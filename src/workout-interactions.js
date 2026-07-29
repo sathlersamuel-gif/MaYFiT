@@ -5,6 +5,7 @@
   let blockNextClick=false;
   let blankInput=null;
   let editingRow=null;
+  let lastPhase='';
 
   const inputSelector='.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input';
   const nativeValueSetter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
@@ -42,10 +43,6 @@
       input.setAttribute('autocomplete','off');
       if(editingRow&&editingRow.contains(input))input.disabled=false;
     });
-    if(editingRow&&editingRow.isConnected){
-      const timer=document.querySelector('.workout-screen .timer-control');
-      if(timer&&!selectedButton&&['CONTINUAR','PAUSAR'].includes(timer.textContent.trim().toUpperCase()))timer.textContent='START';
-    }
   }
 
   function clearSelection(){
@@ -64,10 +61,6 @@
     editingRow=row;
     row.classList.add('mayfit-editing');
     row.querySelectorAll('input').forEach(input=>input.disabled=false);
-    window.setTimeout(()=>{
-      const current=document.querySelector('.workout-screen .timer-control');
-      if(current)current.textContent='START';
-    },0);
   }
 
   function selectExercise(button){
@@ -95,6 +88,19 @@
     requestAnimationFrame(()=>{
       if(input.dataset.mayfitBlank==='1')setNativeValue(input,'',false);
     });
+  }
+
+  function ensureAutomaticPhaseStart(){
+    const phase=document.querySelector('.workout-screen .time-strip span')?.textContent.trim().toUpperCase()||'';
+    if(!phase||phase===lastPhase)return;
+    const previous=lastPhase;
+    lastPhase=phase;
+    if(!previous)return;
+    window.setTimeout(()=>{
+      const active=[...document.querySelectorAll('.workout-screen .complete-button')].some(btn=>btn.textContent.replace(/\s+/g,' ').trim().toUpperCase().includes('EM ANDAMENTO'));
+      const timer=document.querySelector('.workout-screen .timer-control');
+      if(active&&timer&&timer.textContent.trim().toUpperCase()==='CONTINUAR')timer.click();
+    },1100);
   }
 
   document.addEventListener('focusin',event=>{
@@ -140,6 +146,7 @@
 
   window.setInterval(()=>{
     prepareInputs();
+    ensureAutomaticPhaseStart();
     if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!==''){
       setNativeValue(blankInput,'',false);
     }
