@@ -26,7 +26,7 @@ const css=`
 #mayfit-students .ms-card.pending{border-color:#9b7625;background:#1c180d}
 #mayfit-students .ms-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 #mayfit-students .ms-name{font-weight:900;font-size:16px}
-#mayfit-students .ms-email{font-size:12px;color:#98a69d;margin-top:3px;word-break:break-word}
+#mayfit-students .ms-id{font-size:11px;color:#7f9185;margin-top:4px;word-break:break-all}
 #mayfit-students .ms-badge{font-size:11px;font-weight:900;padding:5px 8px;border-radius:999px;background:#233528;color:#b8c8bd;white-space:nowrap}
 #mayfit-students .ms-badge.active{background:#173b20;color:#91ea50}
 #mayfit-students .ms-badge.blocked{background:#3a2020;color:#ffadad}
@@ -53,7 +53,7 @@ async function loadStudents(root){
   try{
     const {data,error}=await supabase
       .from('profiles')
-      .select('id,full_name,email,role,status,created_at')
+      .select('id,full_name,role,status,created_at')
       .order('created_at',{ascending:false});
     if(error)throw error;
     root._students=(data||[]).filter(profile=>profile.role!=='admin');
@@ -71,14 +71,14 @@ async function loadStudents(root){
 
 function render(root){
   const q=(root.querySelector('.ms-search').value||'').trim().toLowerCase();
-  const data=(root._students||[]).filter(x=>!q||`${x.full_name||''} ${x.email||''}`.toLowerCase().includes(q));
+  const data=(root._students||[]).filter(x=>!q||`${x.full_name||''} ${x.id||''}`.toLowerCase().includes(q));
   const list=root.querySelector('.ms-list');
   if(!data.length){list.innerHTML='<div class="ms-empty">Nenhum aluno encontrado.</div>';return}
   list.innerHTML=data.map(x=>{
     const status=normalizedStatus(x.status);
     const approve=status==='pending'?'<button class="ms-approve" data-action="approve">Aprovar aluno</button>':'';
     const toggle=status==='pending'?'':`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear':'Bloquear'}</button>`;
-    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-email">${esc(x.email||'E-mail não informado')}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`;
+    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`;
   }).join('');
 }
 
@@ -146,7 +146,7 @@ function mount(){
   }
   const root=document.createElement('section');
   root.id='mayfit-students';
-  root.innerHTML='<div class="ms-head"><div><h2>Alunos cadastrados</h2><div class="ms-msg">Conectando ao banco...</div></div><div class="ms-actions"><button class="ms-primary" data-new>Novo aluno</button><button class="ms-secondary" data-refresh>Atualizar</button></div></div><input class="ms-search" placeholder="Pesquisar por nome ou e-mail"><div class="ms-list"></div>';
+  root.innerHTML='<div class="ms-head"><div><h2>Alunos cadastrados</h2><div class="ms-msg">Conectando ao banco...</div></div><div class="ms-actions"><button class="ms-primary" data-new>Novo aluno</button><button class="ms-secondary" data-refresh>Atualizar</button></div></div><input class="ms-search" placeholder="Pesquisar por nome"><div class="ms-list"></div>';
   main.prepend(root);
   root.querySelector('[data-new]').onclick=()=>createStudent(root);
   root.querySelector('[data-refresh]').onclick=()=>loadStudents(root);
