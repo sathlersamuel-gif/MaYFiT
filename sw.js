@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v16';
+const VERSION='mayfit-sw-v17';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
@@ -60,6 +60,21 @@ self.addEventListener('fetch',event=>{
       source=source.replace(
         "const conclude=e=>{if(done[e.id])",
         "const conclude=e=>{if(activeId===e.id&&started){setRunning(false);setStarted(false);setPhase('exercise');setSeconds(0);setTimeText(format(0));setRemainingSets(old=>({...old,[e.id]:Number(entries[e.id]?.sets)||1}));setActiveId(null);setDone(old=>({...old,[e.id]:false}));zeroHandled.current=false;return}if(done[e.id])"
+      );
+
+      source=source.replace(
+        "const logout=()=>{setUser(null);sessionStorage.removeItem('mayfit_user')};",
+        "const logout=()=>{setUser(null);sessionStorage.removeItem('mayfit_user');sessionStorage.removeItem('mayfit_admin_return')};"
+      );
+
+      source=source.replace(
+        "<button onClick={()=>{const aluno=data.users.find(u=>u.id==='aluno');setUser(aluno);sessionStorage.setItem('mayfit_user',JSON.stringify(aluno))}}><User/><span>Ver aluno</span></button>",
+        "<button onClick={()=>{const aluno=data.users.find(u=>u.id==='aluno');sessionStorage.setItem('mayfit_admin_return',JSON.stringify(user));setUser(aluno);sessionStorage.setItem('mayfit_user',JSON.stringify(aluno))}}><User/><span>Ver aluno</span></button>"
+      );
+
+      source=source.replace(
+        "</>:<><button className={tab==='inicio'?'active':''} onClick={()=>setTab('inicio')}><Home/><span>Início</span></button>",
+        "</>:<>{sessionStorage.getItem('mayfit_admin_return')&&<button onClick={()=>{try{const adminUser=JSON.parse(sessionStorage.getItem('mayfit_admin_return'));setUser(adminUser);sessionStorage.setItem('mayfit_user',JSON.stringify(adminUser));sessionStorage.removeItem('mayfit_admin_return');setTab('inicio')}catch{}}}><Users/><span>Gerenciador</span></button>}<button className={tab==='inicio'?'active':''} onClick={()=>setTab('inicio')}><Home/><span>Início</span></button>"
       );
 
       return new Response(source,{
