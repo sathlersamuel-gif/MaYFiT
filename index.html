@@ -13,115 +13,111 @@
     <link rel="stylesheet" href="/src/theme.css" />
     <title>MaYFiT</title>
     <style>
-      #mayfit-role-switch {
-        position: fixed;
-        right: 14px;
-        bottom: calc(88px + env(safe-area-inset-bottom));
-        z-index: 9999;
-        border: 0;
-        border-radius: 999px;
-        padding: 12px 16px;
-        background: #7ed832;
-        color: #07120d;
-        font: 800 14px system-ui, -apple-system, sans-serif;
-        box-shadow: 0 10px 30px rgba(0,0,0,.35);
-      }
+      #mayfit-role-switch{position:fixed;right:14px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:9999;border:0;border-radius:999px;padding:12px 16px;background:#7ed832;color:#07120d;font:800 14px system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)}
     </style>
     <script>
-      (function () {
-        const savedTheme = localStorage.getItem('mayfit_theme') || 'dark';
-        if (savedTheme === 'light') document.documentElement.classList.add('pre-theme-light');
-      })();
+      (function(){const savedTheme=localStorage.getItem('mayfit_theme')||'dark';if(savedTheme==='light')document.documentElement.classList.add('pre-theme-light')})();
     </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
-      }
+      if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}
 
-      function applyTheme(theme) {
-        const light = theme === 'light';
-        document.body.classList.toggle('theme-light', light);
+      function applyTheme(theme){
+        const light=theme==='light';
+        document.body.classList.toggle('theme-light',light);
         document.documentElement.classList.remove('pre-theme-light');
-        localStorage.setItem('mayfit_theme', light ? 'light' : 'dark');
-        const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute('content', light ? '#edf4ef' : '#06100b');
-        const button = document.getElementById('mayfit-theme-toggle');
-        if (button) {
-          button.innerHTML = light ? '<span>🌙</span>Tema escuro' : '<span>☀️</span>Tema claro';
-          button.setAttribute('aria-label', light ? 'Ativar tema escuro' : 'Ativar tema claro');
+        localStorage.setItem('mayfit_theme',light?'light':'dark');
+        const meta=document.querySelector('meta[name="theme-color"]');
+        if(meta)meta.setAttribute('content',light?'#edf4ef':'#06100b');
+        const button=document.getElementById('mayfit-theme-toggle');
+        if(button){button.innerHTML=light?'<span>🌙</span>Escuro':'<span>☀️</span>Claro';button.setAttribute('aria-label',light?'Ativar tema escuro':'Ativar tema claro')}
+      }
+
+      function installThemeToggle(){
+        const old=document.getElementById('mayfit-theme-toggle');if(old)old.remove();
+        const button=document.createElement('button');button.id='mayfit-theme-toggle';button.type='button';
+        button.addEventListener('click',()=>applyTheme(document.body.classList.contains('theme-light')?'dark':'light'));
+        document.body.appendChild(button);applyTheme(localStorage.getItem('mayfit_theme')||'dark');
+      }
+
+      function installRoleSwitch(){
+        let current=null;try{current=JSON.parse(sessionStorage.getItem('mayfit_user'))}catch{}
+        if(!current)return;const old=document.getElementById('mayfit-role-switch');if(old)old.remove();
+        const button=document.createElement('button');button.id='mayfit-role-switch';button.type='button';
+        if(current.role==='admin'){
+          button.textContent='Ver como aluno';button.addEventListener('click',()=>{sessionStorage.setItem('mayfit_user',JSON.stringify({id:'aluno',name:'Aluno Teste',email:'aluno@mayfit.com',password:'123456',role:'student',status:'active',phone:'(69) 99999-0000'}));location.reload()})
+        }else{
+          button.textContent='Voltar ao gerenciamento';button.addEventListener('click',()=>{sessionStorage.setItem('mayfit_user',JSON.stringify({id:'admin',name:'Samuel',email:'admin@mayfit.com',password:'123456',role:'admin',status:'active',phone:'(69) 98481-0587'}));location.reload()})
         }
+        document.body.appendChild(button)
       }
 
-      function installThemeToggle() {
-        const old = document.getElementById('mayfit-theme-toggle');
-        if (old) old.remove();
-        const button = document.createElement('button');
-        button.id = 'mayfit-theme-toggle';
-        button.type = 'button';
-        button.addEventListener('click', () => {
-          applyTheme(document.body.classList.contains('theme-light') ? 'dark' : 'light');
-        });
-        document.body.appendChild(button);
-        applyTheme(localStorage.getItem('mayfit_theme') || 'dark');
+      let alarmActive=false;
+      function requestTimerNotification(){
+        if('Notification'in window&&Notification.permission==='default')Notification.requestPermission().catch(()=>{});
+      }
+      function fireStrongTimerAlarm(){
+        if(alarmActive)return;alarmActive=true;
+        if(navigator.vibrate)navigator.vibrate([500,180,500,180,700]);
+        try{
+          const AudioContext=window.AudioContext||window.webkitAudioContext;
+          if(AudioContext){const ctx=new AudioContext();let count=0;const ring=()=>{if(count++>=8){alarmActive=false;ctx.close();return}const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.setValueAtTime(count%2?920:760,ctx.currentTime);g.gain.setValueAtTime(.34,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.38);o.start();o.stop(ctx.currentTime+.4);setTimeout(ring,520)};ring()}else{alarmActive=false}
+        }catch{alarmActive=false}
+        if('Notification'in window&&Notification.permission==='granted'){try{new Notification('Tempo encerrado — MaYFiT',{body:'O cronômetro chegou a 00:00.',tag:'mayfit-timer',requireInteraction:true})}catch{}}
+      }
+      function installTimerAlarmWatcher(){
+        let previous='';
+        setInterval(()=>{
+          const input=document.querySelector('.time-strip input');
+          const control=document.querySelector('.timer-control');
+          if(control&&!control.dataset.alarmReady){control.dataset.alarmReady='1';control.addEventListener('click',requestTimerNotification,{once:true})}
+          if(!input)return;const now=input.value.trim();
+          if(previous&&previous!=='00:00'&&now==='00:00')fireStrongTimerAlarm();
+          if(now!=='00:00')alarmActive=false;previous=now;
+        },300)
       }
 
-      function installRoleSwitch() {
-        let current = null;
-        try { current = JSON.parse(sessionStorage.getItem('mayfit_user')); } catch {}
-        if (!current) return;
-
-        const old = document.getElementById('mayfit-role-switch');
-        if (old) old.remove();
-
-        const button = document.createElement('button');
-        button.id = 'mayfit-role-switch';
-        button.type = 'button';
-
-        if (current.role === 'admin') {
-          button.textContent = 'Ver como aluno';
-          button.addEventListener('click', () => {
-            sessionStorage.setItem('mayfit_user', JSON.stringify({
-              id: 'aluno',
-              name: 'Aluno Teste',
-              email: 'aluno@mayfit.com',
-              password: '123456',
-              role: 'student',
-              status: 'active',
-              phone: '(69) 99999-0000'
-            }));
-            location.reload();
-          });
-        } else {
-          button.textContent = 'Voltar ao gerenciamento';
-          button.addEventListener('click', () => {
-            sessionStorage.setItem('mayfit_user', JSON.stringify({
-              id: 'admin',
-              name: 'Samuel',
-              email: 'admin@mayfit.com',
-              password: '123456',
-              role: 'admin',
-              status: 'active',
-              phone: '(69) 98481-0587'
-            }));
-            location.reload();
-          });
-        }
-
-        document.body.appendChild(button);
+      const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
+      const STORE='mayfit_v8';
+      let exerciseCatalog=[];
+      function closeExercisePicker(){document.getElementById('exercise-picker-overlay')?.remove()}
+      function addSelectedExercises(ids){
+        if(!ids.length)return alert('Selecione pelo menos um exercício.');
+        let data;try{data=JSON.parse(localStorage.getItem(STORE))}catch{}
+        if(!data||!Array.isArray(data.exercises))return alert('Não foi possível acessar o treino atual.');
+        const used=new Set(data.exercises.map(e=>e.type));let nextId=Math.max(0,...data.exercises.map(e=>Number(e.id)||0))+1;let added=0;
+        ids.forEach(type=>{if(used.has(type))return;const item=exerciseCatalog.find(x=>x.id===type);if(!item)return;data.exercises.push({id:nextId++,type:item.id,name:item.name,sets:3,reps:12,load:0,previousLoad:0,rest:60,tip:'Descreva a execução correta.'});used.add(type);added++});
+        localStorage.setItem(STORE,JSON.stringify(data));closeExercisePicker();alert(`${added} exercício(s) atribuído(s) ao aluno.`);location.reload();
+      }
+      function openExercisePicker(){
+        if(document.getElementById('exercise-picker-overlay'))return;
+        const overlay=document.createElement('div');overlay.id='exercise-picker-overlay';
+        overlay.innerHTML='<div class="exercise-picker-card"><div class="exercise-picker-head"><div><h2>Selecionar exercícios</h2><p>Marque um, vários ou todos para atribuir ao aluno.</p></div><button class="picker-close" type="button">×</button></div><div class="exercise-picker-tools"><label class="picker-search"><span>🔎</span><input id="exercise-picker-search" placeholder="Buscar exercício"></label><button id="select-all-exercises" type="button">Selecionar todos</button></div><div id="exercise-picker-list" class="exercise-picker-list"><p>Carregando exercícios...</p></div><div class="exercise-picker-footer"><strong id="selected-count">0 selecionados</strong><button id="assign-selected" type="button">Atribuir selecionados</button></div></div>';
+        document.body.appendChild(overlay);overlay.querySelector('.picker-close').onclick=closeExercisePicker;overlay.addEventListener('click',e=>{if(e.target===overlay)closeExercisePicker()});
+        const render=(query='')=>{const list=overlay.querySelector('#exercise-picker-list');const q=query.toLowerCase().trim();const filtered=exerciseCatalog.filter(x=>x.name.toLowerCase().includes(q));list.innerHTML=filtered.map(x=>`<label class="exercise-choice"><input type="checkbox" value="${x.id}"><span>${x.name}</span></label>`).join('')||'<p>Nenhum exercício encontrado.</p>';list.querySelectorAll('input').forEach(i=>i.addEventListener('change',updateCount))};
+        const updateCount=()=>{overlay.querySelector('#selected-count').textContent=`${overlay.querySelectorAll('.exercise-choice input:checked').length} selecionados`};
+        overlay.querySelector('#exercise-picker-search').addEventListener('input',e=>render(e.target.value));
+        overlay.querySelector('#select-all-exercises').onclick=()=>{overlay.querySelectorAll('.exercise-choice input').forEach(i=>i.checked=true);updateCount()};
+        overlay.querySelector('#assign-selected').onclick=()=>addSelectedExercises([...overlay.querySelectorAll('.exercise-choice input:checked')].map(i=>i.value));
+        if(exerciseCatalog.length)render();else fetch(DB).then(r=>r.json()).then(items=>{exerciseCatalog=items.map(x=>({id:x.id,name:x.name})).filter(x=>x.id&&x.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));render()}).catch(()=>{overlay.querySelector('#exercise-picker-list').innerHTML='<p>Não foi possível carregar o catálogo agora.</p>'})
+      }
+      function installExercisePickerButton(){
+        let current=null;try{current=JSON.parse(sessionStorage.getItem('mayfit_user'))}catch{}
+        if(current?.role!=='admin')return;
+        document.querySelectorAll('.section-title .small').forEach(button=>{
+          if(button.dataset.pickerReady)return;
+          if(/novo|mais|exerc/i.test(button.textContent)){button.dataset.pickerReady='1';button.onclick=e=>{e.preventDefault();e.stopPropagation();openExercisePicker()}}
+        })
       }
 
-      applyTheme(localStorage.getItem('mayfit_theme') || 'dark');
-      window.addEventListener('load', () => {
-        installThemeToggle();
-        installRoleSwitch();
-        setTimeout(() => {
-          installThemeToggle();
-          installRoleSwitch();
-        }, 600);
+      applyTheme(localStorage.getItem('mayfit_theme')||'dark');
+      window.addEventListener('load',()=>{
+        installThemeToggle();installRoleSwitch();installTimerAlarmWatcher();installExercisePickerButton();
+        setInterval(installExercisePickerButton,700);
+        setTimeout(()=>{installThemeToggle();installRoleSwitch();installExercisePickerButton()},600)
       });
     </script>
   </body>
