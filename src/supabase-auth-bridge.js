@@ -1,7 +1,9 @@
 import { supabase } from './lib/supabase.js';
 
 const USER_KEY = 'mayfit_user';
+const SIGNUP_COOLDOWN_KEY = 'mayfit_signup_cooldown_until';
 let busy = false;
+let signupBusy = false;
 
 function setNotice(form, message) {
   let notice = form.querySelector('.notice');
@@ -12,6 +14,18 @@ function setNotice(form, message) {
     form.insertBefore(notice, primary);
   }
   notice.textContent = message;
+}
+
+function friendlyAuthError(error) {
+  const message = String(error?.message || 'Não foi possível concluir o cadastro.');
+  if (/email rate limit exceeded/i.test(message)) {
+    localStorage.setItem(SIGNUP_COOLDOWN_KEY, String(Date.now() + 60000));
+    return 'Foram feitas muitas tentativas de cadastro em pouco tempo. Aguarde 1 minuto e tente novamente apenas uma vez.';
+  }
+  if (/user already registered|already been registered/i.test(message)) {
+    return 'Este e-mail já possui cadastro. Entre com a senha ou use outro e-mail.';
+  }
+  return message;
 }
 
 async function profileFor(user) {
@@ -64,6 +78,14 @@ async function login(form) {
 }
 
 async function signup(form) {
+  if (signupBusy) return;
+  const cooldownUntil = Number(localStorage.getItem(SIGNUP_COOLDOWN_KEY) || 0);
+  if (cooldownUntil > Date.now()) {
+    const seconds = Math.max(1, Math.ceil((cooldownUntil - Date.now()) / 1000));
+    alert(`Aguarde ${seconds} segundos antes de tentar outro cadastro.`);
+    return;
+  }
+
   const fullName = prompt('Digite seu nome completo:');
   if (!fullName?.trim()) return;
   const email = prompt('Digite seu e-mail:');
@@ -74,20 +96,42 @@ async function signup(form) {
     return;
   }
 
-  const { error } = await supabase.auth.signUp({
-    email: email.trim(),
-    password,
-    options: { data: { full_name: fullName.trim() } }
-  });
-
-  if (error) {
-    alert(error.message);
-    return;
+  signupBusy = true;
+  const signupButton = form.querySelector('.demo-switch');
+  const originalText = signupButton?.textContent;
+  if (signupButton) {
+    signupButton.disabled = true;
+    signupButton.textContent = 'Criando conta...';
   }
 
-  alert('Cadastro criado. Aguarde a aprovação do administrador para entrar.');
-  const [emailInput] = form.querySelectorAll('input');
-  emailInput.value = email.trim();
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { data: { full_name: fullName.trim() } }
+    });
+    if (error) throw error;
+
+    if (data.user) {
+      await supabase
+        .from('profiles')
+        .update({ full_name: fullName.trim(), role: 'student', status: 'pending' })
+        .eq('id', data.user.id);
+    }
+
+    localStorage.setItem(SIGNUP_COOLDOWN_KEY, String(Date.now() + 15000));
+    alert('Cadastro enviado. Agora aguarde a aprovação do administrador.');
+    const [emailInput] = form.querySelectorAll('input');
+    emailInput.value = email.trim();
+  } catch (error) {
+    alert(friendlyAuthError(error));
+  } finally {
+    signupBusy = false;
+    if (signupButton) {
+      signupButton.disabled = false;
+      signupButton.textContent = originalText || 'Criar nova conta';
+    }
+  }
 }
 
 function enhanceLogin() {
