@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v5';
+const VERSION='mayfit-sw-v6';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
@@ -30,6 +30,16 @@ self.addEventListener('fetch',event=>{
       source=source.replace(
         'type="number" min="1" value={shownSets}',
         'type="number" inputMode="numeric" value={shownSets}'
+      );
+
+      source=source.replace(
+        "if(phase==='pause'){setPhase('exercise');setTimeout(()=>{setSeconds(Number(exercise?.rest)||0);setStarted(true);setRunning(true)},900);return}",
+        "if(phase==='pause'){const exerciseSeconds=Math.max(1,Number(exercise?.rest)||1);setPhase('exercise');setSeconds(exerciseSeconds);setTimeText(format(exerciseSeconds));setStarted(true);setRunning(true);return}"
+      );
+
+      source=source.replace(
+        "if(left>0){setRemainingSets(old=>({...old,[activeId]:left}));setPhase('pause');setTimeout(()=>{setSeconds(pauseValue());setStarted(true);setRunning(true)},900)}",
+        "if(left>0){const pauseSeconds=Math.max(1,pauseValue());setRemainingSets(old=>({...old,[activeId]:left}));setPhase('pause');setSeconds(pauseSeconds);setTimeText(format(pauseSeconds));setStarted(true);setRunning(true)}"
       );
 
       return new Response(source,{
