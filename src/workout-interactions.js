@@ -1,4 +1,4 @@
-/* Interações da tela de treino — exercício e pausa com visores totalmente independentes. */
+/* Interações da tela de treino — seleção, START exclusivo, reset e pausa independente. */
 (function(){
   let selectedButton=null,bypassComplete=false,blockNextClick=false,blankInput=null,editingRow=null;
   let pauseRunning=false,pauseTimer=null,pauseDeadline=0,lastPhase='';
@@ -14,6 +14,8 @@
     .workout-screen input{user-select:text!important;-webkit-user-select:text!important;touch-action:manipulation!important}
     .workout-screen .sheet-row.mayfit-editing{box-shadow:inset 0 0 0 2px #e2b32c!important}
     .workout-screen .sheet-row.mayfit-editing input{opacity:1!important;pointer-events:auto!important}
+    .workout-screen .sheet-row.mayfit-selected{box-shadow:inset 0 0 0 2px #9df20f!important}
+    .workout-screen .complete-button.mayfit-selected{background:#9df20f!important;color:#071008!important;border-color:#9df20f!important;box-shadow:0 0 16px rgba(157,242,15,.35)!important}
     .workout-screen.mayfit-pause-phase .time-strip input{visibility:hidden!important}
     .workout-screen.mayfit-pause-phase .time-strip span{color:#9aa39d!important}
     #mayfit-pause-control .pause-stepper{position:relative!important}
@@ -44,9 +46,12 @@
     clearSelection();selectedButton=null;if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');editingRow=row;row.classList.add('mayfit-editing');row.querySelectorAll('input').forEach(input=>input.disabled=false)
   }
   function selectExercise(button){
-    const row=button.closest('.sheet-row');if(!row)return;const already=button===selectedButton&&button.classList.contains('mayfit-selected');clearSelection();
+    const row=button.closest('.sheet-row');if(!row)return;
+    const already=button===selectedButton&&button.classList.contains('mayfit-selected');
+    clearSelection();
     if(already){selectedButton=null;row.classList.add('mayfit-editing');editingRow=row;return}
-    if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}selectedButton=button;row.classList.add('mayfit-selected');button.classList.add('mayfit-selected')
+    if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}
+    selectedButton=button;row.classList.add('mayfit-selected');button.classList.add('mayfit-selected')
   }
   function makeInputBlank(input){if(!input||input.disabled)return;blankInput=input;input.dataset.mayfitBlank='1';setNativeValue(input,'');requestAnimationFrame(()=>{if(input.dataset.mayfitBlank==='1')setNativeValue(input,'',false)})}
 
@@ -94,19 +99,33 @@
   document.addEventListener('pointerdown',event=>{
     const complete=event.target.closest?.('.workout-screen .complete-button');if(!complete||bypassComplete)return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();blockNextClick=true;
-    const row=complete.closest('.sheet-row'),activeText=complete.textContent.replace(/\s+/g,' ').trim().toUpperCase();
+    const activeText=complete.textContent.replace(/\s+/g,' ').trim().toUpperCase();
     if(activeText.includes('EM ANDAMENTO')){
-      stopPauseCounter();lastPhase='';bypassComplete=true;complete.click();enterEditMode(complete);return;
+      stopPauseCounter();lastPhase='';clearSelection();selectedButton=null;
+      bypassComplete=true;complete.click();
+      requestAnimationFrame(()=>enterEditMode(complete));
+      return;
     }
     selectExercise(complete)
   },true);
+
   document.addEventListener('click',event=>{
     const complete=event.target.closest?.('.workout-screen .complete-button');
-    if(complete){if(bypassComplete){bypassComplete=false;return}event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();if(blockNextClick){blockNextClick=false;return}selectExercise(complete);return}
-    const start=event.target.closest?.('.workout-screen .timer-control');if(!start||start.textContent.trim().toUpperCase()!=='START')return;
+    if(complete){
+      if(bypassComplete){bypassComplete=false;return}
+      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      if(blockNextClick){blockNextClick=false;return}
+      selectExercise(complete);return
+    }
+    const start=event.target.closest?.('.workout-screen .timer-control');
+    if(!start||start.textContent.trim().toUpperCase()!=='START')return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-    if(!selectedButton){start.classList.add('mayfit-attention');start.textContent='SELECIONE';setTimeout(()=>{start.classList.remove('mayfit-attention');if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START'},900);return}
-    if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}const button=selectedButton;selectedButton=null;clearSelection();bypassComplete=true;button.click()
+    if(!selectedButton){
+      start.classList.add('mayfit-attention');start.textContent='SELECIONE';
+      setTimeout(()=>{start.classList.remove('mayfit-attention');if(start.textContent.trim().toUpperCase()==='SELECIONE')start.textContent='START'},900);return
+    }
+    if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}
+    const button=selectedButton;selectedButton=null;clearSelection();bypassComplete=true;button.click()
   },true);
 
   setInterval(()=>{prepareInputs();getPauseParts();syncPausePhase();if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!=='')setNativeValue(blankInput,'',false)},100);
