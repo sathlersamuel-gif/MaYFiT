@@ -3,18 +3,33 @@
   let selectedButton=null;
   let bypassComplete=false;
   let blockNextClick=false;
+  let blankInput=null;
+
+  const inputSelector='.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input';
+  const nativeValueSetter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
 
   const style=document.createElement('style');
   style.textContent=`
     .workout-screen .exercise-photo{height:auto!important;aspect-ratio:1.58/1!important}
     .workout-screen .exercise-photo img{object-fit:cover!important;object-position:center!important;background:#050706!important}
     .workout-screen .sheet-row{height:auto!important}
+    .workout-screen .timer-control{box-sizing:border-box!important;max-width:100%!important;overflow:hidden!important;text-overflow:clip!important}
     @media(max-width:620px){
       .workout-screen .sheet-row{min-height:0!important}
       .workout-screen .exercise-photo{aspect-ratio:1.55/1!important}
+      .workout-screen .timer-control{min-width:0!important;width:100%!important;padding:0 5px!important;font-size:clamp(14px,4.2vw,18px)!important;letter-spacing:-.4px!important;white-space:nowrap!important}
     }
   `;
   document.head.appendChild(style);
+
+  function setNativeValue(input,value,notify=true){
+    if(nativeValueSetter)nativeValueSetter.call(input,String(value));
+    else input.value=String(value);
+    if(notify){
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  }
 
   function clearSelection(){
     document.querySelectorAll('.sheet-row.mayfit-selected').forEach(row=>row.classList.remove('mayfit-selected'));
@@ -40,10 +55,61 @@
     },0);
   }
 
+  function makeInputBlank(input){
+    if(!input||input.disabled)return;
+    blankInput=input;
+    input.dataset.mayfitBlank='1';
+    setNativeValue(input,'');
+    requestAnimationFrame(()=>{
+      if(input.dataset.mayfitBlank==='1')setNativeValue(input,'',false);
+    });
+  }
+
   document.addEventListener('focusin',event=>{
-    const input=event.target.closest?.('.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input');
+    const input=event.target.closest?.(inputSelector);
     selectInputValue(input);
   },true);
+
+  document.addEventListener('beforeinput',event=>{
+    const input=event.target.closest?.(inputSelector);
+    if(!input||input.disabled)return;
+    if(!String(event.inputType||'').startsWith('delete'))return;
+    event.preventDefault();
+    event.stopPropagation();
+    makeInputBlank(input);
+  },true);
+
+  document.addEventListener('keydown',event=>{
+    const input=event.target.closest?.(inputSelector);
+    if(!input||input.disabled||!['Backspace','Delete'].includes(event.key))return;
+    event.preventDefault();
+    event.stopPropagation();
+    makeInputBlank(input);
+  },true);
+
+  document.addEventListener('input',event=>{
+    const input=event.target.closest?.(inputSelector);
+    if(!input)return;
+    if(input.value!==''){
+      delete input.dataset.mayfitBlank;
+      if(blankInput===input)blankInput=null;
+    }
+  },true);
+
+  document.addEventListener('focusout',event=>{
+    const input=event.target.closest?.(inputSelector);
+    if(!input||input.dataset.mayfitBlank!=='1')return;
+    const isSeriesOrReps=!!input.closest('.series-pair');
+    delete input.dataset.mayfitBlank;
+    blankInput=null;
+    setNativeValue(input,isSeriesOrReps?'1':'0');
+  },true);
+
+  window.setInterval(()=>{
+    if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!==''){
+      setNativeValue(blankInput,'',false);
+    }
+  },30);
 
   document.addEventListener('pointerdown',event=>{
     const complete=event.target.closest?.('.workout-screen .complete-button');
@@ -55,7 +121,7 @@
       selectExercise(complete);
       return;
     }
-    const input=event.target.closest?.('.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input');
+    const input=event.target.closest?.(inputSelector);
     if(input)selectInputValue(input);
   },true);
 
