@@ -5,7 +5,6 @@ const URL='https://hcijxrakfrvcksuanrdy.supabase.co';
 const KEY='sb_publishable_A7SHtwE7jpKGcP6yaPmcGw_mTJeodrN';
 const secondary=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 const USER_KEY='mayfit_user';
-const ADMIN_RETURN_KEY='mayfit_admin_return';
 const VIEW_STUDENT_KEY='mayfit_view_student';
 let mounted=false;
 let loading=false;
@@ -50,9 +49,7 @@ async function handleCard(root,button){
  if(action==='view'){
   const admin=current();
   if(!admin||admin.role!=='admin'){alert('Sessão de administrador inválida. Entre novamente.');return}
-  sessionStorage.setItem(ADMIN_RETURN_KEY,JSON.stringify(admin));
   sessionStorage.setItem(VIEW_STUDENT_KEY,JSON.stringify({id:student.id,name:student.full_name||'Aluno'}));
-  sessionStorage.setItem(USER_KEY,JSON.stringify({id:student.id,name:student.full_name||'Aluno',email:'',role:'student'}));
   location.reload();
   return;
  }
