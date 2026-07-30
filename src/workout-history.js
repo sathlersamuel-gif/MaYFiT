@@ -8,12 +8,19 @@ function currentUserId(){return currentUser()?.id||'guest'}
 function historyKey(userId=currentUserId()){return HISTORY_PREFIX+userId}
 function trainingNameKey(userId=currentUserId()){return TRAINING_NAME_PREFIX+userId}
 function readLocalHistory(userId=currentUserId()){try{return JSON.parse(localStorage.getItem(historyKey(userId))||'[]')}catch{return[]}}
-function writeLocalHistory(items,userId=currentUserId()){localStorage.setItem(historyKey(userId),JSON.stringify(items))}
+function writeLocalHistory(items,userId=currentUserId()){localStorage.setItem(historyKey(userId),JSON.stringify(items));updateHistoryCount(userId,items.length)}
 function savedTrainingName(){return localStorage.getItem(trainingNameKey())||currentUser()?.name||''}
 function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
 function formatDate(value){return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(value))}
 function numberFrom(row,labelText,fallbackIndex){const labels=[...row.querySelectorAll('label')];const label=labels.find(item=>item.textContent.toLowerCase().includes(labelText));const input=label?.querySelector('input')||row.querySelectorAll('input')[fallbackIndex];return Number(input?.value)||0}
 function normalizeCloudItem(item){const payload=item.workout_data||{};const exercises=Array.isArray(payload)?payload:(Array.isArray(payload.exercises)?payload.exercises:[]);return{id:item.id,date:item.created_at,name:item.workout_name||'Treino',exercises,cloud:true}}
+
+function updateHistoryCount(userId,count){
+  if(userId!==currentUserId())return;
+  const card=savedCard();
+  const number=card?.querySelector('strong');
+  if(number)number.textContent=String(Math.max(0,Number(count)||0));
+}
 
 async function authenticatedUserId(){
   if(!supabase)return null;
@@ -45,8 +52,8 @@ async function getHistory(userId){
   await migrateLocalHistory(userId);
   const cloud=await readCloudHistory(userId);
   const local=readLocalHistory(userId);
-  if(cloud===null)return local;
-  if(!cloud.length&&local.length&&userId===currentUserId()&&currentUser()?.role!=='admin')return local;
+  if(cloud===null){updateHistoryCount(userId,local.length);return local}
+  if(!cloud.length&&local.length&&userId===currentUserId()&&currentUser()?.role!=='admin'){updateHistoryCount(userId,local.length);return local}
   writeLocalHistory(cloud,userId);
   return cloud
 }
@@ -57,7 +64,6 @@ async function captureWorkout(){
   const exercises=rows.map((row,index)=>({id:row.dataset.historyId||String(index+1),name:row.querySelector('.exercise-col>strong')?.textContent.trim()||`Exercício ${index+1}`,load:numberFrom(row,'atual',0),previousLoad:numberFrom(row,'anterior',1),sets:numberFrom(row,'séries',2),reps:numberFrom(row,'reps',3),rest:numberFrom(row,'tempo',4)}));
   const profileId=currentUserId();
   const authId=await authenticatedUserId();
-  const userId=authId||profileId;
   const person=savedTrainingName().trim();
   const session={id:crypto.randomUUID(),date:new Date().toISOString(),name:person?`Treino de ${person}`:'Treino',exercises,cloud:false};
   const local=[session,...readLocalHistory(profileId).filter(item=>item.id!==session.id)];
@@ -96,6 +102,6 @@ async function renderHistory(userId=currentUserId(),studentName=''){
 
 function savedCard(){return [...document.querySelectorAll('.summary article')].find(article=>[...article.querySelectorAll('span')].some(span=>/treinos salvos/i.test(span.textContent||'')))||null}
 function personalizeHero(){const hero=document.querySelector('main .hero');if(!hero||hero.dataset.mayfitNamed==='true'||currentUser()?.role==='admin')return;const heading=hero.querySelector('h1');if(!heading)return;const wrapper=document.createElement('div');wrapper.className='mayfit-training-name';wrapper.innerHTML='<strong>TREINO DE:</strong><input type="text" maxlength="40" placeholder="Digite seu nome" aria-label="Nome da pessoa">';const input=wrapper.querySelector('input');input.value=savedTrainingName();input.addEventListener('input',()=>localStorage.setItem(trainingNameKey(),input.value));heading.replaceWith(wrapper);hero.dataset.mayfitNamed='true'}
-function prepareSavedCard(){const card=savedCard();if(!card)return;card.dataset.mayfitHistoryCard='true';card.setAttribute('role','button');card.setAttribute('tabindex','0');card.setAttribute('aria-label','Abrir treinos salvos')}
+async function prepareSavedCard(){const card=savedCard();if(!card)return;card.dataset.mayfitHistoryCard='true';card.setAttribute('role','button');card.setAttribute('tabindex','0');card.setAttribute('aria-label','Abrir treinos salvos');const userId=currentUserId();if(card.dataset.mayfitCountUser===userId)return;card.dataset.mayfitCountUser=userId;updateHistoryCount(userId,readLocalHistory(userId).length);const items=await getHistory(userId);updateHistoryCount(userId,items.length)}
 function install(){styles();window.mayfitOpenWorkoutHistory=(userId,name)=>renderHistory(userId,name);document.addEventListener('click',event=>{const finish=event.target.closest('button.finish');if(finish)captureWorkout();const card=event.target.closest('.summary article[data-mayfit-history-card="true"]');if(!card||card.closest('.mayfit-history-overlay'))return;event.preventDefault();event.stopPropagation();renderHistory()},true);document.addEventListener('keydown',event=>{if(!['Enter',' '].includes(event.key))return;const card=event.target.closest?.('.summary article[data-mayfit-history-card="true"]');if(!card)return;event.preventDefault();renderHistory()},true);const refresh=()=>{prepareSavedCard();personalizeHero()};const observer=new MutationObserver(refresh);observer.observe(document.documentElement,{childList:true,subtree:true});refresh()}
 install();
