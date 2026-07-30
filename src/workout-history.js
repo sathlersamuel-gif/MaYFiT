@@ -15,6 +15,13 @@ function formatDate(value){return new Intl.DateTimeFormat('pt-BR',{dateStyle:'sh
 function numberFrom(row,labelText,fallbackIndex){const labels=[...row.querySelectorAll('label')];const label=labels.find(item=>item.textContent.toLowerCase().includes(labelText));const input=label?.querySelector('input')||row.querySelectorAll('input')[fallbackIndex];return Number(input?.value)||0}
 function normalizeCloudItem(item){const payload=item.workout_data||{};const exercises=Array.isArray(payload)?payload:(Array.isArray(payload.exercises)?payload.exercises:[]);return{id:item.id,date:item.created_at,name:item.workout_name||'Treino',exercises,cloud:true}}
 
+async function authenticatedUserId(){
+  if(!supabase)return null;
+  const {data,error}=await supabase.auth.getUser();
+  if(error||!data?.user)return null;
+  return data.user.id;
+}
+
 async function readCloudHistory(userId){
   if(!supabase||!userId||userId==='guest')return null;
   const {data,error}=await supabase.from('workout_history').select('id,user_id,workout_name,workout_data,created_at,updated_at').eq('user_id',userId).order('created_at',{ascending:false});
@@ -23,42 +30,43 @@ async function readCloudHistory(userId){
 }
 
 async function migrateLocalHistory(userId){
-  if(!supabase||userId!==currentUserId()||currentUser()?.role==='admin')return;
+  if(!supabase||currentUser()?.role==='admin')return;
+  const authId=await authenticatedUserId();
+  if(!authId||authId!==userId)return;
   const local=readLocalHistory(userId).filter(item=>!item.cloud);
   if(!local.length)return;
-  const rows=local.map(item=>({
-    id:item.id,
-    user_id:userId,
-    workout_name:item.name||'Treino',
-    workout_data:{exercises:Array.isArray(item.exercises)?item.exercises:[]},
-    created_at:item.date||new Date().toISOString(),
-    updated_at:item.date||new Date().toISOString()
-  }));
+  const rows=local.map(item=>({id:item.id,user_id:authId,workout_name:item.name||'Treino',workout_data:{exercises:Array.isArray(item.exercises)?item.exercises:[]},created_at:item.date||new Date().toISOString(),updated_at:item.date||new Date().toISOString()}));
   const {error}=await supabase.from('workout_history').upsert(rows,{onConflict:'id'});
-  if(error)console.error('Falha ao migrar histórico local:',error)
+  if(error){console.error('Falha ao migrar histórico local:',error);return}
+  writeLocalHistory(local.map(item=>({...item,cloud:true})),userId)
 }
 
 async function getHistory(userId){
   await migrateLocalHistory(userId);
   const cloud=await readCloudHistory(userId);
-  if(cloud!==null){writeLocalHistory(cloud,userId);return cloud}
-  return readLocalHistory(userId)
+  const local=readLocalHistory(userId);
+  if(cloud===null)return local;
+  if(!cloud.length&&local.length&&userId===currentUserId()&&currentUser()?.role!=='admin')return local;
+  writeLocalHistory(cloud,userId);
+  return cloud
 }
 
 async function captureWorkout(){
   const rows=[...document.querySelectorAll('.workout-screen .sheet-row')];
   if(!rows.length)return;
   const exercises=rows.map((row,index)=>({id:row.dataset.historyId||String(index+1),name:row.querySelector('.exercise-col>strong')?.textContent.trim()||`Exercício ${index+1}`,load:numberFrom(row,'atual',0),previousLoad:numberFrom(row,'anterior',1),sets:numberFrom(row,'séries',2),reps:numberFrom(row,'reps',3),rest:numberFrom(row,'tempo',4)}));
-  const userId=currentUserId();
+  const profileId=currentUserId();
+  const authId=await authenticatedUserId();
+  const userId=authId||profileId;
   const person=savedTrainingName().trim();
   const session={id:crypto.randomUUID(),date:new Date().toISOString(),name:person?`Treino de ${person}`:'Treino',exercises,cloud:false};
-  const local=[session,...readLocalHistory(userId).filter(item=>item.id!==session.id)];
-  writeLocalHistory(local,userId);
-  if(!supabase||userId==='guest')return;
-  const {data,error}=await supabase.from('workout_history').insert({id:session.id,user_id:userId,workout_name:session.name,workout_data:{exercises},created_at:session.date,updated_at:session.date}).select('id,created_at').single();
-  if(error){console.error('Falha ao salvar histórico:',error);return}
+  const local=[session,...readLocalHistory(profileId).filter(item=>item.id!==session.id)];
+  writeLocalHistory(local,profileId);
+  if(!supabase||!authId){alert('O treino ficou salvo neste aparelho, mas sua sessão online expirou. Entre novamente para sincronizar.');return}
+  const {data,error}=await supabase.from('workout_history').insert({id:session.id,user_id:authId,workout_name:session.name,workout_data:{exercises},created_at:session.date,updated_at:session.date}).select('id,created_at').single();
+  if(error){console.error('Falha ao salvar histórico:',error);alert('O treino ficou salvo neste aparelho, mas não foi enviado ao administrador: '+error.message);return}
   session.id=data.id;session.date=data.created_at;session.cloud=true;
-  writeLocalHistory([session,...local.filter(item=>item.id!==session.id)],userId)
+  writeLocalHistory([session,...local.filter(item=>item.id!==session.id)],profileId)
 }
 
 function styles(){
