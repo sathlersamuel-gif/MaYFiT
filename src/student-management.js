@@ -5,6 +5,7 @@ const URL='https://hcijxrakfrvcksuanrdy.supabase.co';
 const KEY='sb_publishable_A7SHtwE7jpKGcP6yaPmcGw_mTJeodrN';
 const secondary=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 const USER_KEY='mayfit_user';
+const VIEW_STUDENT_KEY='mayfit_view_student';
 let mounted=false;
 let loading=false;
 let observer;
@@ -18,7 +19,7 @@ const css=`
 #mayfit-students{padding:16px;border:1px solid #2d5038;border-radius:22px;background:#0d1711;color:#fff}
 #mayfit-students .ms-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}#mayfit-students h2{margin:0;font-size:22px}
 #mayfit-students .ms-actions{display:flex;gap:8px;flex-wrap:wrap}#mayfit-students button{border:0;border-radius:12px;padding:10px 12px;font-weight:850;cursor:pointer}#mayfit-students button:disabled{opacity:.55}
-.ms-primary,.ms-approve{background:#78d532;color:#07110c}.ms-secondary{background:#1a2e20;color:#8fe52f;border:1px solid #355640!important}.ms-history{background:#15351f;color:#a7f45e;border:1px solid #4f7d5b!important}.ms-danger{background:#3a1b1b;color:#ffb6b6}
+.ms-primary,.ms-approve{background:#78d532;color:#07110c}.ms-secondary{background:#1a2e20;color:#8fe52f;border:1px solid #355640!important}.ms-danger{background:#3a1b1b;color:#ffb6b6}
 .ms-search{width:100%;margin-bottom:12px;background:#08110b;border:1px solid #304939;color:#fff;border-radius:12px;padding:11px;box-sizing:border-box}.ms-list{display:grid;gap:10px}.ms-card{padding:12px;border:1px solid #294133;border-radius:16px;background:#101a14}.ms-card.pending{border-color:#9b7625;background:#1c180d}.ms-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.ms-name{font-weight:900;font-size:16px}.ms-id{font-size:11px;color:#7f9185;margin-top:4px;word-break:break-all}.ms-badge{font-size:11px;font-weight:900;padding:5px 8px;border-radius:999px;background:#233528;color:#b8c8bd;white-space:nowrap}.ms-badge.active{background:#173b20;color:#91ea50}.ms-badge.blocked{background:#3a2020;color:#ffadad}.ms-badge.pending{background:#4a3812;color:#ffd76a}.ms-card-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.ms-empty{padding:18px;text-align:center;color:#98a69d}.ms-msg{margin:8px 0;color:#a9b8af;font-size:13px}.ms-pending-count{display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:6px;padding:0 5px;border-radius:999px;background:#ffd35a;color:#241b00;font-size:11px;font-weight:950}
 @media(max-width:620px){#mayfit-settings-button{width:42px;height:42px;margin-left:6px;font-size:21px}.ms-head{align-items:flex-start!important;flex-direction:column}.ms-actions{width:100%}.ms-actions button{flex:1}}
 `;
@@ -27,17 +28,24 @@ function current(){try{return JSON.parse(sessionStorage.getItem(USER_KEY))}catch
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function normalizedStatus(value){return value==='active'||value==='blocked'?value:'pending'}
 function statusLabel(value){const s=normalizedStatus(value);return s==='active'?'Ativo':s==='blocked'?'Bloqueado':'Pendente'}
+function rememberViewedStudent(students){
+ try{
+  const saved=JSON.parse(sessionStorage.getItem(VIEW_STUDENT_KEY)||'null');
+  const selected=students.find(item=>item.id===saved?.id)||students.find(item=>normalizedStatus(item.status)==='active')||students[0];
+  if(selected)sessionStorage.setItem(VIEW_STUDENT_KEY,JSON.stringify({id:selected.id,name:selected.full_name||'Aluno'}));
+ }catch{}
+}
 
 async function loadStudents(root){
  if(loading)return;loading=true;const refresh=root.querySelector('[data-refresh]');const msg=root.querySelector('.ms-msg');if(refresh)refresh.disabled=true;msg.textContent='Carregando alunos...';
- try{const {data,error}=await supabase.from('profiles').select('id,full_name,role,status,created_at').order('created_at',{ascending:false});if(error)throw error;root._students=(data||[]).filter(p=>p.role!=='admin');const pending=root._students.filter(p=>normalizedStatus(p.status)==='pending').length;msg.innerHTML=`${root._students.length} aluno(s) encontrado(s)${pending?` <span class="ms-pending-count">${pending}</span> aguardando aprovação`:''}`;render(root)}
+ try{const {data,error}=await supabase.from('profiles').select('id,full_name,role,status,created_at').order('created_at',{ascending:false});if(error)throw error;root._students=(data||[]).filter(p=>p.role!=='admin');rememberViewedStudent(root._students);const pending=root._students.filter(p=>normalizedStatus(p.status)==='pending').length;msg.innerHTML=`${root._students.length} aluno(s) encontrado(s)${pending?` <span class="ms-pending-count">${pending}</span> aguardando aprovação`:''}`;render(root)}
  catch(error){msg.textContent='Não foi possível carregar os alunos: '+error.message;root.querySelector('.ms-list').innerHTML='<div class="ms-empty">Falha ao consultar o banco de dados.</div>'}
  finally{loading=false;if(refresh)refresh.disabled=false}
 }
 
 function render(root){
  const q=(root.querySelector('.ms-search').value||'').trim().toLowerCase();const data=(root._students||[]).filter(x=>!q||`${x.full_name||''} ${x.id||''}`.toLowerCase().includes(q));const list=root.querySelector('.ms-list');if(!data.length){list.innerHTML='<div class="ms-empty">Nenhum aluno encontrado.</div>';return}
- list.innerHTML=data.map(x=>{const status=normalizedStatus(x.status);const approve=status==='pending'?'<button class="ms-approve" data-action="approve">Aprovar aluno</button>':'';const toggle=status==='pending'?'':`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear':'Bloquear'}</button>`;return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-history" data-action="history">Histórico</button><button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`}).join('')
+ list.innerHTML=data.map(x=>{const status=normalizedStatus(x.status);const approve=status==='pending'?'<button class="ms-approve" data-action="approve">Aprovar aluno</button>':'';const toggle=status==='pending'?'':`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear':'Bloquear'}</button>`;return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`}).join('')
 }
 
 async function createStudent(root){const name=prompt('Nome completo do aluno:');if(!name?.trim())return;const email=prompt('E-mail do aluno:');if(!email?.trim())return;const password=prompt('Senha inicial com pelo menos 6 caracteres:');if(!password||password.length<6){alert('A senha precisa ter pelo menos 6 caracteres.');return}const {data,error}=await secondary.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim()}}});if(error){alert('Não foi possível cadastrar: '+error.message);return}if(data.user){const {error:updateError}=await supabase.from('profiles').update({full_name:name.trim(),role:'student',status:'active'}).eq('id',data.user.id);if(updateError){alert('O login foi criado, mas o perfil não pôde ser ativado: '+updateError.message);return}}alert('Aluno cadastrado com sucesso.');await loadStudents(root)}
@@ -45,7 +53,6 @@ async function deleteStudentAccount(id){const rpc=await supabase.rpc('delete_stu
 
 async function handleCard(root,button){
  const card=button.closest('.ms-card');const id=card?.dataset.id;const student=(root._students||[]).find(x=>x.id===id);if(!student)return;const action=button.dataset.action;
- if(action==='history'){if(typeof window.mayfitOpenWorkoutHistory!=='function'){alert('O histórico ainda está carregando. Tente novamente em alguns segundos.');return}window.mayfitOpenWorkoutHistory(id,student.full_name||'Aluno');return}
  button.disabled=true;
  try{
   if(action==='approve'){const {error}=await supabase.from('profiles').update({role:'student',status:'active'}).eq('id',id);if(error)throw error}
