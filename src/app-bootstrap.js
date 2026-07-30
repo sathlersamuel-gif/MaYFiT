@@ -1,5 +1,6 @@
 import { initializeWorkoutCloudSync } from './workout-cloud-sync.js';
 import './admin-workout-tools.js';
+import './supabase-login-bridge.js';
 
 try {
   await initializeWorkoutCloudSync();
