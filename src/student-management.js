@@ -19,6 +19,7 @@ const css=`
 #mayfit-students .ms-primary{background:#78d532;color:#07110c}
 #mayfit-students .ms-approve{background:#78d532;color:#07110c}
 #mayfit-students .ms-secondary{background:#1a2e20;color:#8fe52f;border:1px solid #355640}
+#mayfit-students .ms-history{background:#15351f;color:#a7f45e;border:1px solid #4f7d5b}
 #mayfit-students .ms-danger{background:#3a1b1b;color:#ffb6b6}
 #mayfit-students .ms-search{width:100%;margin-bottom:12px;background:#08110b;border:1px solid #304939;color:#fff;border-radius:12px;padding:11px;box-sizing:border-box}
 #mayfit-students .ms-list{display:grid;gap:10px}
@@ -44,133 +45,35 @@ function normalizedStatus(value){return value==='active'||value==='blocked'?valu
 function statusLabel(value){const s=normalizedStatus(value);return s==='active'?'Ativo':s==='blocked'?'Bloqueado':'Pendente'}
 
 async function loadStudents(root){
-  if(loading)return;
-  loading=true;
-  const refresh=root.querySelector('[data-refresh]');
-  const msg=root.querySelector('.ms-msg');
-  refresh.disabled=true;
-  msg.textContent='Carregando alunos...';
-  try{
-    const {data,error}=await supabase.from('profiles').select('id,full_name,role,status,created_at').order('created_at',{ascending:false});
-    if(error)throw error;
-    root._students=(data||[]).filter(profile=>profile.role!=='admin');
-    const pending=root._students.filter(profile=>normalizedStatus(profile.status)==='pending').length;
-    msg.innerHTML=`${root._students.length} aluno(s) encontrado(s)${pending?` <span class="ms-pending-count">${pending}</span> aguardando aprovação`:''}`;
-    render(root);
-  }catch(error){
-    msg.textContent='Não foi possível carregar os alunos: '+error.message;
-    root.querySelector('.ms-list').innerHTML='<div class="ms-empty">Falha ao consultar o banco de dados.</div>';
-  }finally{
-    loading=false;
-    refresh.disabled=false;
-  }
+  if(loading)return;loading=true;const refresh=root.querySelector('[data-refresh]');const msg=root.querySelector('.ms-msg');refresh.disabled=true;msg.textContent='Carregando alunos...';
+  try{const {data,error}=await supabase.from('profiles').select('id,full_name,role,status,created_at').order('created_at',{ascending:false});if(error)throw error;root._students=(data||[]).filter(profile=>profile.role!=='admin');const pending=root._students.filter(profile=>normalizedStatus(profile.status)==='pending').length;msg.innerHTML=`${root._students.length} aluno(s) encontrado(s)${pending?` <span class="ms-pending-count">${pending}</span> aguardando aprovação`:''}`;render(root)}
+  catch(error){msg.textContent='Não foi possível carregar os alunos: '+error.message;root.querySelector('.ms-list').innerHTML='<div class="ms-empty">Falha ao consultar o banco de dados.</div>'}
+  finally{loading=false;refresh.disabled=false}
 }
 
 function render(root){
-  const q=(root.querySelector('.ms-search').value||'').trim().toLowerCase();
-  const data=(root._students||[]).filter(x=>!q||`${x.full_name||''} ${x.id||''}`.toLowerCase().includes(q));
-  const list=root.querySelector('.ms-list');
-  if(!data.length){list.innerHTML='<div class="ms-empty">Nenhum aluno encontrado.</div>';return}
-  list.innerHTML=data.map(x=>{
-    const status=normalizedStatus(x.status);
-    const approve=status==='pending'?'<button class="ms-approve" data-action="approve">Aprovar aluno</button>':'';
-    const toggle=status==='pending'?'':`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear':'Bloquear'}</button>`;
-    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`;
-  }).join('');
+  const q=(root.querySelector('.ms-search').value||'').trim().toLowerCase();const data=(root._students||[]).filter(x=>!q||`${x.full_name||''} ${x.id||''}`.toLowerCase().includes(q));const list=root.querySelector('.ms-list');if(!data.length){list.innerHTML='<div class="ms-empty">Nenhum aluno encontrado.</div>';return}
+  list.innerHTML=data.map(x=>{const status=normalizedStatus(x.status);const approve=status==='pending'?'<button class="ms-approve" data-action="approve">Aprovar aluno</button>':'';const toggle=status==='pending'?'':`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear':'Bloquear'}</button>`;return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-history" data-action="history">Histórico</button><button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`}).join('')
 }
 
-async function createStudent(root){
-  const name=prompt('Nome completo do aluno:'); if(!name?.trim())return;
-  const email=prompt('E-mail do aluno:'); if(!email?.trim())return;
-  const password=prompt('Senha inicial com pelo menos 6 caracteres:');
-  if(!password||password.length<6){alert('A senha precisa ter pelo menos 6 caracteres.');return}
-  const {data,error}=await secondary.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim()}}});
-  if(error){alert('Não foi possível cadastrar: '+error.message);return}
-  if(data.user){
-    const {error:updateError}=await supabase.from('profiles').update({full_name:name.trim(),role:'student',status:'active'}).eq('id',data.user.id);
-    if(updateError){alert('O login foi criado, mas o perfil não pôde ser ativado: '+updateError.message);return}
-  }
-  alert('Aluno cadastrado com sucesso.');
-  await loadStudents(root);
-}
-
-async function deleteStudentAccount(id){
-  const rpc=await supabase.rpc('delete_student_account',{target_user_id:id});
-  if(!rpc.error)return;
-  const missing=/function .*delete_student_account|could not find the function|schema cache/i.test(rpc.error.message||'');
-  if(!missing)throw rpc.error;
-
-  const direct=await supabase.from('profiles').delete().eq('id',id).select('id');
-  if(direct.error)throw direct.error;
-  if(!direct.data?.length)throw new Error('O banco recusou a exclusão. É necessário ativar a permissão segura de exclusão no Supabase.');
-}
+async function createStudent(root){const name=prompt('Nome completo do aluno:');if(!name?.trim())return;const email=prompt('E-mail do aluno:');if(!email?.trim())return;const password=prompt('Senha inicial com pelo menos 6 caracteres:');if(!password||password.length<6){alert('A senha precisa ter pelo menos 6 caracteres.');return}const {data,error}=await secondary.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim()}}});if(error){alert('Não foi possível cadastrar: '+error.message);return}if(data.user){const {error:updateError}=await supabase.from('profiles').update({full_name:name.trim(),role:'student',status:'active'}).eq('id',data.user.id);if(updateError){alert('O login foi criado, mas o perfil não pôde ser ativado: '+updateError.message);return}}alert('Aluno cadastrado com sucesso.');await loadStudents(root)}
+async function deleteStudentAccount(id){const rpc=await supabase.rpc('delete_student_account',{target_user_id:id});if(!rpc.error)return;const missing=/function .*delete_student_account|could not find the function|schema cache/i.test(rpc.error.message||'');if(!missing)throw rpc.error;const direct=await supabase.from('profiles').delete().eq('id',id).select('id');if(direct.error)throw direct.error;if(!direct.data?.length)throw new Error('O banco recusou a exclusão. É necessário ativar a permissão segura de exclusão no Supabase.')}
 
 async function handleCard(root,button){
-  const card=button.closest('.ms-card');
-  const id=card?.dataset.id;
-  const student=(root._students||[]).find(x=>x.id===id);
-  if(!student)return;
-  const action=button.dataset.action;
+  const card=button.closest('.ms-card');const id=card?.dataset.id;const student=(root._students||[]).find(x=>x.id===id);if(!student)return;const action=button.dataset.action;
+  if(action==='history'){if(typeof window.mayfitOpenWorkoutHistory!=='function'){alert('O histórico ainda está carregando. Tente novamente em alguns segundos.');return}window.mayfitOpenWorkoutHistory(id,student.full_name||'Aluno');return}
   button.disabled=true;
   try{
-    if(action==='approve'){
-      const {error}=await supabase.from('profiles').update({role:'student',status:'active'}).eq('id',id);
-      if(error)throw error;
-    }
-    if(action==='edit'){
-      const name=prompt('Nome completo:',student.full_name||''); if(!name?.trim())return;
-      const {error}=await supabase.from('profiles').update({full_name:name.trim()}).eq('id',id);
-      if(error)throw error;
-    }
-    if(action==='toggle'){
-      const next=normalizedStatus(student.status)==='blocked'?'active':'blocked';
-      const {error}=await supabase.from('profiles').update({status:next}).eq('id',id);
-      if(error)throw error;
-    }
-    if(action==='delete'){
-      if(!confirm(`Excluir definitivamente o aluno ${student.full_name||''}?`))return;
-      button.textContent='Excluindo...';
-      await deleteStudentAccount(id);
-      root._students=(root._students||[]).filter(item=>item.id!==id);
-      render(root);
-      alert('Aluno excluído com sucesso.');
-    }
-    if(action!=='delete')await loadStudents(root);
-  }catch(error){
-    alert('Não foi possível concluir: '+error.message);
-    await loadStudents(root);
-  }finally{
-    button.disabled=false;
-    if(action==='delete')button.textContent='Excluir';
-  }
+    if(action==='approve'){const {error}=await supabase.from('profiles').update({role:'student',status:'active'}).eq('id',id);if(error)throw error}
+    if(action==='edit'){const name=prompt('Nome completo:',student.full_name||'');if(!name?.trim())return;const {error}=await supabase.from('profiles').update({full_name:name.trim()}).eq('id',id);if(error)throw error}
+    if(action==='toggle'){const next=normalizedStatus(student.status)==='blocked'?'active':'blocked';const {error}=await supabase.from('profiles').update({status:next}).eq('id',id);if(error)throw error}
+    if(action==='delete'){if(!confirm(`Excluir definitivamente o aluno ${student.full_name||''}?`))return;button.textContent='Excluindo...';await deleteStudentAccount(id);root._students=(root._students||[]).filter(item=>item.id!==id);render(root);alert('Aluno excluído com sucesso.')}
+    if(action!=='delete')await loadStudents(root)
+  }catch(error){alert('Não foi possível concluir: '+error.message);await loadStudents(root)}finally{button.disabled=false;if(action==='delete')button.textContent='Excluir'}
 }
 
 function mount(){
-  if(mounted||current()?.role!=='admin'||!supabase)return false;
-  const main=document.querySelector('.app main');
-  if(!main)return false;
-  mounted=true;
-  observer?.disconnect();
-  if(!document.getElementById('mayfit-students-style')){
-    const style=document.createElement('style');
-    style.id='mayfit-students-style';
-    style.textContent=css;
-    document.head.appendChild(style);
-  }
-  const root=document.createElement('section');
-  root.id='mayfit-students';
-  root.innerHTML='<div class="ms-head"><div><h2>Alunos cadastrados</h2><div class="ms-msg">Conectando ao banco...</div></div><div class="ms-actions"><button class="ms-primary" data-new>Novo aluno</button><button class="ms-secondary" data-refresh>Atualizar</button></div></div><input class="ms-search" placeholder="Pesquisar por nome"><div class="ms-list"></div>';
-  main.prepend(root);
-  root.querySelector('[data-new]').onclick=()=>createStudent(root);
-  root.querySelector('[data-refresh]').onclick=()=>loadStudents(root);
-  root.querySelector('.ms-search').oninput=()=>render(root);
-  root.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button)handleCard(root,button)});
-  loadStudents(root);
-  return true;
+  if(mounted||current()?.role!=='admin'||!supabase)return false;const main=document.querySelector('.app main');if(!main)return false;mounted=true;observer?.disconnect();if(!document.getElementById('mayfit-students-style')){const style=document.createElement('style');style.id='mayfit-students-style';style.textContent=css;document.head.appendChild(style)}const root=document.createElement('section');root.id='mayfit-students';root.innerHTML='<div class="ms-head"><div><h2>Alunos cadastrados</h2><div class="ms-msg">Conectando ao banco...</div></div><div class="ms-actions"><button class="ms-primary" data-new>Novo aluno</button><button class="ms-secondary" data-refresh>Atualizar</button></div></div><input class="ms-search" placeholder="Pesquisar por nome"><div class="ms-list"></div>';main.prepend(root);root.querySelector('[data-new]').onclick=()=>createStudent(root);root.querySelector('[data-refresh]').onclick=()=>loadStudents(root);root.querySelector('.ms-search').oninput=()=>render(root);root.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button)handleCard(root,button)});loadStudents(root);return true
 }
 
-if(!mount()){
-  observer=new MutationObserver(()=>mount());
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  window.setTimeout(()=>observer?.disconnect(),10000);
-}
+if(!mount()){observer=new MutationObserver(()=>mount());observer.observe(document.documentElement,{childList:true,subtree:true});window.setTimeout(()=>observer?.disconnect(),10000)}
