@@ -18,10 +18,9 @@ function readJson(storage, key) {
 
 function targetStudentId() {
   const current = readJson(sessionStorage, USER_KEY);
-  const admin = readJson(sessionStorage, ADMIN_RETURN_KEY);
   const viewed = readJson(sessionStorage, VIEW_STUDENT_KEY);
 
-  if (admin?.role === 'admin' && current?.role === 'student' && viewed?.id && current?.id === viewed.id) return viewed.id;
+  if (current?.role === 'admin' && viewed?.id) return viewed.id;
   if (current?.role === 'student' && current?.id && current.id !== 'aluno') return current.id;
   return null;
 }
@@ -33,11 +32,7 @@ function currentPayload() {
 
 function emptyPayload() {
   const local = currentPayload() || {};
-  return {
-    ...local,
-    exercises: [],
-    sessions: Array.isArray(local.sessions) ? local.sessions : []
-  };
+  return { ...local, exercises: [], sessions: Array.isArray(local.sessions) ? local.sessions : [] };
 }
 
 function samePayload(a, b) {
