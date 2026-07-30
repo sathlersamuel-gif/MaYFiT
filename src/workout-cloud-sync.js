@@ -21,8 +21,7 @@ function targetStudentId() {
   const admin = readJson(sessionStorage, ADMIN_RETURN_KEY);
   const viewed = readJson(sessionStorage, VIEW_STUDENT_KEY);
 
-  if (admin?.role === 'admin' && viewed?.id) return viewed.id;
-  if (current?.role === 'admin' && viewed?.id) return viewed.id;
+  if (admin?.role === 'admin' && current?.role === 'student' && viewed?.id && current?.id === viewed.id) return viewed.id;
   if (current?.role === 'student' && current?.id && current.id !== 'aluno') return current.id;
   return null;
 }
