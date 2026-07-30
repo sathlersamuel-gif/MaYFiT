@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v17';
+const VERSION='mayfit-sw-v18';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
@@ -16,6 +16,25 @@ self.addEventListener('activate',event=>{
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
+
+  if(url.origin===self.location.origin&&url.pathname==='/src/supabase-auth-bridge.js'){
+    event.respondWith((async()=>{
+      const response=await fetch(event.request,{cache:'no-store'});
+      let source=await response.text();
+
+      source=source.replace(
+        "    const { error } = await supabase.auth.updateUser({ password });\n    if (error) throw error;\n    await supabase.auth.signOut();\n    sessionStorage.removeItem(USER_KEY);\n    history.replaceState({}, document.title, location.pathname);\n    alert('Senha alterada com sucesso. Agora entre usando sua nova senha.');\n    location.reload();",
+        "    const { error } = await supabase.auth.updateUser({ password });\n    if (error) throw error;\n    sessionStorage.removeItem(USER_KEY);\n    history.replaceState({}, document.title, location.pathname);\n    alert('Senha alterada com sucesso. Agora entre usando sua nova senha.');\n    try { await supabase.auth.signOut(); } catch {}\n    location.reload();"
+      );
+
+      return new Response(source,{
+        status:response.status,
+        statusText:response.statusText,
+        headers:{'Content-Type':'text/javascript; charset=utf-8','Cache-Control':'no-store'}
+      });
+    })());
+    return;
+  }
 
   if(url.origin===self.location.origin&&url.pathname==='/src/main.jsx'){
     event.respondWith((async()=>{
