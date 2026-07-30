@@ -4,6 +4,7 @@ const USER_KEY = 'mayfit_user';
 const SIGNUP_COOLDOWN_KEY = 'mayfit_signup_cooldown_until';
 let busy = false;
 let signupBusy = false;
+let recoveryBusy = false;
 
 function setNotice(form, message) {
   let notice = form.querySelector('.notice');
@@ -20,10 +21,10 @@ function friendlyAuthError(error) {
   const message = String(error?.message || 'Não foi possível concluir o cadastro.');
   if (/email rate limit exceeded/i.test(message)) {
     localStorage.setItem(SIGNUP_COOLDOWN_KEY, String(Date.now() + 60000));
-    return 'Foram feitas muitas tentativas de cadastro em pouco tempo. Aguarde 1 minuto e tente novamente apenas uma vez.';
+    return 'Foram feitas muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente apenas uma vez.';
   }
   if (/user already registered|already been registered/i.test(message)) {
-    return 'Este e-mail já possui cadastro. Entre com a senha ou use outro e-mail.';
+    return 'Este e-mail já possui cadastro. Entre com a senha ou use a opção Esqueci minha senha.';
   }
   return message;
 }
@@ -74,6 +75,58 @@ async function login(form) {
     button.disabled = false;
     button.textContent = 'Entrar';
     busy = false;
+  }
+}
+
+async function requestPasswordReset(form) {
+  if (recoveryBusy) return;
+  const emailInput = form.querySelector('input');
+  const typedEmail = emailInput?.value.trim() || '';
+  const email = prompt('Digite o e-mail cadastrado:', typedEmail);
+  if (!email?.trim()) return;
+
+  recoveryBusy = true;
+  try {
+    const redirectTo = `${location.origin}${location.pathname}`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    if (error) throw error;
+    if (emailInput) emailInput.value = email.trim();
+    setNotice(form, 'Enviamos um link para seu e-mail. Abra o link para criar uma nova senha.');
+    alert('Link de recuperação enviado. Verifique também a caixa de spam.');
+  } catch (error) {
+    setNotice(form, friendlyAuthError(error));
+  } finally {
+    recoveryBusy = false;
+  }
+}
+
+async function finishPasswordRecovery() {
+  if (recoveryBusy) return;
+  recoveryBusy = true;
+  try {
+    const password = prompt('Crie uma nova senha com pelo menos 6 caracteres:');
+    if (!password) return;
+    if (password.length < 6) {
+      alert('A senha precisa ter pelo menos 6 caracteres. Abra novamente o link recebido e tente outra vez.');
+      return;
+    }
+    const confirmation = prompt('Digite novamente a nova senha:');
+    if (password !== confirmation) {
+      alert('As senhas não são iguais. Abra novamente o link recebido e tente outra vez.');
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+    await supabase.auth.signOut();
+    sessionStorage.removeItem(USER_KEY);
+    history.replaceState({}, document.title, location.pathname);
+    alert('Senha alterada com sucesso. Agora entre usando sua nova senha.');
+    location.reload();
+  } catch (error) {
+    alert(`Não foi possível alterar a senha: ${error.message}`);
+  } finally {
+    recoveryBusy = false;
   }
 }
 
@@ -156,6 +209,20 @@ function enhanceLogin() {
     };
   }
 
+  const forgotButton = document.createElement('button');
+  forgotButton.type = 'button';
+  forgotButton.textContent = 'Esqueci minha senha';
+  forgotButton.dataset.passwordRecovery = 'true';
+  forgotButton.style.cssText = 'display:block;width:100%;margin:10px 0 2px;padding:8px;border:0;background:transparent;color:#8df20b;font:800 14px system-ui,-apple-system,sans-serif;text-decoration:underline;cursor:pointer';
+  forgotButton.onclick = event => {
+    event.preventDefault();
+    event.stopPropagation();
+    requestPasswordReset(form);
+  };
+  const passwordLabel = inputs[1]?.closest('label');
+  if (passwordLabel) passwordLabel.insertAdjacentElement('afterend', forgotButton);
+  else form.insertBefore(forgotButton, form.querySelector('button.primary'));
+
   form.addEventListener(
     'submit',
     event => {
@@ -198,6 +265,9 @@ function installLogoutSync() {
 if (!supabase) {
   console.error('Supabase não configurado.');
 } else {
+  supabase.auth.onAuthStateChange(event => {
+    if (event === 'PASSWORD_RECOVERY') setTimeout(finishPasswordRecovery, 150);
+  });
   restoreSession();
   installLogoutSync();
   const observer = new MutationObserver(enhanceLogin);
