@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v19';
+const VERSION='mayfit-sw-v20';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
@@ -78,7 +78,7 @@ self.addEventListener('fetch',event=>{
 
       source=source.replace(
         "const conclude=e=>{if(done[e.id])",
-        "const conclude=e=>{setDone(old=>({...old,[e.id]:!old[e.id]}));return;if(done[e.id])"
+        "const conclude=e=>{if(activeId===e.id&&started){setRunning(false);setStarted(false);setPhase('exercise');setSeconds(0);setTimeText(format(0));setRemainingSets(old=>({...old,[e.id]:Number(entries[e.id]?.sets)||1}));setActiveId(null);setDone(old=>({...old,[e.id]:false}));zeroHandled.current=false;return}if(done[e.id])"
       );
 
       source=source.replace(
