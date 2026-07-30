@@ -59,9 +59,9 @@
     <script type="module" src="/src/supabase-auth-bridge.js?v=4"></script>
     <script type="module" src="/src/student-management.js?v=6"></script>
     <script type="module" src="/src/workout-interactions.js?v=16"></script>
-    <script type="module" src="/src/workout-history.js?v=5"></script>
+    <script type="module" src="/src/workout-history.js?v=6"></script>
     <script>
-      if('serviceWorker' in navigator){window.addEventListener('load',async()=>{const registration=await navigator.serviceWorker.register('/sw.js?v=36');registration.update()})}
+      if('serviceWorker' in navigator){window.addEventListener('load',async()=>{const registration=await navigator.serviceWorker.register('/sw.js?v=37');registration.update()})}
       function applyTheme(theme){const light=theme==='light';document.body.classList.toggle('theme-light',light);localStorage.setItem('mayfit_theme',light?'light':'dark');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=light?'#edf4ef':'#06100b'}
       function installPauseControl(){const top=document.querySelector('.workout-top');if(!top)return;if(document.getElementById('mayfit-pause-control'))return;const pause=document.createElement('div');pause.id='mayfit-pause-control';const saved=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);pause.innerHTML=`<strong>TEMPO DE PAUSA</strong><div class="pause-stepper"><button type="button" data-step="-5">−</button><input type="number" min="0" step="5" value="${saved}"><button type="button" data-step="5">+</button></div><small>segundos</small>`;top.insertAdjacentElement('afterend',pause);const input=pause.querySelector('input');const save=()=>{if(pause.classList.contains('counting'))return;const v=Math.max(0,Number(input.value)||0);input.value=v;localStorage.setItem('mayfit_pause_seconds',String(v))};input.onchange=save;input.onblur=save;pause.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{if(pause.classList.contains('counting'))return;input.value=Math.max(0,(Number(input.value)||0)+Number(btn.dataset.step));save()})}
       function parseClock(value){const parts=String(value||'0').split(':').map(Number);return parts.length>1?Math.max(0,(parts[0]||0)*60+(parts[1]||0)):Math.max(0,parts[0]||0)}
