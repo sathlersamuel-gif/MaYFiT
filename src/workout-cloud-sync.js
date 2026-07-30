@@ -32,6 +32,15 @@ function currentPayload() {
   return value && typeof value === 'object' ? value : null;
 }
 
+function emptyPayload() {
+  const local = currentPayload() || {};
+  return {
+    ...local,
+    exercises: [],
+    sessions: Array.isArray(local.sessions) ? local.sessions : []
+  };
+}
+
 function samePayload(a, b) {
   try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
 }
@@ -73,6 +82,17 @@ function applyRemote(row, reload = true) {
   return true;
 }
 
+function clearLegacyLocalWorkout(reload = true) {
+  const cleared = emptyPayload();
+  if (samePayload(currentPayload(), cleared)) return false;
+  applyingRemote = true;
+  localStorage.setItem(STORE_KEY, JSON.stringify(cleared));
+  applyingRemote = false;
+  if (reload && !document.querySelector('.workout-screen')) location.reload();
+  else sessionStorage.setItem('mayfit_cloud_update_pending', 'true');
+  return true;
+}
+
 async function loadCloud({ reload = false } = {}) {
   const studentId = targetStudentId();
   if (!studentId || !supabase) return;
@@ -88,7 +108,13 @@ async function loadCloud({ reload = false } = {}) {
     console.error('MaYFiT: falha ao buscar treino sincronizado:', error.message);
     return;
   }
-  if (data) applyRemote(data, reload);
+
+  if (data) {
+    applyRemote(data, reload);
+    return;
+  }
+
+  clearLegacyLocalWorkout(reload);
 }
 
 function subscribe(studentId) {
