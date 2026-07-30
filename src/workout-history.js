@@ -13,17 +13,36 @@ function savedTrainingName(){return localStorage.getItem(trainingNameKey())||cur
 function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
 function formatDate(value){return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(value))}
 function numberFrom(row,labelText,fallbackIndex){const labels=[...row.querySelectorAll('label')];const label=labels.find(item=>item.textContent.toLowerCase().includes(labelText));const input=label?.querySelector('input')||row.querySelectorAll('input')[fallbackIndex];return Number(input?.value)||0}
+function normalizeCloudItem(item){const payload=item.workout_data||{};const exercises=Array.isArray(payload)?payload:(Array.isArray(payload.exercises)?payload.exercises:[]);return{id:item.id,date:item.created_at,name:item.workout_name||'Treino',exercises,cloud:true}}
 
 async function readCloudHistory(userId){
   if(!supabase||!userId||userId==='guest')return null;
-  const {data,error}=await supabase.from('workout_history').select('id,student_id,workout_name,exercises,created_at').eq('student_id',userId).order('created_at',{ascending:false});
-  if(error)return null;
-  return (data||[]).map(item=>({id:item.id,date:item.created_at,name:item.workout_name,exercises:Array.isArray(item.exercises)?item.exercises:[],cloud:true}));
+  const {data,error}=await supabase.from('workout_history').select('id,user_id,workout_name,workout_data,created_at,updated_at').eq('user_id',userId).order('created_at',{ascending:false});
+  if(error){console.error('Falha ao carregar histórico:',error);return null}
+  return (data||[]).map(normalizeCloudItem)
 }
+
+async function migrateLocalHistory(userId){
+  if(!supabase||userId!==currentUserId()||currentUser()?.role==='admin')return;
+  const local=readLocalHistory(userId).filter(item=>!item.cloud);
+  if(!local.length)return;
+  const rows=local.map(item=>({
+    id:item.id,
+    user_id:userId,
+    workout_name:item.name||'Treino',
+    workout_data:{exercises:Array.isArray(item.exercises)?item.exercises:[]},
+    created_at:item.date||new Date().toISOString(),
+    updated_at:item.date||new Date().toISOString()
+  }));
+  const {error}=await supabase.from('workout_history').upsert(rows,{onConflict:'id'});
+  if(error)console.error('Falha ao migrar histórico local:',error)
+}
+
 async function getHistory(userId){
+  await migrateLocalHistory(userId);
   const cloud=await readCloudHistory(userId);
   if(cloud!==null){writeLocalHistory(cloud,userId);return cloud}
-  return readLocalHistory(userId);
+  return readLocalHistory(userId)
 }
 
 async function captureWorkout(){
@@ -32,12 +51,14 @@ async function captureWorkout(){
   const exercises=rows.map((row,index)=>({id:row.dataset.historyId||String(index+1),name:row.querySelector('.exercise-col>strong')?.textContent.trim()||`Exercício ${index+1}`,load:numberFrom(row,'atual',0),previousLoad:numberFrom(row,'anterior',1),sets:numberFrom(row,'séries',2),reps:numberFrom(row,'reps',3),rest:numberFrom(row,'tempo',4)}));
   const userId=currentUserId();
   const person=savedTrainingName().trim();
-  const session={id:crypto.randomUUID(),date:new Date().toISOString(),name:person?`Treino de ${person}`:'Treino',exercises};
-  const items=readLocalHistory(userId);items.unshift(session);writeLocalHistory(items,userId);
-  if(supabase&&userId!=='guest'){
-    const {data,error}=await supabase.from('workout_history').insert({student_id:userId,workout_name:session.name,exercises}).select('id,created_at').single();
-    if(!error&&data){session.id=data.id;session.date=data.created_at;session.cloud=true;writeLocalHistory([session,...items.filter(item=>item.id!==session.id)],userId)}
-  }
+  const session={id:crypto.randomUUID(),date:new Date().toISOString(),name:person?`Treino de ${person}`:'Treino',exercises,cloud:false};
+  const local=[session,...readLocalHistory(userId).filter(item=>item.id!==session.id)];
+  writeLocalHistory(local,userId);
+  if(!supabase||userId==='guest')return;
+  const {data,error}=await supabase.from('workout_history').insert({id:session.id,user_id:userId,workout_name:session.name,workout_data:{exercises},created_at:session.date,updated_at:session.date}).select('id,created_at').single();
+  if(error){console.error('Falha ao salvar histórico:',error);return}
+  session.id=data.id;session.date=data.created_at;session.cloud=true;
+  writeLocalHistory([session,...local.filter(item=>item.id!==session.id)],userId)
 }
 
 function styles(){
@@ -60,8 +81,8 @@ async function renderHistory(userId=currentUserId(),studentName=''){
     const details=document.createElement('details');details.className='mayfit-session';if(sessionIndex===0)details.open=true;details.innerHTML=`<summary><div class="mayfit-session-title"><strong>${esc(session.name||'Treino')}</strong><span>${esc(formatDate(session.date))}</span></div></summary><div class="mayfit-session-body"></div>`;const body=details.querySelector('.mayfit-session-body');
     session.exercises.forEach((exercise,exerciseIndex)=>{const evolution=(Number(exercise.load)||0)-(Number(exercise.previousLoad)||0);const box=document.createElement('div');box.className='mayfit-history-exercise';box.dataset.exerciseIndex=exerciseIndex;box.innerHTML=`<h3>${esc(exercise.name)}</h3><div class="mayfit-history-grid"><label>Carga atual<input type="number" data-field="load" value="${Number(exercise.load)||0}"></label><label>Carga anterior<input type="number" data-field="previousLoad" value="${Number(exercise.previousLoad)||0}"></label><label>Séries<input type="number" data-field="sets" value="${Number(exercise.sets)||0}"></label><label>Repetições<input type="number" data-field="reps" value="${Number(exercise.reps)||0}"></label><label>Tempo (s)<input type="number" data-field="rest" value="${Number(exercise.rest)||0}"></label></div><div class="mayfit-evolution">Evolução: ${evolution>=0?'+':''}${evolution} kg</div>`;box.querySelectorAll('input').forEach(input=>input.addEventListener('input',()=>{const load=Number(box.querySelector('[data-field="load"]').value)||0;const previous=Number(box.querySelector('[data-field="previousLoad"]').value)||0;box.querySelector('.mayfit-evolution').textContent=`Evolução: ${load-previous>=0?'+':''}${load-previous} kg`}));body.appendChild(box)});
     const actions=document.createElement('div');actions.className='mayfit-history-actions';actions.innerHTML='<button type="button" class="mayfit-save-session">Salvar alterações</button><button type="button" class="mayfit-delete-session">Excluir treino</button>';
-    actions.querySelector('.mayfit-save-session').onclick=async()=>{const all=await getHistory(userId);const target=all.find(item=>item.id===session.id);if(!target)return;body.querySelectorAll('.mayfit-history-exercise').forEach(box=>{const exercise=target.exercises[Number(box.dataset.exerciseIndex)];box.querySelectorAll('input').forEach(input=>exercise[input.dataset.field]=Number(input.value)||0)});writeLocalHistory(all,userId);if(supabase&&target.cloud)await supabase.from('workout_history').update({exercises:target.exercises,updated_at:new Date().toISOString()}).eq('id',target.id);alert('Alterações salvas no histórico.')};
-    actions.querySelector('.mayfit-delete-session').onclick=async()=>{if(!confirm('Excluir este treino do histórico?'))return;writeLocalHistory((await getHistory(userId)).filter(item=>item.id!==session.id),userId);if(supabase&&session.cloud)await supabase.from('workout_history').delete().eq('id',session.id);renderHistory(userId,studentName)};body.appendChild(actions);list.appendChild(details)
+    actions.querySelector('.mayfit-save-session').onclick=async()=>{const all=await getHistory(userId);const target=all.find(item=>item.id===session.id);if(!target)return;body.querySelectorAll('.mayfit-history-exercise').forEach(box=>{const exercise=target.exercises[Number(box.dataset.exerciseIndex)];box.querySelectorAll('input').forEach(input=>exercise[input.dataset.field]=Number(input.value)||0)});writeLocalHistory(all,userId);if(supabase&&target.cloud){const {error}=await supabase.from('workout_history').update({workout_data:{exercises:target.exercises},updated_at:new Date().toISOString()}).eq('id',target.id);if(error)return alert('Não foi possível salvar: '+error.message)}alert('Alterações salvas no histórico.')};
+    actions.querySelector('.mayfit-delete-session').onclick=async()=>{if(!confirm('Excluir este treino do histórico?'))return;const remaining=(await getHistory(userId)).filter(item=>item.id!==session.id);if(supabase&&session.cloud){const {error}=await supabase.from('workout_history').delete().eq('id',session.id);if(error)return alert('Não foi possível excluir: '+error.message)}writeLocalHistory(remaining,userId);renderHistory(userId,studentName)};body.appendChild(actions);list.appendChild(details)
   })
 }
 
