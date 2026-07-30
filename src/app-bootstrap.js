@@ -1,5 +1,3 @@
-import './supabase-auth-bridge.js';
-import './student-management.js';
 import './admin-workout-tools.js';
 import { initializeWorkoutCloudSync } from './workout-cloud-sync.js';
 
