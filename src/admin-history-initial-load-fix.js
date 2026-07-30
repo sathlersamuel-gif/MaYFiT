@@ -1,7 +1,6 @@
 import { supabase } from './lib/supabase.js';
 
 const USER_KEY='mayfit_user';
-const ADMIN_RETURN_KEY='mayfit_admin_return';
 const VIEW_STUDENT_KEY='mayfit_view_student';
 let loadingStudent=false;
 
@@ -10,28 +9,6 @@ function readJson(key){
 }
 
 function currentUser(){return readJson(USER_KEY)}
-
-function returnToAdmin(){
-  const admin=readJson(ADMIN_RETURN_KEY);
-  if(!admin?.id||admin.role!=='admin')return false;
-  sessionStorage.setItem(USER_KEY,JSON.stringify(admin));
-  sessionStorage.removeItem(ADMIN_RETURN_KEY);
-  sessionStorage.removeItem(VIEW_STUDENT_KEY);
-  location.reload();
-  return true;
-}
-
-function restoreAdminReturn(){
-  const admin=readJson(ADMIN_RETURN_KEY);
-  const user=currentUser();
-  if(!admin?.id||admin.role!=='admin'||user?.role!=='student')return;
-
-  document.querySelectorAll('button,a').forEach(element=>{
-    if(/voltar.*administrador|retornar.*administrador/i.test(element.textContent||'')){
-      element.onclick=event=>{event.preventDefault();event.stopPropagation();returnToAdmin()};
-    }
-  });
-}
 
 async function preloadAdminStudent(){
   const user=currentUser();
@@ -84,10 +61,6 @@ function retryAdminHistory(){
 }
 
 document.addEventListener('click',event=>{
-  const target=event.target.closest?.('button,a');
-  if(target&&/voltar.*administrador|retornar.*administrador/i.test(target.textContent||'')){
-    if(returnToAdmin()){event.preventDefault();event.stopImmediatePropagation();return}
-  }
   const card=event.target.closest?.('.summary article');
   if(!card)return;
   const isHistory=[...card.querySelectorAll('span')].some(span=>/treinos salvos/i.test(span.textContent||''));
@@ -96,13 +69,7 @@ document.addEventListener('click',event=>{
   setTimeout(retryAdminHistory,1300);
 },true);
 
-let scheduled=false;
-const observer=new MutationObserver(()=>{
-  if(scheduled)return;
-  scheduled=true;
-  requestAnimationFrame(()=>{scheduled=false;alignAdminHeader();restoreAdminReturn()});
-});
+const observer=new MutationObserver(()=>alignAdminHeader());
 observer.observe(document.documentElement,{childList:true,subtree:true});
 preloadAdminStudent();
 alignAdminHeader();
-restoreAdminReturn();
