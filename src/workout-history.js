@@ -49,7 +49,11 @@ function styles(){
   .mayfit-session-body{padding:0 12px 14px}.mayfit-history-exercise{border-top:1px solid #294332;padding:14px 2px}.mayfit-history-exercise h3{margin:0 0 10px;font-size:17px;color:#fff}
   .mayfit-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mayfit-history-grid label{font-size:11px;font-weight:800;color:#aebbb2;text-transform:uppercase}.mayfit-history-grid input{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:11px 8px;border:1px solid #42634c;border-radius:11px;background:#050a07;color:#fff;font-size:18px;font-weight:850}
   .mayfit-evolution{margin-top:10px;color:#8df20b;font-weight:900}.mayfit-history-actions{display:flex;gap:9px;margin-top:13px}.mayfit-history-actions button{flex:1;padding:12px;border-radius:12px;font-weight:900;border:1px solid #477155}.mayfit-save-session{background:#76d625;color:#071006}.mayfit-delete-session{background:#24100f;color:#ff938d}
-  .mayfit-training-name{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:10px 0 20px}.mayfit-training-name strong{font-size:26px;color:#fff}.mayfit-training-name input{min-width:0;flex:1;width:160px;border:0;border-bottom:2px solid #75dd2a;background:transparent;color:#fff;padding:5px 2px;font:900 27px/1.15 system-ui,-apple-system,sans-serif;outline:none}.mayfit-training-name input::placeholder{color:#718078}
+  .mayfit-training-name{display:block!important;width:100%!important;margin:12px 0 24px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+  .mayfit-training-name strong{display:block!important;margin:0 0 8px!important;color:#8df20b!important;font:900 15px/1.1 system-ui,-apple-system,sans-serif!important;letter-spacing:2px!important}
+  .mayfit-training-name input{display:block!important;width:100%!important;height:auto!important;min-height:0!important;box-sizing:border-box!important;margin:0!important;padding:0 0 9px!important;border:0!important;border-bottom:2px solid #65c92d!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#fff!important;font:900 clamp(30px,7vw,48px)/1.08 system-ui,-apple-system,sans-serif!important;letter-spacing:-1px!important;outline:none!important;-webkit-appearance:none!important;appearance:none!important}
+  .mayfit-training-name input:focus{border-bottom-color:#9df20f!important;box-shadow:0 2px 0 rgba(157,242,15,.18)!important}
+  .mayfit-training-name input::placeholder{color:#728078!important;opacity:1!important}
   .summary article[data-mayfit-history-card="true"]{cursor:pointer;touch-action:manipulation}
   `;
   document.head.appendChild(style);
@@ -91,7 +95,7 @@ function personalizeHero(){
   if(!hero||hero.dataset.mayfitNamed==='true'||currentUser()?.role==='admin')return;
   const heading=hero.querySelector('h1');
   if(!heading)return;
-  const wrapper=document.createElement('label');
+  const wrapper=document.createElement('div');
   wrapper.className='mayfit-training-name';
   wrapper.innerHTML='<strong>TREINO DE:</strong><input type="text" maxlength="40" placeholder="Digite seu nome" aria-label="Nome da pessoa">';
   const input=wrapper.querySelector('input');
