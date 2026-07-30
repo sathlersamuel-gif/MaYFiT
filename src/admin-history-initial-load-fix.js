@@ -61,8 +61,6 @@ function retryAdminHistory(){
 }
 
 document.addEventListener('click',event=>{
-  const button=event.target.closest?.('button');
-  if(button?.textContent.trim()==='Ver aluno')preloadAdminStudent();
   const card=event.target.closest?.('.summary article');
   if(!card)return;
   const isHistory=[...card.querySelectorAll('span')].some(span=>/treinos salvos/i.test(span.textContent||''));
