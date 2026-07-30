@@ -2,14 +2,16 @@ import { supabase } from './lib/supabase.js';
 
 const HISTORY_PREFIX='mayfit_workout_history_';
 const TRAINING_NAME_PREFIX='mayfit_training_name_';
+const VIEW_STUDENT_KEY='mayfit_view_student';
 
 function currentUser(){try{return JSON.parse(sessionStorage.getItem('mayfit_user')||'{}')}catch{return{}}}
-function currentUserId(){return currentUser()?.id||'guest'}
+function viewedStudent(){try{return JSON.parse(sessionStorage.getItem(VIEW_STUDENT_KEY)||'null')}catch{return null}}
+function currentUserId(){const user=currentUser();const viewed=viewedStudent();return user?.id==='aluno'&&sessionStorage.getItem('mayfit_admin_return')&&viewed?.id?viewed.id:(user?.id||'guest')}
 function historyKey(userId=currentUserId()){return HISTORY_PREFIX+userId}
 function trainingNameKey(userId=currentUserId()){return TRAINING_NAME_PREFIX+userId}
 function readLocalHistory(userId=currentUserId()){try{return JSON.parse(localStorage.getItem(historyKey(userId))||'[]')}catch{return[]}}
 function writeLocalHistory(items,userId=currentUserId()){localStorage.setItem(historyKey(userId),JSON.stringify(items));updateHistoryCount(userId,items.length)}
-function savedTrainingName(){return localStorage.getItem(trainingNameKey())||currentUser()?.name||''}
+function savedTrainingName(){return localStorage.getItem(trainingNameKey())||viewedStudent()?.name||currentUser()?.name||''}
 function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
 function formatDate(value){return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(value))}
 function numberFrom(row,labelText,fallbackIndex){const labels=[...row.querySelectorAll('label')];const label=labels.find(item=>item.textContent.toLowerCase().includes(labelText));const input=label?.querySelector('input')||row.querySelectorAll('input')[fallbackIndex];return Number(input?.value)||0}
@@ -37,7 +39,7 @@ async function readCloudHistory(userId){
 }
 
 async function migrateLocalHistory(userId){
-  if(!supabase||currentUser()?.role==='admin')return;
+  if(!supabase||currentUser()?.role==='admin'||sessionStorage.getItem('mayfit_admin_return'))return;
   const authId=await authenticatedUserId();
   if(!authId||authId!==userId)return;
   const local=readLocalHistory(userId).filter(item=>!item.cloud);
@@ -103,5 +105,5 @@ async function renderHistory(userId=currentUserId(),studentName=''){
 function savedCard(){return [...document.querySelectorAll('.summary article')].find(article=>[...article.querySelectorAll('span')].some(span=>/treinos salvos/i.test(span.textContent||'')))||null}
 function personalizeHero(){const hero=document.querySelector('main .hero');if(!hero||hero.dataset.mayfitNamed==='true'||currentUser()?.role==='admin')return;const heading=hero.querySelector('h1');if(!heading)return;const wrapper=document.createElement('div');wrapper.className='mayfit-training-name';wrapper.innerHTML='<strong>TREINO DE:</strong><input type="text" maxlength="40" placeholder="Digite seu nome" aria-label="Nome da pessoa">';const input=wrapper.querySelector('input');input.value=savedTrainingName();input.addEventListener('input',()=>localStorage.setItem(trainingNameKey(),input.value));heading.replaceWith(wrapper);hero.dataset.mayfitNamed='true'}
 async function prepareSavedCard(){const card=savedCard();if(!card)return;card.dataset.mayfitHistoryCard='true';card.setAttribute('role','button');card.setAttribute('tabindex','0');card.setAttribute('aria-label','Abrir treinos salvos');const userId=currentUserId();if(card.dataset.mayfitCountUser===userId)return;card.dataset.mayfitCountUser=userId;updateHistoryCount(userId,readLocalHistory(userId).length);const items=await getHistory(userId);updateHistoryCount(userId,items.length)}
-function install(){styles();window.mayfitOpenWorkoutHistory=(userId,name)=>renderHistory(userId,name);document.addEventListener('click',event=>{const finish=event.target.closest('button.finish');if(finish)captureWorkout();const card=event.target.closest('.summary article[data-mayfit-history-card="true"]');if(!card||card.closest('.mayfit-history-overlay'))return;event.preventDefault();event.stopPropagation();renderHistory()},true);document.addEventListener('keydown',event=>{if(!['Enter',' '].includes(event.key))return;const card=event.target.closest?.('.summary article[data-mayfit-history-card="true"]');if(!card)return;event.preventDefault();renderHistory()},true);const refresh=()=>{prepareSavedCard();personalizeHero()};const observer=new MutationObserver(refresh);observer.observe(document.documentElement,{childList:true,subtree:true});refresh()}
+function install(){styles();window.mayfitOpenWorkoutHistory=(userId,name)=>renderHistory(userId,name);document.addEventListener('click',event=>{const finish=event.target.closest('button.finish');if(finish)captureWorkout();const card=event.target.closest('.summary article[data-mayfit-history-card="true"]');if(!card||card.closest('.mayfit-history-overlay'))return;event.preventDefault();event.stopPropagation();renderHistory(currentUserId(),viewedStudent()?.name||'')},true);document.addEventListener('keydown',event=>{if(!['Enter',' '].includes(event.key))return;const card=event.target.closest?.('.summary article[data-mayfit-history-card="true"]');if(!card)return;event.preventDefault();renderHistory(currentUserId(),viewedStudent()?.name||'')},true);const refresh=()=>{prepareSavedCard();personalizeHero()};const observer=new MutationObserver(refresh);observer.observe(document.documentElement,{childList:true,subtree:true});refresh()}
 install();
