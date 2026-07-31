@@ -2,8 +2,6 @@ import { supabase } from './lib/supabase.js';
 
 const STORE_KEY = 'mayfit_v8';
 const USER_KEY = 'mayfit_user';
-const ADMIN_RETURN_KEY = 'mayfit_admin_return';
-const VIEW_STUDENT_KEY = 'mayfit_view_student';
 const TABLE = 'student_workouts';
 
 let applyingRemote = false;
@@ -18,11 +16,7 @@ function readJson(storage, key) {
 
 function targetStudentId() {
   const current = readJson(sessionStorage, USER_KEY);
-  const viewed = readJson(sessionStorage, VIEW_STUDENT_KEY);
-
-  if (current?.role === 'admin' && viewed?.id) return viewed.id;
-  if (current?.role === 'student' && current?.id && current.id !== 'aluno') return current.id;
-  return null;
+  return current?.id || null;
 }
 
 function currentPayload() {
@@ -44,9 +38,12 @@ async function saveCloud() {
   const payload = currentPayload();
   if (!studentId || !payload || applyingRemote || !supabase) return;
 
+  const cleanPayload = { ...payload };
+  delete cleanPayload.users;
+
   const { error } = await supabase.from(TABLE).upsert({
     student_id: studentId,
-    workout_data: payload,
+    workout_data: cleanPayload,
     updated_at: new Date().toISOString()
   }, { onConflict: 'student_id' });
 
@@ -138,7 +135,7 @@ function installStorageHook() {
   Storage.prototype.setItem = hookedSetItem;
 }
 
-function watchTargetChanges() {
+function watchSession() {
   setInterval(async () => {
     const next = targetStudentId();
     if (!next || next === activeStudentId) {
@@ -163,5 +160,5 @@ export async function initializeWorkoutCloudSync() {
   await loadCloud({ reload: false });
   const studentId = targetStudentId();
   if (studentId) subscribe(studentId);
-  watchTargetChanges();
+  watchSession();
 }
