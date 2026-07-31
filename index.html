@@ -8,14 +8,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="MaYFiT" />
     <meta name="description" content="Treinos, evolução corporal e gestão de alunos." />
-    <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-    <link rel="stylesheet" href="./src/styles.css?v=202607310036" />
-    <link rel="stylesheet" href="./src/exercise-quality.css?v=202607310036" />
-    <link rel="stylesheet" href="./src/role-access.css?v=202607310036" />
-    <link rel="stylesheet" href="./src/figures.css?v=202607310036" />
-    <link rel="stylesheet" href="./src/theme.css?v=202607310036" />
-    <link rel="stylesheet" href="./src/mobile-audit.css?v=202607310036" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="stylesheet" href="/src/figures.css" />
+    <link rel="stylesheet" href="/src/theme.css" />
+    <link rel="stylesheet" href="/src/mobile-audit.css" />
     <title>MaYFiT</title>
     <style>
       html,body,#root{min-height:100%;margin:0;background:#050706}
@@ -23,40 +20,47 @@
       #boot-status strong{display:block;color:#8df20b;font-size:30px;margin-bottom:10px}
       #boot-status small{color:#b9c8be}
     </style>
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@18.3.1",
-          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-          "lucide-react": "https://esm.sh/lucide-react@0.468.0?external=react",
-          "https://sathlersamuel-gif.github.io/MaYFiT/src/styles.css": "data:text/javascript,export default {};",
-          "https://sathlersamuel-gif.github.io/MaYFiT/src/exercise-quality.css": "data:text/javascript,export default {};",
-          "https://sathlersamuel-gif.github.io/MaYFiT/src/role-access.css": "data:text/javascript,export default {};"
-        }
-      }
-    </script>
-    <script src="https://unpkg.com/@babel/standalone@7.25.9/babel.min.js"></script>
   </head>
   <body>
     <div id="root"></div>
     <div id="boot-status"><div><strong>MaYFiT</strong><small>Carregando aplicativo…</small></div></div>
     <script>
-      const root=document.getElementById('root');
-      const boot=document.getElementById('boot-status');
-      const observer=new MutationObserver(()=>{if(root.childElementCount){observer.disconnect();boot.remove();}});
-      observer.observe(root,{childList:true});
-      window.addEventListener('error',event=>{if(!root.childElementCount&&boot){boot.querySelector('small').textContent='Erro ao carregar: '+(event.message||'atualize a página')}});
+      window.addEventListener('error',function(event){
+        var root=document.getElementById('root');
+        var boot=document.getElementById('boot-status');
+        if(root&&!root.childElementCount&&boot){
+          boot.querySelector('small').textContent='Erro ao carregar: '+(event.message||'atualize a página');
+        }
+      });
+      window.addEventListener('unhandledrejection',function(event){
+        var root=document.getElementById('root');
+        var boot=document.getElementById('boot-status');
+        if(root&&!root.childElementCount&&boot){
+          boot.querySelector('small').textContent='Erro ao iniciar o aplicativo.';
+        }
+      });
+      new MutationObserver(function(_,observer){
+        var root=document.getElementById('root');
+        var boot=document.getElementById('boot-status');
+        if(root&&root.childElementCount&&boot){observer.disconnect();boot.remove();}
+      }).observe(document.getElementById('root'),{childList:true});
     </script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-    <script src="./src/legacy-workout-recovery.js?v=202607310036"></script>
-    <script type="text/babel" data-type="module" data-presets="react" src="./src/main.jsx?v=202607310036"></script>
-    <script src="./src/approved-workout-ui.js?v=202607310036"></script>
-    <script src="./src/workout-interactions.js?v=202607310036"></script>
-    <script type="module" src="./src/firebase-auth-bridge.js?v=202607310036"></script>
+    <script src="/src/legacy-workout-recovery.js"></script>
+    <script type="module" src="/src/main.jsx"></script>
+    <script src="/src/approved-workout-ui.js"></script>
+    <script src="/src/workout-interactions.js"></script>
+    <script type="module" src="/src/firebase-auth-bridge.js"></script>
     <script>
-      if('serviceWorker' in navigator){window.addEventListener('load',async()=>{try{const registrations=await navigator.serviceWorker.getRegistrations();for(const registration of registrations)await registration.unregister();const keys=await caches.keys();await Promise.all(keys.map(key=>caches.delete(key)))}catch{}})}
+      if('serviceWorker' in navigator){
+        window.addEventListener('load',async function(){
+          try{
+            var registrations=await navigator.serviceWorker.getRegistrations();
+            for(var registration of registrations)await registration.unregister();
+            var keys=await caches.keys();
+            await Promise.all(keys.map(function(key){return caches.delete(key)}));
+          }catch(error){}
+        });
+      }
     </script>
   </body>
 </html>
