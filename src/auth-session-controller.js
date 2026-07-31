@@ -6,16 +6,16 @@ const STORE_KEY='mayfit_v8';
 
 function readJson(storage,key){try{return JSON.parse(storage.getItem(key)||'null')}catch{return null}}
 
-function writeRealUser(profile,authUser){
+function writeSelfServiceUser(authUser,profile={}){
   const user={
-    id:profile.id,
-    name:profile.full_name||authUser?.user_metadata?.full_name||authUser?.email?.split('@')[0]||'Usuário',
-    email:authUser?.email||'',
-    role:profile.role||'student',
-    status:profile.status||'pending'
+    id:authUser.id,
+    name:profile.full_name||authUser.user_metadata?.full_name||authUser.email?.split('@')[0]||'Usuário',
+    email:authUser.email||'',
+    role:'admin',
+    status:'active'
   };
   sessionStorage.setItem(USER_KEY,JSON.stringify(user));
-  if(user.role!=='admin')sessionStorage.removeItem(VIEW_STUDENT_KEY);
+  sessionStorage.removeItem(VIEW_STUDENT_KEY);
   return user;
 }
 
@@ -40,20 +40,15 @@ export async function synchronizeAuthSession(){
   if(sessionError){console.error('MaYFiT: falha ao restaurar sessão:',sessionError.message);return null}
   if(!session?.user)return null;
 
-  const {data:profile,error}=await supabase
+  let profile={};
+  const {data,error}=await supabase
     .from('profiles')
-    .select('id,full_name,role,status')
+    .select('id,full_name')
     .eq('id',session.user.id)
     .maybeSingle();
+  if(!error&&data)profile=data;
 
-  if(error){console.error('MaYFiT: falha ao carregar perfil real:',error.message);return null}
-  if(!profile){
-    await supabase.auth.signOut();
-    sessionStorage.removeItem(USER_KEY);
-    return null;
-  }
-
-  return writeRealUser(profile,session.user);
+  return writeSelfServiceUser(session.user,profile);
 }
 
 export function installRealLogout(){
