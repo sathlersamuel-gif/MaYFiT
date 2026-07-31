@@ -10,9 +10,9 @@
     <meta name="description" content="Treinos, evolução corporal e gestão de alunos." />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-    <link rel="stylesheet" href="./src/figures.css?v=202607310002" />
-    <link rel="stylesheet" href="./src/theme.css?v=202607310002" />
-    <link rel="stylesheet" href="./src/mobile-audit.css?v=202607310002" />
+    <link rel="stylesheet" href="./src/figures.css?v=202607310018" />
+    <link rel="stylesheet" href="./src/theme.css?v=202607310018" />
+    <link rel="stylesheet" href="./src/mobile-audit.css?v=202607310018" />
     <title>MaYFiT</title>
     <style>
       html,body,#root{min-height:100%;margin:0;background:#050706}
@@ -30,12 +30,13 @@
       const observer=new MutationObserver(()=>{if(root.childElementCount){observer.disconnect();boot.remove();}});
       observer.observe(root,{childList:true});
       window.addEventListener('mayfit-ready',()=>boot?.remove(),{once:true});
+      if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(list=>list.forEach(r=>r.update()))}
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-    <script src="./src/legacy-workout-recovery.js?v=202607310002"></script>
-    <script type="module" src="./src/app-bootstrap.js?v=202607310002"></script>
-    <script type="module" src="./src/firebase-auth-bridge.js?v=202607310002"></script>
+    <script src="./src/legacy-workout-recovery.js?v=202607310018"></script>
+    <script type="module" src="./src/app-bootstrap.js?v=202607310018"></script>
+    <script type="module" src="./src/firebase-auth-bridge.js?v=202607310018"></script>
   </body>
 </html>
