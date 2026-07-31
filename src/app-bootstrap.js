@@ -25,36 +25,33 @@ const loadOptionalModule = async (path, label) => {
 async function bootstrap() {
   try {
     await import('./main.jsx');
+    window.dispatchEvent(new Event('mayfit-ready'));
   } catch (error) {
     showFatalError(error);
     return;
   }
 
-  const authModule = await loadOptionalModule('./auth-session-controller.js', 'sessão');
-  await loadOptionalModule('./supabase-login-bridge.js', 'login Supabase');
-  await loadOptionalModule('./self-service-mode.js', 'modo individual');
-  await loadOptionalModule('./admin-workout-tools.js', 'ferramentas de treino');
+  const [authModule] = await Promise.all([
+    loadOptionalModule('./auth-session-controller.js', 'sessão'),
+    loadOptionalModule('./supabase-login-bridge.js', 'login Supabase'),
+    loadOptionalModule('./self-service-mode.js', 'modo individual'),
+    loadOptionalModule('./admin-workout-tools.js', 'ferramentas de treino')
+  ]);
 
   if (authModule) {
-    try {
-      await Promise.race([
-        authModule.synchronizeAuthSession?.(),
-        new Promise(resolve => setTimeout(resolve, 3500))
-      ]);
-    } catch (error) {
+    authModule.installRealLogout?.();
+    Promise.race([
+      authModule.synchronizeAuthSession?.(),
+      new Promise(resolve => setTimeout(resolve, 900))
+    ]).catch(error => {
       console.error('MaYFiT: não foi possível restaurar a sessão:', error);
-    }
-
-    try {
-      authModule.installRealLogout?.();
-    } catch (error) {
-      console.error('MaYFiT: não foi possível instalar o logout:', error);
-    }
+    });
   }
 
-  const syncModule = await loadOptionalModule('./workout-cloud-sync.js', 'sincronização');
-  syncModule?.initializeWorkoutCloudSync?.().catch(error => {
-    console.error('MaYFiT: sincronização inicial indisponível:', error);
+  loadOptionalModule('./workout-cloud-sync.js', 'sincronização').then(syncModule => {
+    syncModule?.initializeWorkoutCloudSync?.().catch(error => {
+      console.error('MaYFiT: sincronização inicial indisponível:', error);
+    });
   });
 }
 
