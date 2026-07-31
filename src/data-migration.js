@@ -15,7 +15,7 @@ const DEFAULT_USERS=[
 ];
 
 function text(value,fallback){
-  const result=String(value??'').trim();
+  const result=String(value==null?'':value).trim();
   return result||fallback;
 }
 
@@ -29,9 +29,9 @@ function normalizeExercise(item,index){
   const type=text(source.type||source.exercise_id||source.slug,'supino');
   return {
     ...source,
-    id:source.id??`exercise-${Date.now()}-${index}`,
+    id:source.id!=null?source.id:`exercise-${Date.now()}-${index}`,
     type,
-    name:text(source.name||source.label,type.replaceAll('_',' ').replaceAll('-',' ')),
+    name:text(source.name||source.label,type.split('_').join(' ').split('-').join(' ')),
     sets:number(source.sets,3,1),
     reps:number(source.reps,12,1),
     load:number(source.load,0),
@@ -80,7 +80,9 @@ normalizeSession();
 
 window.addEventListener('error',event=>{
   console.error('Falha ao iniciar o MaYFiT:',event.error||event.message);
-  const root=document.getElementById('root');
-  if(!root||root.childElementCount)return;
-  root.innerHTML='<main style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#06100b;color:#fff;font-family:system-ui;text-align:center"><div><h1 style="color:#8df20b">MaYFiT</h1><p>Não foi possível abrir o painel. Saia e entre novamente.</p><button onclick="sessionStorage.removeItem(\'mayfit_user\');location.reload()" style="padding:12px 18px;border:0;border-radius:10px;font-weight:800">Voltar ao login</button></div></main>';
+  setTimeout(()=>{
+    const root=document.getElementById('root');
+    if(!root||root.childElementCount)return;
+    root.innerHTML='<main style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#06100b;color:#fff;font-family:system-ui;text-align:center"><div><h1 style="color:#8df20b">MaYFiT</h1><p>Não foi possível abrir o painel.</p><button onclick="sessionStorage.removeItem(\'mayfit_user\');location.reload()" style="padding:12px 18px;border:0;border-radius:10px;font-weight:800">Voltar ao login</button></div></main>';
+  },100);
 });
