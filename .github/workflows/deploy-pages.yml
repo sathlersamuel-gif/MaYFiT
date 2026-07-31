@@ -33,6 +33,31 @@ jobs:
       - name: Gerar versão de produção
         run: npm run build
 
+      - name: Ajustar caminhos e PWA para GitHub Pages
+        run: |
+          cp sw.js dist/sw.js
+          python3 - <<'PY'
+          from pathlib import Path
+
+          index = Path('dist/index.html')
+          html = index.read_text(encoding='utf-8')
+          replacements = {
+              'href="/manifest.webmanifest"': 'href="/MaYFiT/manifest.webmanifest"',
+              'href="/icons/': 'href="/MaYFiT/icons/',
+              "register('/sw.js?v=49')": "register('/MaYFiT/sw.js?v=50', { scope: '/MaYFiT/' })",
+          }
+          for old, new in replacements.items():
+              html = html.replace(old, new)
+          index.write_text(html, encoding='utf-8')
+
+          manifest = Path('dist/manifest.webmanifest')
+          if manifest.exists():
+              text = manifest.read_text(encoding='utf-8')
+              text = text.replace('"start_url": "/"', '"start_url": "/MaYFiT/"')
+              text = text.replace('"scope": "/"', '"scope": "/MaYFiT/"')
+              manifest.write_text(text, encoding='utf-8')
+          PY
+
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
 
