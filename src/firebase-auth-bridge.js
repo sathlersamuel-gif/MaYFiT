@@ -46,7 +46,8 @@ function errorText(e){
 function adminProfile(user){
   const email=String(user?.email||'').toLowerCase();
   return {
-    id:user.uid,
+    id:'admin',
+    firebaseUid:user.uid,
     name:user.displayName||email.split('@')[0]||'Administrador',
     email:user.email||'',
     role:'admin',
