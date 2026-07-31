@@ -6,13 +6,18 @@ const STORE_KEY='mayfit_v8';
 
 function readJson(storage,key){try{return JSON.parse(storage.getItem(key)||'null')}catch{return null}}
 
-function writeSelfServiceUser(authUser,profile={}){
+function normalizeRole(profile={}){
+  const raw=String(profile.role||profile.user_role||'student').trim().toLowerCase();
+  return ['admin','administrator','administrador'].includes(raw)?'admin':'student';
+}
+
+function writeAuthenticatedUser(authUser,profile={}){
   const user={
     id:authUser.id,
     name:profile.full_name||authUser.user_metadata?.full_name||authUser.email?.split('@')[0]||'Usuário',
     email:authUser.email||'',
-    role:'admin',
-    status:'active'
+    role:normalizeRole(profile),
+    status:profile.status||'active'
   };
   sessionStorage.setItem(USER_KEY,JSON.stringify(user));
   sessionStorage.removeItem(VIEW_STUDENT_KEY);
@@ -32,6 +37,20 @@ function removeLegacySession(){
   }
 }
 
+export async function getProfileForUser(authUser){
+  if(!supabase||!authUser)return {};
+  const {data,error}=await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id',authUser.id)
+    .maybeSingle();
+  if(error){
+    console.error('MaYFiT: não foi possível consultar o perfil:',error.message);
+    return {};
+  }
+  return data||{};
+}
+
 export async function synchronizeAuthSession(){
   removeLegacySession();
   if(!supabase)return null;
@@ -40,15 +59,8 @@ export async function synchronizeAuthSession(){
   if(sessionError){console.error('MaYFiT: falha ao restaurar sessão:',sessionError.message);return null}
   if(!session?.user)return null;
 
-  let profile={};
-  const {data,error}=await supabase
-    .from('profiles')
-    .select('id,full_name')
-    .eq('id',session.user.id)
-    .maybeSingle();
-  if(!error&&data)profile=data;
-
-  return writeSelfServiceUser(session.user,profile);
+  const profile=await getProfileForUser(session.user);
+  return writeAuthenticatedUser(session.user,profile);
 }
 
 export function installRealLogout(){
