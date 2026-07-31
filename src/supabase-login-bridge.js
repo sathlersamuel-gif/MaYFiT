@@ -2,6 +2,7 @@ import { supabase } from './lib/supabase.js';
 
 const USER_KEY='mayfit_user';
 const VIEW_STUDENT_KEY='mayfit_view_student';
+const ADMIN_EMAIL='sathlersamuel@gmail.com';
 let busy=false;
 
 function setMessage(form,text){
@@ -15,9 +16,9 @@ function setMessage(form,text){
   box.textContent=text;
 }
 
-function normalizeRole(profile={}){
-  const raw=String(profile.role||profile.user_role||'student').trim().toLowerCase();
-  return ['admin','administrator','administrador'].includes(raw)?'admin':'student';
+function resolveRole(authUser){
+  const email=String(authUser?.email||'').trim().toLowerCase();
+  return email===ADMIN_EMAIL?'admin':'student';
 }
 
 async function sessionUser(authUser){
@@ -28,7 +29,7 @@ async function sessionUser(authUser){
     id:authUser.id,
     name:profile.full_name||authUser.user_metadata?.full_name||authUser.email?.split('@')[0]||'Usuário',
     email:authUser.email||'',
-    role:normalizeRole(profile),
+    role:resolveRole(authUser),
     status:profile.status||'active'
   };
 }
@@ -76,8 +77,9 @@ async function signup(form){
 
   busy=true;
   try{
+    const normalizedEmail=email.trim().toLowerCase();
     const {data,error}=await supabase.auth.signUp({
-      email:email.trim().toLowerCase(),
+      email:normalizedEmail,
       password,
       options:{data:{full_name:name.trim(),role:'student'}}
     });
@@ -87,7 +89,7 @@ async function signup(form){
       await supabase.from('profiles').upsert({
         id:data.user.id,
         full_name:name.trim(),
-        role:'student',
+        role:normalizedEmail===ADMIN_EMAIL?'admin':'student',
         status:'active'
       },{onConflict:'id'});
     }
@@ -101,7 +103,7 @@ async function signup(form){
 
     setMessage(form,'Cadastro criado. Confirme seu e-mail pelo link recebido e depois entre com sua senha.');
     const inputs=form.querySelectorAll('input');
-    if(inputs[0])inputs[0].value=email.trim().toLowerCase();
+    if(inputs[0])inputs[0].value=normalizedEmail;
   }catch(error){
     const raw=error?.message||'';
     let message=raw||'Não foi possível criar a conta.';
