@@ -3,12 +3,14 @@ import { supabase } from './lib/supabase.js';
 const USER_KEY='mayfit_user';
 const VIEW_STUDENT_KEY='mayfit_view_student';
 const STORE_KEY='mayfit_v8';
+const ADMIN_EMAIL='sathlersamuel@gmail.com';
 
 function readJson(storage,key){try{return JSON.parse(storage.getItem(key)||'null')}catch{return null}}
 
-function normalizeRole(profile={}){
-  const raw=String(profile.role||profile.user_role||'student').trim().toLowerCase();
-  return ['admin','administrator','administrador'].includes(raw)?'admin':'student';
+function resolveRole(authUser,profile={}){
+  const email=String(authUser?.email||'').trim().toLowerCase();
+  if(email===ADMIN_EMAIL)return 'admin';
+  return 'student';
 }
 
 function writeAuthenticatedUser(authUser,profile={}){
@@ -16,7 +18,7 @@ function writeAuthenticatedUser(authUser,profile={}){
     id:authUser.id,
     name:profile.full_name||authUser.user_metadata?.full_name||authUser.email?.split('@')[0]||'Usuário',
     email:authUser.email||'',
-    role:normalizeRole(profile),
+    role:resolveRole(authUser,profile),
     status:profile.status||'active'
   };
   sessionStorage.setItem(USER_KEY,JSON.stringify(user));
