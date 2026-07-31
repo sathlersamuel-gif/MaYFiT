@@ -19,3 +19,10 @@ export const supabase = isSupabaseConfigured
       }
     })
   : null;
+
+if (typeof window !== 'undefined' && supabase) {
+  window.mayfitSupabase = supabase;
+  import('../workout-plan-sync.js').catch(error =>
+    console.error('Falha ao iniciar sincronização das fichas:', error)
+  );
+}
