@@ -1,3 +1,5 @@
+import './student-workout-manager.js';
+
 const USER_KEY='mayfit_user';
 const ADMIN_RETURN_KEY='mayfit_admin_return';
 
