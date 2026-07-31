@@ -32,6 +32,8 @@ async function bootstrap() {
   }
 
   await Promise.all([
+    loadOptionalModule('./approved-workout-ui.js', 'estrutura visual aprovada do treino'),
+    loadOptionalModule('./workout-interactions.js', 'cronômetro e interações do treino'),
     loadOptionalModule('./self-service-mode.js', 'modo individual'),
     loadOptionalModule('./admin-workout-tools.js', 'ferramentas de treino')
   ]);
