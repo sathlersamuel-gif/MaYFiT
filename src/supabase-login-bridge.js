@@ -15,13 +15,21 @@ function setMessage(form,text){
   box.textContent=text;
 }
 
-function sessionUser(authUser){
+function normalizeRole(profile={}){
+  const raw=String(profile.role||profile.user_role||'student').trim().toLowerCase();
+  return ['admin','administrator','administrador'].includes(raw)?'admin':'student';
+}
+
+async function sessionUser(authUser){
+  let profile={};
+  const {data,error}=await supabase.from('profiles').select('*').eq('id',authUser.id).maybeSingle();
+  if(!error&&data)profile=data;
   return {
     id:authUser.id,
-    name:authUser.user_metadata?.full_name||authUser.email?.split('@')[0]||'Usuário',
+    name:profile.full_name||authUser.user_metadata?.full_name||authUser.email?.split('@')[0]||'Usuário',
     email:authUser.email||'',
-    role:'admin',
-    status:'active'
+    role:normalizeRole(profile),
+    status:profile.status||'active'
   };
 }
 
@@ -42,7 +50,7 @@ async function handleLogin(event){
   try{
     const {data,error}=await supabase.auth.signInWithPassword({email,password});
     if(error)throw error;
-    sessionStorage.setItem(USER_KEY,JSON.stringify(sessionUser(data.user)));
+    sessionStorage.setItem(USER_KEY,JSON.stringify(await sessionUser(data.user)));
     sessionStorage.removeItem(VIEW_STUDENT_KEY);
     location.reload();
   }catch(error){
@@ -71,12 +79,21 @@ async function signup(form){
     const {data,error}=await supabase.auth.signUp({
       email:email.trim().toLowerCase(),
       password,
-      options:{data:{full_name:name.trim()}}
+      options:{data:{full_name:name.trim(),role:'student'}}
     });
     if(error)throw error;
 
+    if(data.user){
+      await supabase.from('profiles').upsert({
+        id:data.user.id,
+        full_name:name.trim(),
+        role:'student',
+        status:'active'
+      },{onConflict:'id'});
+    }
+
     if(data.session&&data.user){
-      sessionStorage.setItem(USER_KEY,JSON.stringify(sessionUser(data.user)));
+      sessionStorage.setItem(USER_KEY,JSON.stringify(await sessionUser(data.user)));
       sessionStorage.removeItem(VIEW_STUDENT_KEY);
       location.reload();
       return;
