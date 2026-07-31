@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#06100b" />
+  <title>MaYFiT iPhone</title>
+  <style>
+    html,body,#root{min-height:100%;margin:0;background:#06100b}
+    #iphone-loading{position:fixed;inset:0;display:grid;place-items:center;background:#06100b;color:#fff;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;z-index:9999}
+    #iphone-loading strong{display:block;color:#8df20b;font-size:28px;margin-bottom:8px}
+  </style>
+  <script>
+    window.addEventListener('DOMContentLoaded',function(){
+      if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(list){list.forEach(function(reg){reg.unregister()})}).catch(function(){})}
+      if(window.caches){caches.keys().then(function(keys){keys.forEach(function(key){caches.delete(key)})}).catch(function(){})}
+    });
+    window.addEventListener('error',function(event){
+      var box=document.getElementById('iphone-loading');
+      if(box){box.innerHTML='<div><strong>MaYFiT</strong><p>Erro ao abrir no iPhone.</p><small>'+String(event.message||'Falha desconhecida')+'</small></div>'}
+    });
+    window.setTimeout(function(){
+      var box=document.getElementById('iphone-loading');
+      var root=document.getElementById('root');
+      if(box&&root&&root.childElementCount===0){box.innerHTML='<div><strong>MaYFiT</strong><p>O aplicativo demorou para iniciar.</p><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:10px;font-weight:800">Tentar novamente</button></div>'}
+    },12000);
+  </script>
+</head>
+<body>
+  <div id="iphone-loading"><div><strong>MaYFiT</strong><p>Carregando versão para iPhone...</p></div></div>
+  <div id="root"></div>
+  <script src="/src/data-migration.js?v=iphone2"></script>
+  <script type="module" src="/src/main.jsx?v=iphone2"></script>
+  <script type="module" src="/src/supabase-auth-bridge.js?v=iphone2"></script>
+  <script>
+    const observer=new MutationObserver(function(){
+      const root=document.getElementById('root');
+      const loading=document.getElementById('iphone-loading');
+      if(root&&root.childElementCount>0&&loading){loading.remove();observer.disconnect()}
+    });
+    observer.observe(document.documentElement,{childList:true,subtree:true});
+  </script>
+</body>
+</html>
