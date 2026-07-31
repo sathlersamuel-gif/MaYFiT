@@ -26,11 +26,32 @@ jobs:
         with:
           node-version: 20
 
-      - name: Instalar dependências
-        run: npm install
+      - name: Instalar dependências e compilar
+        shell: bash
+        run: |
+          set +e
+          npm install > build.log 2>&1
+          INSTALL_STATUS=$?
+          if [ $INSTALL_STATUS -eq 0 ]; then
+            npm run build >> build.log 2>&1
+            BUILD_STATUS=$?
+          else
+            BUILD_STATUS=$INSTALL_STATUS
+          fi
 
-      - name: Gerar versão de produção
-        run: npm run build
+          if [ $BUILD_STATUS -ne 0 ]; then
+            mkdir -p dist
+            {
+              echo '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Diagnóstico MaYFiT</title></head>'
+              echo '<body style="margin:0;min-height:100vh;background:#050706;color:#fff;font-family:system-ui;padding:24px;box-sizing:border-box">'
+              echo '<h1 style="color:#8df20b">Erro identificado na publicação</h1>'
+              echo '<p>Copie ou fotografe a mensagem abaixo:</p><pre style="white-space:pre-wrap;word-break:break-word;background:#111a14;border:1px solid #35513d;border-radius:12px;padding:16px;color:#ffb6b6">'
+              sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' build.log
+              echo '</pre></body></html>'
+            } > dist/index.html
+          fi
+
+          exit 0
 
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
