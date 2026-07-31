@@ -1,3 +1,5 @@
+const VERSION='202607310018';
+
 const showFatalError = (error) => {
   console.error('MaYFiT: falha ao abrir o aplicativo:', error);
   const root = document.getElementById('root');
@@ -14,22 +16,15 @@ const showFatalError = (error) => {
 };
 
 const loadOptionalModule = async (path, label) => {
-  try {
-    return await import(path);
-  } catch (error) {
-    console.error(`MaYFiT: módulo opcional indisponível (${label}):`, error);
-    return null;
-  }
+  try { return await import(`${path}?v=${VERSION}`); }
+  catch (error) { console.error(`MaYFiT: módulo opcional indisponível (${label}):`, error); return null; }
 };
 
 async function bootstrap() {
   try {
-    await import('./main.jsx');
+    await import(`./main.jsx?v=${VERSION}`);
     window.dispatchEvent(new Event('mayfit-ready'));
-  } catch (error) {
-    showFatalError(error);
-    return;
-  }
+  } catch (error) { showFatalError(error); return; }
 
   await Promise.all([
     loadOptionalModule('./approved-workout-ui.js', 'estrutura visual aprovada do treino'),
