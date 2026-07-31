@@ -4,41 +4,66 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#06100b" />
-  <title>MaYFiT iPhone</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>MaYFiT</title>
+  <link rel="stylesheet" href="/src/figures.css?v=14" />
+  <link rel="stylesheet" href="/src/theme.css?v=14" />
+  <link rel="stylesheet" href="/src/mobile-audit.css?v=1" />
   <style>
-    html,body,#root{min-height:100%;margin:0;background:#06100b}
+    html,body,#root{min-height:100%;margin:0;background:#050706}
     #iphone-loading{position:fixed;inset:0;display:grid;place-items:center;background:#06100b;color:#fff;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;z-index:9999}
     #iphone-loading strong{display:block;color:#8df20b;font-size:28px;margin-bottom:8px}
+    #mayfit-pause-control{display:flex;align-items:center;justify-content:center;gap:12px;width:calc(100% - 92px);margin:0 0 14px 92px;padding:10px 14px;border:1px solid #41634d;border-radius:16px;background:#101a14;color:#fff;box-sizing:border-box}
+    #mayfit-pause-control strong{font:900 13px system-ui,-apple-system,sans-serif;white-space:nowrap}
+    #mayfit-pause-control .pause-stepper{display:flex;align-items:center;gap:8px}
+    #mayfit-pause-control button{width:38px;height:38px;border:1px solid #3f6749;border-radius:12px;background:#17341f;color:#86e044;font:950 22px system-ui,-apple-system,sans-serif}
+    #mayfit-pause-control input{width:82px;height:38px;border:1px solid #8b9b90;border-radius:12px;background:#f7faf8;color:#d9262e;text-align:center;font:950 20px system-ui,-apple-system,sans-serif;box-sizing:border-box}
+    #mayfit-pause-control small{color:#b9c8be;font:750 11px system-ui,-apple-system,sans-serif;white-space:nowrap}
+    @media(max-width:620px){
+      .workout-screen{padding-top:max(12px,env(safe-area-inset-top))!important}
+      .workout-screen .workout-top{position:relative!important;top:auto!important;grid-template-columns:42px minmax(0,1fr)!important;gap:5px!important;padding-top:0!important}
+      .workout-screen .back-button{width:42px!important;height:56px!important}
+      .workout-screen .time-strip{height:56px!important;grid-template-columns:auto minmax(0,1fr) 116px!important;padding:5px 6px!important;gap:4px!important;overflow:hidden!important}
+      .workout-screen .time-strip span{font-size:12px!important}
+      .workout-screen .time-strip input{font-size:30px!important;min-width:0!important}
+      .workout-screen .timer-control{display:flex!important;align-items:center!important;justify-content:center!important;height:44px!important;width:100%!important;min-width:0!important;max-width:116px!important;padding:0 4px!important;margin:0!important;font:900 10px/1 system-ui,-apple-system,sans-serif!important;letter-spacing:-.25px!important;box-sizing:border-box!important;white-space:nowrap!important;overflow:hidden!important;text-align:center!important}
+      #mayfit-pause-control{position:relative!important;top:auto!important;width:100%!important;margin:0 0 12px!important;min-height:56px!important;gap:6px!important;padding:6px 7px!important;border-radius:0 0 30px 30px!important}
+      #mayfit-pause-control strong{font-size:10px!important}
+      #mayfit-pause-control input{width:58px!important;height:34px!important;font-size:22px!important}
+      #mayfit-pause-control button{width:32px!important;height:32px!important;flex-basis:32px!important;font-size:20px!important}
+      #mayfit-pause-control small{font-size:9px!important}
+      .workout-screen .sheet-row{min-height:0!important}
+      .workout-screen .exercise-col{justify-content:flex-start!important;padding:8px 6px 12px!important}
+      .workout-screen .exercise-col>strong{font-size:15px!important;line-height:1.08!important;margin:0 0 10px!important}
+      .workout-screen .exercise-photo{display:block!important;width:100%!important;height:auto!important;aspect-ratio:auto!important;border:0!important;border-radius:0!important;background:transparent!important;overflow:visible!important}
+      .workout-screen .exercise-photo .pose-pair{width:100%!important;height:auto!important;aspect-ratio:1.52/1!important;border:1px solid #344239!important;border-radius:10px!important;overflow:hidden!important;background:#050706!important}
+      .workout-screen .exercise-photo>span{position:static!important;display:flex!important;align-items:center!important;gap:6px!important;width:100%!important;margin:8px 0 0!important;padding:0!important;border:0!important;background:transparent!important;color:#fff!important;font-size:9px!important;font-weight:950!important;white-space:nowrap!important;line-height:1.2!important}
+      .workout-screen .exercise-photo>span::before{content:'✓';display:grid;place-items:center;width:18px;height:18px;flex:0 0 18px;border:2px solid #8df20b;border-radius:50%;color:#8df20b;font-size:12px;font-weight:1000;line-height:1}
+    }
   </style>
   <script>
     window.addEventListener('DOMContentLoaded',function(){
       if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(list){list.forEach(function(reg){reg.unregister()})}).catch(function(){})}
       if(window.caches){caches.keys().then(function(keys){keys.forEach(function(key){caches.delete(key)})}).catch(function(){})}
     });
-    window.addEventListener('error',function(event){
-      var box=document.getElementById('iphone-loading');
-      if(box){box.innerHTML='<div><strong>MaYFiT</strong><p>Erro ao abrir no iPhone.</p><small>'+String(event.message||'Falha desconhecida')+'</small></div>'}
-    });
-    window.setTimeout(function(){
-      var box=document.getElementById('iphone-loading');
-      var root=document.getElementById('root');
-      if(box&&root&&root.childElementCount===0){box.innerHTML='<div><strong>MaYFiT</strong><p>O aplicativo demorou para iniciar.</p><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:10px;font-weight:800">Tentar novamente</button></div>'}
-    },12000);
   </script>
 </head>
 <body>
-  <div id="iphone-loading"><div><strong>MaYFiT</strong><p>Carregando versão para iPhone...</p></div></div>
+  <div id="iphone-loading"><div><strong>MaYFiT</strong><p>Carregando...</p></div></div>
   <div id="root"></div>
-  <script src="/src/data-migration.js?v=iphone2"></script>
-  <script type="module" src="/src/main.jsx?v=iphone2"></script>
-  <script type="module" src="/src/supabase-auth-bridge.js?v=iphone2"></script>
+  <script src="/src/data-migration.js?v=iphone3"></script>
+  <script type="module" src="/src/main.jsx?v=iphone3"></script>
+  <script type="module" src="/src/supabase-auth-bridge.js?v=iphone3"></script>
+  <script type="module" src="/src/student-management.js?v=6"></script>
+  <script type="module" src="/src/admin-bulk-delete.js?v=1"></script>
+  <script type="module" src="/src/admin-preview-session.js?v=1"></script>
+  <script type="module" src="/src/workout-interactions.js?v=16"></script>
+  <script type="module" src="/src/workout-history.js?v=6"></script>
   <script>
-    const observer=new MutationObserver(function(){
-      const root=document.getElementById('root');
-      const loading=document.getElementById('iphone-loading');
-      if(root&&root.childElementCount>0&&loading){loading.remove();observer.disconnect()}
-    });
-    observer.observe(document.documentElement,{childList:true,subtree:true});
+    const loadingObserver=new MutationObserver(function(){const root=document.getElementById('root');const loading=document.getElementById('iphone-loading');if(root&&root.childElementCount>0&&loading){loading.remove();loadingObserver.disconnect()}});loadingObserver.observe(document.documentElement,{childList:true,subtree:true});
+    function installPauseControl(){const top=document.querySelector('.workout-top');if(!top||document.getElementById('mayfit-pause-control'))return;const pause=document.createElement('div');pause.id='mayfit-pause-control';const saved=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);pause.innerHTML='<strong>TEMPO DE PAUSA</strong><div class="pause-stepper"><button type="button" data-step="-5">−</button><input type="number" min="0" step="5" value="'+saved+'"><button type="button" data-step="5">+</button></div><small>segundos</small>';top.insertAdjacentElement('afterend',pause);const input=pause.querySelector('input');const save=function(){const v=Math.max(0,Number(input.value)||0);input.value=v;localStorage.setItem('mayfit_pause_seconds',String(v))};input.onchange=save;input.onblur=save;pause.querySelectorAll('button').forEach(function(btn){btn.onclick=function(){input.value=Math.max(0,(Number(input.value)||0)+Number(btn.dataset.step));save()}})}
+    const uiObserver=new MutationObserver(function(){installPauseControl()});uiObserver.observe(document.documentElement,{childList:true,subtree:true});installPauseControl();
   </script>
 </body>
 </html>
