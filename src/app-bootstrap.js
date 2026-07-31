@@ -31,28 +31,10 @@ async function bootstrap() {
     return;
   }
 
-  const [authModule] = await Promise.all([
-    loadOptionalModule('./auth-session-controller.js', 'sessão'),
-    loadOptionalModule('./supabase-login-bridge.js', 'login Supabase'),
+  await Promise.all([
     loadOptionalModule('./self-service-mode.js', 'modo individual'),
     loadOptionalModule('./admin-workout-tools.js', 'ferramentas de treino')
   ]);
-
-  if (authModule) {
-    authModule.installRealLogout?.();
-    Promise.race([
-      authModule.synchronizeAuthSession?.(),
-      new Promise(resolve => setTimeout(resolve, 900))
-    ]).catch(error => {
-      console.error('MaYFiT: não foi possível restaurar a sessão:', error);
-    });
-  }
-
-  loadOptionalModule('./workout-cloud-sync.js', 'sincronização').then(syncModule => {
-    syncModule?.initializeWorkoutCloudSync?.().catch(error => {
-      console.error('MaYFiT: sincronização inicial indisponível:', error);
-    });
-  });
 }
 
 bootstrap().catch(showFatalError);
