@@ -14,6 +14,7 @@
     html,body,#root{min-height:100%;margin:0;background:#050706}
     #iphone-loading{position:fixed;inset:0;display:grid;place-items:center;background:#06100b;color:#fff;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;z-index:9999}
     #iphone-loading strong{display:block;color:#8df20b;font-size:28px;margin-bottom:8px}
+    #iphone-loading button{padding:12px 18px;border:0;border-radius:10px;font-weight:800}
     #mayfit-pause-control{display:flex;align-items:center;justify-content:center;gap:12px;width:calc(100% - 92px);margin:0 0 14px 92px;padding:10px 14px;border:1px solid #41634d;border-radius:16px;background:#101a14;color:#fff;box-sizing:border-box}
     #mayfit-pause-control strong{font:900 13px system-ui,-apple-system,sans-serif;white-space:nowrap}
     #mayfit-pause-control .pause-stepper{display:flex;align-items:center;gap:8px}
@@ -47,23 +48,31 @@
       if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(list){list.forEach(function(reg){reg.unregister()})}).catch(function(){})}
       if(window.caches){caches.keys().then(function(keys){keys.forEach(function(key){caches.delete(key)})}).catch(function(){})}
     });
+    window.addEventListener('error',function(event){
+      var box=document.getElementById('iphone-loading');
+      var root=document.getElementById('root');
+      if(box&&root&&root.childElementCount===0){box.innerHTML='<div><strong>MaYFiT</strong><p>Falha ao iniciar: '+String(event.message||'erro desconhecido')+'</p><button onclick="location.reload()">Tentar novamente</button></div>'}
+    });
   </script>
 </head>
 <body>
   <div id="iphone-loading"><div><strong>MaYFiT</strong><p>Carregando...</p></div></div>
   <div id="root"></div>
-  <script src="/src/data-migration.js?v=iphone3"></script>
-  <script type="module" src="/src/main.jsx?v=iphone3"></script>
-  <script type="module" src="/src/supabase-auth-bridge.js?v=iphone3"></script>
-  <script type="module" src="/src/student-management.js?v=6"></script>
-  <script type="module" src="/src/admin-bulk-delete.js?v=1"></script>
-  <script type="module" src="/src/admin-preview-session.js?v=1"></script>
-  <script type="module" src="/src/workout-interactions.js?v=16"></script>
-  <script type="module" src="/src/workout-history.js?v=6"></script>
+  <script src="/src/data-migration.js?v=iphone5"></script>
+  <script type="module" src="/src/main.jsx?v=iphone5"></script>
+  <script type="module" src="/src/supabase-auth-bridge.js?v=iphone5"></script>
   <script>
-    const loadingObserver=new MutationObserver(function(){const root=document.getElementById('root');const loading=document.getElementById('iphone-loading');if(root&&root.childElementCount>0&&loading){loading.remove();loadingObserver.disconnect()}});loadingObserver.observe(document.documentElement,{childList:true,subtree:true});
-    function installPauseControl(){const top=document.querySelector('.workout-top');if(!top||document.getElementById('mayfit-pause-control'))return;const pause=document.createElement('div');pause.id='mayfit-pause-control';const saved=Math.max(0,Number(localStorage.getItem('mayfit_pause_seconds'))||60);pause.innerHTML='<strong>TEMPO DE PAUSA</strong><div class="pause-stepper"><button type="button" data-step="-5">−</button><input type="number" min="0" step="5" value="'+saved+'"><button type="button" data-step="5">+</button></div><small>segundos</small>';top.insertAdjacentElement('afterend',pause);const input=pause.querySelector('input');const save=function(){const v=Math.max(0,Number(input.value)||0);input.value=v;localStorage.setItem('mayfit_pause_seconds',String(v))};input.onchange=save;input.onblur=save;pause.querySelectorAll('button').forEach(function(btn){btn.onclick=function(){input.value=Math.max(0,(Number(input.value)||0)+Number(btn.dataset.step));save()}})}
-    const uiObserver=new MutationObserver(function(){installPauseControl()});uiObserver.observe(document.documentElement,{childList:true,subtree:true});installPauseControl();
+    var loadingObserver=new MutationObserver(function(){
+      var root=document.getElementById('root');
+      var loading=document.getElementById('iphone-loading');
+      if(root&&root.childElementCount>0&&loading){loading.remove();loadingObserver.disconnect()}
+    });
+    loadingObserver.observe(document.documentElement,{childList:true,subtree:true});
+    window.setTimeout(function(){
+      var root=document.getElementById('root');
+      var loading=document.getElementById('iphone-loading');
+      if(root&&root.childElementCount===0&&loading){loading.innerHTML='<div><strong>MaYFiT</strong><p>O aplicativo não conseguiu iniciar.</p><button onclick="sessionStorage.clear();location.reload()">Limpar sessão e tentar</button></div>'}
+    },10000);
   </script>
 </body>
 </html>
