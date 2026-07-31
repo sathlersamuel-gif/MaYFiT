@@ -25,7 +25,7 @@ if (typeof window !== 'undefined' && supabase) {
   import('../workout-plan-sync.js').catch(error =>
     console.error('Falha ao iniciar sincronização das fichas:', error)
   );
-  import('../workout-assignment-ui.js').catch(error =>
-    console.error('Falha ao iniciar atribuição de treinos:', error)
+  import('../workout-assignment-cards.js').catch(error =>
+    console.error('Falha ao iniciar cards de treinos:', error)
   );
 }
