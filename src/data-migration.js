@@ -1,4 +1,5 @@
 const STORE='mayfit_v8';
+const USER_KEY='mayfit_user';
 
 const DEFAULT_EXERCISES=[
   {id:1,type:'supino',name:'Supino reto',sets:4,reps:12,load:60,previousLoad:56,rest:59,tip:'Pés firmes, escápulas encaixadas e barra descendo até a linha média do peito.'},
@@ -40,6 +41,24 @@ function normalizeExercise(item,index){
   };
 }
 
+function normalizeSession(){
+  try{
+    const parsed=JSON.parse(sessionStorage.getItem(USER_KEY)||'null');
+    if(!parsed||typeof parsed!=='object')return;
+    const email=text(parsed.email,'');
+    const normalized={
+      ...parsed,
+      id:text(parsed.id,email||'usuario'),
+      name:text(parsed.name||parsed.full_name,email?email.split('@')[0]:'Usuário'),
+      email,
+      role:parsed.role==='admin'?'admin':'student'
+    };
+    sessionStorage.setItem(USER_KEY,JSON.stringify(normalized));
+  }catch{
+    sessionStorage.removeItem(USER_KEY);
+  }
+}
+
 try{
   const parsed=JSON.parse(localStorage.getItem(STORE)||'null');
   const source=parsed&&typeof parsed==='object'?parsed:{};
@@ -56,3 +75,12 @@ try{
 }catch{
   localStorage.setItem(STORE,JSON.stringify({users:DEFAULT_USERS,exercises:DEFAULT_EXERCISES,sessions:[]}));
 }
+
+normalizeSession();
+
+window.addEventListener('error',event=>{
+  console.error('Falha ao iniciar o MaYFiT:',event.error||event.message);
+  const root=document.getElementById('root');
+  if(!root||root.childElementCount)return;
+  root.innerHTML='<main style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#06100b;color:#fff;font-family:system-ui;text-align:center"><div><h1 style="color:#8df20b">MaYFiT</h1><p>Não foi possível abrir o painel. Saia e entre novamente.</p><button onclick="sessionStorage.removeItem(\'mayfit_user\');location.reload()" style="padding:12px 18px;border:0;border-radius:10px;font-weight:800">Voltar ao login</button></div></main>';
+});
