@@ -1,4 +1,16 @@
+const USER_KEY='mayfit_user';
+
+function getCurrentUser(){
+  try{return JSON.parse(sessionStorage.getItem(USER_KEY)||'null')}catch{return null}
+}
+
+function isStudent(){
+  return getCurrentUser()?.role==='student';
+}
+
 function normalizeInterface(){
+  if(!isStudent())return;
+
   document.querySelectorAll('button').forEach(button=>{
     const text=(button.textContent||'').trim().toLowerCase();
     if(text==='ver aluno'||text==='alunos'||text.includes('aprovar usuário')||text.includes('aprovar aluno')){
