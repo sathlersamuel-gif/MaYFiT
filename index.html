@@ -10,66 +10,31 @@
     <meta name="description" content="Treinos, evolução corporal e gestão de alunos." />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-    <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin />
-    <link rel="dns-prefetch" href="https://raw.githubusercontent.com" />
     <link rel="stylesheet" href="./src/figures.css" />
     <link rel="stylesheet" href="./src/theme.css" />
     <link rel="stylesheet" href="./src/mobile-audit.css" />
     <title>MaYFiT</title>
     <style>
       html,body,#root{min-height:100%;margin:0;background:#050706}
-      #boot-status{position:fixed;inset:0;display:grid;place-items:center;background:#050706;color:#fff;font-family:system-ui,-apple-system,sans-serif;z-index:99999;text-align:center;padding:24px;transition:opacity .12s ease}
+      #boot-status{position:fixed;inset:0;display:grid;place-items:center;background:#050706;color:#fff;font-family:system-ui,-apple-system,sans-serif;z-index:99999;text-align:center;padding:24px}
       #boot-status strong{display:block;color:#8df20b;font-size:30px;margin-bottom:10px}
       #boot-status small{color:#b9c8be}
-      button,a,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-      button:active,a:active,[role="button"]:active{transform:scale(.985)}
     </style>
   </head>
   <body>
     <div id="root"></div>
     <div id="boot-status"><div><strong>MaYFiT</strong><small>Carregando…</small></div></div>
-
     <script>
-      (function(){
-        var root=document.getElementById('root');
-        var box=document.getElementById('boot-status');
-        var removeBoot=function(){
-          if(!box||!box.isConnected)return;
-          box.style.opacity='0';
-          setTimeout(function(){if(box&&box.isConnected)box.remove()},120);
-        };
-        if(root){
-          var observer=new MutationObserver(function(){
-            if(root.childElementCount>0){observer.disconnect();removeBoot();}
-          });
-          observer.observe(root,{childList:true});
-          if(root.childElementCount>0)removeBoot();
-        }
-        window.addEventListener('mayfit-ready',removeBoot,{once:true});
-        window.addEventListener('error',function(event){
-          if(box&&box.isConnected)box.innerHTML='<div><strong>MaYFiT</strong><p>Erro ao carregar o aplicativo.</p><small>'+String(event.message||'Erro desconhecido')+'</small></div>';
-        });
-        window.addEventListener('unhandledrejection',function(event){
-          var reason=event.reason&&event.reason.message?event.reason.message:event.reason;
-          if(box&&box.isConnected)box.innerHTML='<div><strong>MaYFiT</strong><p>Erro ao iniciar o aplicativo.</p><small>'+String(reason||'Erro desconhecido')+'</small></div>';
-        });
-        setTimeout(function(){
-          if(root&&root.childElementCount>0)removeBoot();
-        },1500);
-      })();
+      const root=document.getElementById('root');
+      const boot=document.getElementById('boot-status');
+      const observer=new MutationObserver(()=>{if(root.childElementCount){observer.disconnect();boot.remove();}});
+      observer.observe(root,{childList:true});
+      window.addEventListener('mayfit-ready',()=>boot?.remove(),{once:true});
     </script>
-
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
     <script type="module" src="./src/app-bootstrap.js"></script>
     <script type="module" src="./src/firebase-auth-bridge.js"></script>
-    <script type="module" src="./src/student-management.js"></script>
-    <script type="module" src="./src/workout-interactions.js"></script>
-    <script type="module" src="./src/workout-history.js"></script>
-    <script type="module" src="./src/history-persistence-fix.js"></script>
-    <script type="module" src="./src/admin-history-initial-load-fix.js"></script>
-    <script type="module" src="./src/exercise-translation-admin-return.js"></script>
-    <script type="module" src="./src/exercise-selector-single-thumbnail.js"></script>
   </body>
 </html>
