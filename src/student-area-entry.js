@@ -1,0 +1,4 @@
+import './body-evolution.js?v=4';
+import './body-evolution-save-fix.js?v=4';
+import './body-evolution-delete-record.js?v=3';
+import './student-performance-fix.js?v=3';
