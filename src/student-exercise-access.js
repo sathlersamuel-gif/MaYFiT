@@ -2,6 +2,8 @@ const STORE='mayfit_v8';
 const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 const IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const USER_KEY='mayfit_user';
+const CATALOG_KEY='mayfit_exercise_catalog_v1';
+const NAME_PREFIX='mayfit_workout_name_';
 let loading=false,allExercises=[];
 
 const css=`
@@ -22,15 +24,58 @@ const css=`
 #mse-modal .mse-action.remove{background:#3b1c1c;color:#ffb5b5;border:1px solid #713737}
 #mse-modal .mse-footer{padding:11px 15px;border-top:1px solid #263d2d;background:#0d1711;color:#9cac9f;font-size:13px}
 .mse-image-zoom{position:fixed;inset:0;z-index:100001;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.92)}.mse-image-zoom img{max-width:min(920px,96vw);max-height:86vh;object-fit:contain;border-radius:16px}.mse-image-zoom button{position:fixed;top:max(18px,env(safe-area-inset-top));left:18px;min-width:92px;height:44px;border:1px solid #49664f;border-radius:14px;background:#132018;color:#fff;font-size:15px;font-weight:900}
-@media(max-width:620px){#mayfit-student-exercises{padding:13px;border-radius:18px}#mayfit-student-exercises .mse-head{align-items:flex-start;flex-direction:column}#mayfit-student-exercises .mse-head>button{width:100%}#mse-modal{padding:0;align-items:end}#mse-modal .mse-card{max-height:94vh;border-radius:22px 22px 0 0}#mse-modal .mse-item{grid-template-columns:62px minmax(0,1fr) auto;gap:8px}#mse-modal .mse-thumb{width:62px;height:52px}#mse-modal .mse-action{min-width:78px;padding:9px 8px;font-size:12px}}
+.mayfit-workout-name{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px}.mayfit-workout-name input{min-width:130px;max-width:100%;flex:1;border:0;border-bottom:2px solid #78d532;border-radius:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;line-height:1.15;padding:0 2px 2px;outline:none}
+@media(max-width:620px){#mayfit-student-exercises{padding:13px;border-radius:18px}#mayfit-student-exercises .mse-head{align-items:flex-start;flex-direction:column}#mayfit-student-exercises .mse-head>button{width:100%}#mse-modal{padding:0;align-items:end}#mse-modal .mse-card{max-height:94vh;border-radius:22px 22px 0 0}#mse-modal .mse-item{grid-template-columns:62px minmax(0,1fr);gap:8px}#mse-modal .mse-thumb{width:62px;height:52px}#mse-modal .mse-action{grid-column:1/-1;width:100%;min-width:0;padding:11px;font-size:14px}}
 `;
 
-function currentUser(){try{return JSON.parse(sessionStorage.getItem(USER_KEY))}catch{return null}}
+function currentUser(){try{return JSON.parse(sessionStorage.getItem(USER_KEY)||'null')}catch{return null}}
 function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}}
 function writeStore(data){localStorage.setItem(STORE,JSON.stringify(data));window.dispatchEvent(new Event('mayfit-store-updated'))}
 function esc(value){return String(value??'').replace(/[&<>'\"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[char]))}
 function imageFor(item){return item.image?IMAGE_BASE+item.image:''}
+function workoutNameKey(){return NAME_PREFIX+(currentUser()?.id||'student')}
+
+function ensureStyle(){if(document.getElementById('mse-style'))return;const style=document.createElement('style');style.id='mse-style';style.textContent=css;document.head.appendChild(style)}
+
+function installWorkoutName(){
+  const user=currentUser();if(user?.role!=='student')return;
+  const title=document.querySelector('.app main .hero h1');
+  if(!title||title.dataset.workoutNameReady==='true')return;
+  title.dataset.workoutNameReady='true';
+  title.classList.add('mayfit-workout-name');
+  const saved=(localStorage.getItem(workoutNameKey())||user.name||user.full_name||'').trim();
+  title.innerHTML='';
+  const prefix=document.createElement('span');prefix.textContent='Treino de';
+  const input=document.createElement('input');input.type='text';input.value=saved;input.placeholder='seu nome';input.setAttribute('aria-label','Nome do treino');
+  const saveName=()=>{const value=input.value.trim();if(value)localStorage.setItem(workoutNameKey(),value);else localStorage.removeItem(workoutNameKey())};
+  ['click','pointerdown','touchstart'].forEach(type=>input.addEventListener(type,event=>event.stopPropagation()));
+  input.addEventListener('input',saveName);input.addEventListener('blur',saveName);input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();input.blur()}});
+  title.append(prefix,input);
+}
+
+function installEvolutionLabel(){
+  if(currentUser()?.role!=='student')return;
+  const cards=[...document.querySelectorAll('.app main .summary article')];
+  const card=cards.find(item=>/treinos salvos/i.test(item.textContent||''));
+  if(!card)return;
+  const strong=card.querySelector('strong');if(strong)strong.remove();
+  const label=[...card.querySelectorAll('span')].find(item=>/treinos salvos/i.test(item.textContent||''));if(label)label.textContent='Evolução de cargas';
+  card.setAttribute('aria-label','Abrir evolução de cargas');
+}
+
+function hideAdminWorkoutManager(){
+  if(currentUser()?.role!=='admin')return;
+  const section=[...document.querySelectorAll('.app main>section')].find(item=>/gerenciar treino/i.test(item.querySelector('h1')?.textContent||''));
+  if(section)section.style.display='none';
+}
+
 function openImage(src,name){document.querySelector('.mse-image-zoom')?.remove();const zoom=document.createElement('div');zoom.className='mse-image-zoom';zoom.innerHTML=`<button type="button">← Voltar</button><img src="${esc(src)}" alt="${esc(name)}">`;zoom.querySelector('button').onclick=()=>zoom.remove();zoom.onclick=e=>{if(e.target===zoom)zoom.remove()};document.body.appendChild(zoom)}
+
+function prewarmImages(items){
+  const urls=items.map(imageFor).filter(Boolean).slice(0,100);
+  const run=()=>urls.forEach(url=>{const img=new Image();img.decoding='async';img.src=url});
+  if('requestIdleCallback'in window)requestIdleCallback(run,{timeout:2500});else setTimeout(run,200);
+}
 
 function renderList(modal){
   const query=(modal.querySelector('.mse-search').value||'').trim().toLowerCase();
@@ -51,10 +96,14 @@ async function loadCatalog(modal){
   if(loading)return;loading=true;
   modal.querySelector('.mse-list').innerHTML='<div style="padding:20px;text-align:center;color:#96a49a">Carregando exercícios...</div>';
   try{
-    const response=await fetch(DB,{cache:'no-store'});if(!response.ok)throw new Error('Falha ao carregar catálogo');
+    const cached=localStorage.getItem(CATALOG_KEY);
+    if(cached){const parsed=JSON.parse(cached);if(Array.isArray(parsed)&&parsed.length)allExercises=parsed}
+    if(allExercises.length){renderList(modal);prewarmImages(allExercises);return}
+    const response=await fetch(DB,{cache:'force-cache'});if(!response.ok)throw new Error('Falha ao carregar catálogo');
     const data=await response.json();
     allExercises=(Array.isArray(data)?data:[]).map(item=>({id:item.id,name:item.name,image:Array.isArray(item.images)?item.images[0]:''})).filter(item=>item.id&&item.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-    renderList(modal);
+    try{localStorage.setItem(CATALOG_KEY,JSON.stringify(allExercises))}catch{}
+    renderList(modal);prewarmImages(allExercises);
   }catch(error){modal.querySelector('.mse-list').innerHTML=`<div style="padding:20px;text-align:center;color:#ffb4b4">${esc(error.message)}. Tente novamente.</div>`}finally{loading=false}
 }
 
@@ -93,13 +142,14 @@ function openManager(){
   loadCatalog(modal);
 }
 
-function mount(){
+function mountStudentExercises(){
   if(currentUser()?.role!=='student')return false;
   if(document.querySelector('.workout-screen')){document.getElementById('mayfit-student-exercises')?.remove();return false}
   const main=document.querySelector('.app main');if(!main)return false;
-  if(!document.getElementById('mse-style')){const style=document.createElement('style');style.id='mse-style';style.textContent=css;document.head.appendChild(style)}
   if(document.getElementById('mayfit-student-exercises'))return true;
   const section=document.createElement('section');section.id='mayfit-student-exercises';section.innerHTML='<div class="mse-head"><div><h2>Meus exercícios</h2><p>Adicione ou remova exercícios do seu treino.</p></div><button type="button">Adicionar/remover exercícios</button></div>';section.querySelector('button').onclick=openManager;main.prepend(section);return true
 }
 
-const observer=new MutationObserver(()=>requestAnimationFrame(mount));observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('pageshow',mount);window.addEventListener('focus',mount);document.addEventListener('visibilitychange',()=>{if(!document.hidden)mount()});setInterval(mount,1500);mount();
+function apply(){ensureStyle();installWorkoutName();installEvolutionLabel();hideAdminWorkoutManager();mountStudentExercises()}
+const observer=new MutationObserver(()=>requestAnimationFrame(apply));observer.observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('pageshow',apply);window.addEventListener('focus',apply);document.addEventListener('visibilitychange',()=>{if(!document.hidden)apply()});window.addEventListener('mayfit-store-updated',apply);setInterval(apply,1200);apply();
