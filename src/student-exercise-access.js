@@ -1,5 +1,6 @@
 const STORE='mayfit_v8';
 const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
+const IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const USER_KEY='mayfit_user';
 let mounted=false;
 let loading=false;
@@ -19,21 +20,25 @@ const css=`
 #mse-modal .mse-close{width:38px;height:38px;padding:0;border:1px solid #385442;border-radius:12px;background:#17231b;color:#fff;font-size:22px}
 #mse-modal .mse-search{margin:12px 15px;padding:12px;border:1px solid #3a5743;border-radius:12px;background:#07100a;color:#fff;font-size:16px}
 #mse-modal .mse-list{display:grid;gap:8px;padding:0 15px 15px;overflow:auto}
-#mse-modal .mse-item{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid #263d2d;border-radius:13px;background:#101a14;cursor:pointer}
-#mse-modal .mse-item input{width:20px;height:20px;accent-color:#78d532}
-#mse-modal .mse-item span{font-weight:750}
+#mse-modal .mse-item{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid #263d2d;border-radius:13px;background:#101a14;cursor:pointer}
+#mse-modal .mse-item input{width:20px;height:20px;flex:0 0 20px;accent-color:#78d532}
+#mse-modal .mse-thumb{width:76px;height:60px;flex:0 0 76px;display:block;object-fit:cover;border:1px solid #36513f;border-radius:10px;background:#07100a}
+#mse-modal .mse-info{min-width:0;display:grid;gap:3px}
+#mse-modal .mse-info strong{font-weight:850;line-height:1.2}
+#mse-modal .mse-info small{color:#9cac9f;font-size:12px}
 #mse-modal .mse-item.used{opacity:.52;cursor:default}
 #mse-modal .mse-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;border-top:1px solid #263d2d;background:#0d1711}
 #mse-modal .mse-count{color:#a9b8af;font-size:13px}
 #mse-modal .mse-add{border:0;border-radius:12px;padding:12px 16px;background:#78d532;color:#07110c;font-weight:950}
 #mse-modal .mse-add:disabled{opacity:.5}
-@media(max-width:620px){#mayfit-student-exercises{padding:13px;border-radius:18px}#mayfit-student-exercises .mse-head{align-items:flex-start;flex-direction:column}#mayfit-student-exercises button{width:100%}#mse-modal{padding:0;align-items:end}#mse-modal .mse-card{max-height:94vh;border-radius:22px 22px 0 0}}
+@media(max-width:620px){#mayfit-student-exercises{padding:13px;border-radius:18px}#mayfit-student-exercises .mse-head{align-items:flex-start;flex-direction:column}#mayfit-student-exercises button{width:100%}#mse-modal{padding:0;align-items:end}#mse-modal .mse-card{max-height:94vh;border-radius:22px 22px 0 0}#mse-modal .mse-thumb{width:68px;height:56px;flex-basis:68px}}
 `;
 
 function currentUser(){try{return JSON.parse(sessionStorage.getItem(USER_KEY))}catch{return null}}
 function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}}
 function writeStore(data){localStorage.setItem(STORE,JSON.stringify(data))}
 function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
+function imageFor(item){return item.image?IMAGE_BASE+item.image:''}
 
 function renderList(modal){
   const query=(modal.querySelector('.mse-search').value||'').trim().toLowerCase();
@@ -42,7 +47,9 @@ function renderList(modal){
   const filtered=allExercises.filter(item=>!query||item.name.toLowerCase().includes(query));
   modal.querySelector('.mse-list').innerHTML=filtered.slice(0,350).map(item=>{
     const exists=used.has(item.id);
-    return `<label class="mse-item ${exists?'used':''}"><input type="checkbox" value="${esc(item.id)}" ${exists?'disabled checked':selected.has(item.id)?'checked':''}><span>${esc(item.name)}</span></label>`;
+    const image=imageFor(item);
+    const thumb=image?`<img class="mse-thumb" src="${esc(image)}" alt="${esc(item.name)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`:'<span class="mse-thumb" aria-hidden="true"></span>';
+    return `<label class="mse-item ${exists?'used':''}"><input type="checkbox" value="${esc(item.id)}" ${exists?'disabled checked':selected.has(item.id)?'checked':''}>${thumb}<span class="mse-info"><strong>${esc(item.name)}</strong><small>${exists?'Já adicionado':'Disponível para atribuir'}</small></span></label>`;
   }).join('')||'<div style="padding:20px;text-align:center;color:#96a49a">Nenhum exercício encontrado.</div>';
   modal.querySelector('.mse-count').textContent=`${selected.size} selecionado(s)`;
   modal.querySelector('.mse-add').disabled=!selected.size;
@@ -57,7 +64,7 @@ async function loadCatalog(modal){
     const response=await fetch(DB,{cache:'no-store'});
     if(!response.ok)throw new Error('Falha ao carregar catálogo');
     const data=await response.json();
-    allExercises=(Array.isArray(data)?data:[]).map(item=>({id:item.id,name:item.name})).filter(item=>item.id&&item.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    allExercises=(Array.isArray(data)?data:[]).map(item=>({id:item.id,name:item.name,image:Array.isArray(item.images)?item.images[0]:''})).filter(item=>item.id&&item.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
     renderList(modal);
   }catch(error){
     modal.querySelector('.mse-list').innerHTML=`<div style="padding:20px;text-align:center;color:#ffb4b4">${esc(error.message)}. Tente novamente.</div>`;
