@@ -1,0 +1,2 @@
+Backup lógico antes de adicionar miniaturas à lista de exercícios dos alunos.
+Versão preservada pela branch backup-antes-fotos-exercicios-alunos-20260731.
