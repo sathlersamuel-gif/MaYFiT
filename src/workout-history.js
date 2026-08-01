@@ -27,10 +27,10 @@ function captureWorkout(){
     rest:numberFrom(row,'tempo',4)
   }));
   const items=readHistory();
-  items.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),name:'Treino A',exercises});
+  items.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),name:'Treino',exercises});
   writeHistory(items);
 }
-function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt',"'":'&#39;','"':'&quot;'}[char]))}
+function esc(value){return String(value??'').replace(/[&<>'\"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt',"'":'&#39;','\"':'&quot;'}[char]))}
 function formatDate(value){return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(value))}
 function styles(){
   if(document.getElementById('mayfit-history-style'))return;
@@ -55,7 +55,7 @@ function renderHistory(){
   const items=readHistory();
   const overlay=document.createElement('section');
   overlay.className='mayfit-history-overlay';
-  overlay.innerHTML=`<div class="mayfit-history-head"><button type="button" data-close-history>‹</button><h1>Treinos salvos</h1></div><div data-history-list>${items.length?'':'<div class="mayfit-history-empty">Nenhum treino salvo ainda.</div>'}</div>`;
+  overlay.innerHTML=`<div class="mayfit-history-head"><button type="button" data-close-history>‹</button><h1>Evolução de cargas</h1></div><div data-history-list>${items.length?'':'<div class="mayfit-history-empty">Nenhum treino salvo ainda.</div>'}</div>`;
   const list=overlay.querySelector('[data-history-list]');
   items.forEach((session,sessionIndex)=>{
     const details=document.createElement('details');
@@ -79,16 +79,16 @@ function renderHistory(){
   document.body.appendChild(overlay);
 }
 function findSavedCard(){
-  return [...document.querySelectorAll('body *')].find(element=>element.children.length<8&&/treinos salvos/i.test(element.textContent||'')&&element.getBoundingClientRect().width>120)?.closest('button,article,div');
+  return [...document.querySelectorAll('body *')].find(element=>element.children.length<8&&/(treinos salvos|evolução de cargas)/i.test(element.textContent||'')&&element.getBoundingClientRect().width>120)?.closest('button,article,div');
 }
 function install(){
   document.addEventListener('click',event=>{
     const finish=event.target.closest('button.finish');
     if(finish)captureWorkout();
     const target=event.target.closest('button,article,div');
-    if(target&&/treinos salvos/i.test(target.textContent||'')&&!target.closest('.mayfit-history-overlay')){event.preventDefault();event.stopPropagation();renderHistory()}
+    if(target&&/(treinos salvos|evolução de cargas)/i.test(target.textContent||'')&&!target.closest('.mayfit-history-overlay')){event.preventDefault();event.stopPropagation();renderHistory()}
   },true);
-  const observer=new MutationObserver(()=>{const card=findSavedCard();if(card){card.style.cursor='pointer';card.setAttribute('role','button');card.setAttribute('aria-label','Abrir treinos salvos')}});
+  const observer=new MutationObserver(()=>{const card=findSavedCard();if(card){card.style.cursor='pointer';card.setAttribute('role','button');card.setAttribute('aria-label','Abrir evolução de cargas')}});
   observer.observe(document.documentElement,{childList:true,subtree:true});
 }
 install();
