@@ -2,75 +2,62 @@ const STORE='mayfit_v8';
 const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 const IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const USER_KEY='mayfit_user';
-let mounted=false,loading=false,allExercises=[],selected=new Set();
+let loading=false,allExercises=[],selected=new Set();
 
 const css=`
 #mayfit-student-exercises{margin:0 0 18px;padding:16px;border:1px solid #31523d;border-radius:22px;background:#0d1711;color:#fff}
 #mayfit-student-exercises .mse-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #mayfit-student-exercises h2{margin:0;font-size:21px}#mayfit-student-exercises p{margin:5px 0 0;color:#9cac9f;font-size:13px}
+#mayfit-student-exercises .mse-actions{display:flex;gap:8px;flex-wrap:wrap}
 #mayfit-student-exercises button{border:0;border-radius:12px;padding:11px 14px;background:#78d532;color:#07110c;font-weight:900;cursor:pointer}
+#mayfit-student-exercises .mse-manage{background:#17291d;color:#9bea58;border:1px solid #3b6046}
 #mse-modal{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:14px;background:rgba(0,0,0,.82)}
 #mse-modal .mse-card{width:min(720px,100%);max-height:90vh;display:flex;flex-direction:column;border:1px solid #3d6249;border-radius:22px;background:#0b130e;color:#fff;overflow:hidden}
 #mse-modal .mse-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px;border-bottom:1px solid #263d2d}
-#mse-modal h2{margin:0;font-size:21px}.mse-close{width:38px;height:38px;padding:0!important;border:1px solid #385442!important;border-radius:12px!important;background:#17231b!important;color:#fff!important;font-size:22px!important}
+#mse-modal h2{margin:0;font-size:21px}.mse-back{min-width:92px;height:40px;padding:0 12px!important;border:1px solid #385442!important;border-radius:12px!important;background:#17231b!important;color:#fff!important;font-size:15px!important;font-weight:900!important}
 #mse-modal .mse-search{margin:12px 15px;padding:12px;border:1px solid #3a5743;border-radius:12px;background:#07100a;color:#fff;font-size:16px}
 #mse-modal .mse-list{display:grid;gap:8px;padding:0 15px 15px;overflow:auto}
 #mse-modal .mse-item{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid #263d2d;border-radius:13px;background:#101a14;cursor:pointer}
 #mse-modal .mse-item input{width:20px;height:20px;flex:0 0 20px;accent-color:#78d532}
 #mse-modal .mse-thumb{width:76px;height:60px;flex:0 0 76px;display:block;object-fit:cover;border:1px solid #36513f;border-radius:10px;background:#07100a;cursor:zoom-in}
 #mse-modal .mse-info{min-width:0;display:grid;gap:3px}.mse-info strong{font-weight:850;line-height:1.2}.mse-info small{color:#9cac9f;font-size:12px}
-#mse-modal .mse-item.used{opacity:.52}.mse-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;border-top:1px solid #263d2d;background:#0d1711}.mse-count{color:#a9b8af;font-size:13px}.mse-add{border:0;border-radius:12px;padding:12px 16px;background:#78d532;color:#07110c;font-weight:950}.mse-add:disabled{opacity:.5}
-.mse-image-zoom{position:fixed;inset:0;z-index:100001;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.92)}.mse-image-zoom img{max-width:min(920px,96vw);max-height:86vh;object-fit:contain;border-radius:16px}.mse-image-zoom button{position:fixed;top:max(18px,env(safe-area-inset-top));right:18px;width:44px;height:44px;border:1px solid #49664f;border-radius:14px;background:#132018;color:#fff;font-size:26px}
-@media(max-width:620px){#mayfit-student-exercises{padding:13px;border-radius:18px}#mayfit-student-exercises .mse-head{align-items:flex-start;flex-direction:column}#mayfit-student-exercises button{width:100%}#mse-modal{padding:0;align-items:end}#mse-modal .mse-card{max-height:94vh;border-radius:22px 22px 0 0}#mse-modal .mse-thumb{width:68px;height:56px;flex-basis:68px}}
+#mse-modal .mse-item.used{opacity:.52}.mse-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;border-top:1px solid #263d2d;background:#0d1711}.mse-count{color:#a9b8af;font-size:13px}.mse-add,.mse-remove{border:0;border-radius:12px;padding:12px 16px;background:#78d532;color:#07110c;font-weight:950}.mse-remove{background:#b72d2d;color:#fff}.mse-add:disabled,.mse-remove:disabled{opacity:.5}
+.mse-image-zoom{position:fixed;inset:0;z-index:100001;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.92)}.mse-image-zoom img{max-width:min(920px,96vw);max-height:86vh;object-fit:contain;border-radius:16px}.mse-image-zoom button{position:fixed;top:max(18px,env(safe-area-inset-top));left:18px;min-width:92px;height:44px;border:1px solid #49664f;border-radius:14px;background:#132018;color:#fff;font-size:15px;font-weight:900}
+@media(max-width:620px){#mayfit-student-exercises{padding:13px;border-radius:18px}#mayfit-student-exercises .mse-head{align-items:flex-start;flex-direction:column}#mayfit-student-exercises .mse-actions{width:100%}#mayfit-student-exercises .mse-actions button{flex:1}#mse-modal{padding:0;align-items:end}#mse-modal .mse-card{max-height:94vh;border-radius:22px 22px 0 0}#mse-modal .mse-thumb{width:68px;height:56px;flex-basis:68px}}
 `;
 
 function currentUser(){try{return JSON.parse(sessionStorage.getItem(USER_KEY))}catch{return null}}
 function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}}
-function writeStore(data){localStorage.setItem(STORE,JSON.stringify(data))}
+function writeStore(data){localStorage.setItem(STORE,JSON.stringify(data));window.dispatchEvent(new Event('mayfit-store-updated'))}
 function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
 function imageFor(item){return item.image?IMAGE_BASE+item.image:''}
-function openImage(src,name){document.querySelector('.mse-image-zoom')?.remove();const zoom=document.createElement('div');zoom.className='mse-image-zoom';zoom.innerHTML=`<button type="button">×</button><img src="${esc(src)}" alt="${esc(name)}">`;zoom.querySelector('button').onclick=()=>zoom.remove();zoom.onclick=e=>{if(e.target===zoom)zoom.remove()};document.body.appendChild(zoom)}
+function openImage(src,name){document.querySelector('.mse-image-zoom')?.remove();const zoom=document.createElement('div');zoom.className='mse-image-zoom';zoom.innerHTML=`<button type="button">← Voltar</button><img src="${esc(src)}" alt="${esc(name)}">`;zoom.querySelector('button').onclick=()=>zoom.remove();zoom.onclick=e=>{if(e.target===zoom)zoom.remove()};document.body.appendChild(zoom)}
 
-function renderList(modal){
+function closeModal(modal){modal?.remove()}
+function baseModal(title,subtitle){const modal=document.createElement('div');modal.id='mse-modal';modal.innerHTML=`<div class="mse-card"><div class="mse-top"><div><h2>${esc(title)}</h2><div style="color:#9cac9f;font-size:13px;margin-top:4px">${esc(subtitle)}</div></div><button class="mse-back" type="button">← Voltar</button></div><input class="mse-search" placeholder="Pesquisar exercício"><div class="mse-list"></div><div class="mse-footer"></div></div>`;document.body.appendChild(modal);modal.querySelector('.mse-back').onclick=()=>closeModal(modal);modal.addEventListener('click',e=>{if(e.target===modal)closeModal(modal)});return modal}
+
+function renderAddList(modal){
   const query=(modal.querySelector('.mse-search').value||'').trim().toLowerCase();
-  const store=readStore();
-  const used=new Set((store?.exercises||[]).map(item=>item.type));
+  const store=readStore();const used=new Set((store?.exercises||[]).map(item=>item.type));
   const filtered=allExercises.filter(item=>!query||item.name.toLowerCase().includes(query));
-  modal.querySelector('.mse-list').innerHTML=filtered.map(item=>{
-    const exists=used.has(item.id),image=imageFor(item);
-    const thumb=image?`<img class="mse-thumb" data-image="${esc(image)}" src="${esc(image)}" alt="${esc(item.name)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`:'<span class="mse-thumb" aria-hidden="true"></span>';
-    return `<label class="mse-item ${exists?'used':''}"><input type="checkbox" value="${esc(item.id)}" ${exists?'disabled checked':selected.has(item.id)?'checked':''}>${thumb}<span class="mse-info"><strong>${esc(item.name)}</strong><small>${exists?'Já adicionado':'Disponível para atribuir'}</small></span></label>`;
-  }).join('')||'<div style="padding:20px;text-align:center;color:#96a49a">Nenhum exercício encontrado.</div>';
-  modal.querySelector('.mse-count').textContent=`${selected.size} selecionado(s) • ${filtered.length} exercício(s)`;
-  modal.querySelector('.mse-add').disabled=!selected.size;
+  modal.querySelector('.mse-list').innerHTML=filtered.map(item=>{const exists=used.has(item.id),image=imageFor(item);const thumb=image?`<img class="mse-thumb" data-image="${esc(image)}" src="${esc(image)}" alt="${esc(item.name)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`:'<span class="mse-thumb"></span>';return `<label class="mse-item ${exists?'used':''}"><input type="checkbox" value="${esc(item.id)}" ${exists?'disabled checked':selected.has(item.id)?'checked':''}>${thumb}<span class="mse-info"><strong>${esc(item.name)}</strong><small>${exists?'Já adicionado':'Disponível para atribuir'}</small></span></label>`}).join('')||'<div style="padding:20px;text-align:center;color:#96a49a">Nenhum exercício encontrado.</div>';
+  modal.querySelector('.mse-count').textContent=`${selected.size} selecionado(s) • ${filtered.length} exercício(s)`;modal.querySelector('.mse-add').disabled=!selected.size;
 }
+async function loadCatalog(modal){if(allExercises.length){renderAddList(modal);return}if(loading)return;loading=true;modal.querySelector('.mse-list').innerHTML='<div style="padding:20px;text-align:center;color:#96a49a">Carregando exercícios...</div>';try{const response=await fetch(DB,{cache:'no-store'});if(!response.ok)throw new Error('Falha ao carregar catálogo');const data=await response.json();allExercises=(Array.isArray(data)?data:[]).map(item=>({id:item.id,name:item.name,image:Array.isArray(item.images)?item.images[0]:''})).filter(item=>item.id&&item.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));renderAddList(modal)}catch(error){modal.querySelector('.mse-list').innerHTML=`<div style="padding:20px;text-align:center;color:#ffb4b4">${esc(error.message)}. Tente novamente.</div>`}finally{loading=false}}
+function addSelected(modal){const store=readStore();if(!store||!Array.isArray(store.exercises)){alert('Não foi possível acessar os treinos salvos.');return}const used=new Set(store.exercises.map(item=>item.type));let nextId=Math.max(0,...store.exercises.map(item=>Number(item.id)||0));const additions=allExercises.filter(item=>selected.has(item.id)&&!used.has(item.id)).map(item=>({id:++nextId,type:item.id,name:item.name,sets:3,reps:12,load:0,previousLoad:0,rest:60,tip:'Execute o movimento com controle e postura correta.'}));if(!additions.length){alert('Os exercícios selecionados já foram adicionados.');return}writeStore({...store,exercises:[...store.exercises,...additions]});alert(`${additions.length} exercício(s) adicionado(s) com sucesso.`);closeModal(modal);location.reload()}
+function openAddModal(){selected=new Set();const modal=baseModal('Adicionar exercícios','Mesmo catálogo completo do administrador.');modal.querySelector('.mse-footer').innerHTML='<span class="mse-count">0 selecionado(s)</span><button class="mse-add" type="button" disabled>Adicionar selecionados</button>';modal.querySelector('.mse-search').oninput=()=>renderAddList(modal);modal.querySelector('.mse-list').addEventListener('click',event=>{const image=event.target.closest('.mse-thumb[data-image]');if(!image)return;event.preventDefault();event.stopPropagation();openImage(image.dataset.image,image.alt)},true);modal.querySelector('.mse-list').addEventListener('change',event=>{const input=event.target.closest('input[type="checkbox"]');if(!input||input.disabled)return;input.checked?selected.add(input.value):selected.delete(input.value);renderAddList(modal)});modal.querySelector('.mse-add').onclick=()=>addSelected(modal);loadCatalog(modal)}
 
-async function loadCatalog(modal){
-  if(allExercises.length){renderList(modal);return}if(loading)return;loading=true;
-  modal.querySelector('.mse-list').innerHTML='<div style="padding:20px;text-align:center;color:#96a49a">Carregando exercícios...</div>';
-  try{const response=await fetch(DB,{cache:'no-store'});if(!response.ok)throw new Error('Falha ao carregar catálogo');const data=await response.json();allExercises=(Array.isArray(data)?data:[]).map(item=>({id:item.id,name:item.name,image:Array.isArray(item.images)?item.images[0]:''})).filter(item=>item.id&&item.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));renderList(modal)}catch(error){modal.querySelector('.mse-list').innerHTML=`<div style="padding:20px;text-align:center;color:#ffb4b4">${esc(error.message)}. Tente novamente.</div>`}finally{loading=false}
-}
-
-function addSelected(){
-  const store=readStore();if(!store||!Array.isArray(store.exercises)){alert('Não foi possível acessar os treinos salvos.');return}
-  const used=new Set(store.exercises.map(item=>item.type));let nextId=Math.max(0,...store.exercises.map(item=>Number(item.id)||0));
-  const additions=allExercises.filter(item=>selected.has(item.id)&&!used.has(item.id)).map(item=>({id:++nextId,type:item.id,name:item.name,sets:3,reps:12,load:0,previousLoad:0,rest:60,tip:'Execute o movimento com controle e postura correta.'}));
-  if(!additions.length){alert('Os exercícios selecionados já foram adicionados.');return}
-  writeStore({...store,exercises:[...store.exercises,...additions]});alert(`${additions.length} exercício(s) adicionado(s) com sucesso.`);location.reload();
-}
-
-function openModal(){
-  selected=new Set();const modal=document.createElement('div');modal.id='mse-modal';
-  modal.innerHTML='<div class="mse-card"><div class="mse-top"><div><h2>Adicionar exercícios</h2><div style="color:#9cac9f;font-size:13px;margin-top:4px">Mesmo catálogo completo do administrador.</div></div><button class="mse-close" type="button">×</button></div><input class="mse-search" placeholder="Pesquisar exercício"><div class="mse-list"></div><div class="mse-footer"><span class="mse-count">0 selecionado(s)</span><button class="mse-add" type="button" disabled>Adicionar selecionados</button></div></div>';
-  document.body.appendChild(modal);const close=()=>modal.remove();modal.querySelector('.mse-close').onclick=close;modal.addEventListener('click',e=>{if(e.target===modal)close()});modal.querySelector('.mse-search').oninput=()=>renderList(modal);
-  modal.querySelector('.mse-list').addEventListener('click',event=>{const image=event.target.closest('.mse-thumb[data-image]');if(!image)return;event.preventDefault();event.stopPropagation();openImage(image.dataset.image,image.alt)},true);
-  modal.querySelector('.mse-list').addEventListener('change',event=>{const input=event.target.closest('input[type="checkbox"]');if(!input||input.disabled)return;input.checked?selected.add(input.value):selected.delete(input.value);renderList(modal)});
-  modal.querySelector('.mse-add').onclick=addSelected;loadCatalog(modal);
-}
+function renderRemoveList(modal){const query=(modal.querySelector('.mse-search').value||'').trim().toLowerCase();const exercises=(readStore()?.exercises||[]).filter(item=>!query||String(item.name||'').toLowerCase().includes(query));modal.querySelector('.mse-list').innerHTML=exercises.map(item=>`<label class="mse-item"><input type="checkbox" value="${esc(item.id)}" ${selected.has(String(item.id))?'checked':''}><span class="mse-info"><strong>${esc(item.name||'Exercício')}</strong><small>Séries: ${Number(item.sets)||0} • Repetições: ${Number(item.reps)||0}</small></span></label>`).join('')||'<div style="padding:20px;text-align:center;color:#96a49a">Nenhum exercício no treino.</div>';modal.querySelector('.mse-count').textContent=`${selected.size} selecionado(s) • ${exercises.length} exercício(s)`;modal.querySelector('.mse-remove').disabled=!selected.size}
+function removeSelected(modal){const store=readStore();if(!store||!Array.isArray(store.exercises))return;const names=store.exercises.filter(item=>selected.has(String(item.id))).map(item=>item.name);if(!names.length)return;if(!confirm(`Remover ${names.length} exercício(s) do seu treino?`))return;writeStore({...store,exercises:store.exercises.filter(item=>!selected.has(String(item.id)))});alert(`${names.length} exercício(s) removido(s).`);closeModal(modal);location.reload()}
+function openRemoveModal(){selected=new Set();const modal=baseModal('Gerenciar exercícios','Selecione somente os exercícios que deseja retirar.');modal.querySelector('.mse-footer').innerHTML='<span class="mse-count">0 selecionado(s)</span><button class="mse-remove" type="button" disabled>Remover selecionados</button>';modal.querySelector('.mse-search').oninput=()=>renderRemoveList(modal);modal.querySelector('.mse-list').addEventListener('change',event=>{const input=event.target.closest('input[type="checkbox"]');if(!input)return;input.checked?selected.add(input.value):selected.delete(input.value);renderRemoveList(modal)});modal.querySelector('.mse-remove').onclick=()=>removeSelected(modal);renderRemoveList(modal)}
 
 function mount(){
-  if(mounted||currentUser()?.role!=='student')return false;const main=document.querySelector('.app main');if(!main||document.querySelector('.workout-screen'))return false;
+  if(currentUser()?.role!=='student')return false;
+  if(document.querySelector('.workout-screen')){document.getElementById('mayfit-student-exercises')?.remove();return false}
+  const main=document.querySelector('.app main');if(!main)return false;
   if(!document.getElementById('mse-style')){const style=document.createElement('style');style.id='mse-style';style.textContent=css;document.head.appendChild(style)}
-  const section=document.createElement('section');section.id='mayfit-student-exercises';section.innerHTML='<div class="mse-head"><div><h2>Meus exercícios</h2><p>Adicione novos exercícios ao seu treino.</p></div><button type="button">Adicionar exercícios</button></div>';section.querySelector('button').onclick=openModal;main.prepend(section);mounted=true;return true;
+  if(document.getElementById('mayfit-student-exercises'))return true;
+  const section=document.createElement('section');section.id='mayfit-student-exercises';section.innerHTML='<div class="mse-head"><div><h2>Meus exercícios</h2><p>Adicione ou retire exercícios do seu treino.</p></div><div class="mse-actions"><button type="button" class="mse-add-open">Adicionar exercícios</button><button type="button" class="mse-manage">Gerenciar/remover</button></div></div>';section.querySelector('.mse-add-open').onclick=openAddModal;section.querySelector('.mse-manage').onclick=openRemoveModal;main.prepend(section);return true
 }
-if(!mount()){const observer=new MutationObserver(()=>mount());observer.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),15000)}
+
+const observer=new MutationObserver(()=>requestAnimationFrame(mount));observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('pageshow',mount);window.addEventListener('focus',mount);document.addEventListener('visibilitychange',()=>{if(!document.hidden)mount()});setInterval(mount,1500);mount();
