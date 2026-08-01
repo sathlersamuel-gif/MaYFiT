@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v22-ui-aluno';
+const VERSION='mayfit-sw-v23-student-access-audit';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
