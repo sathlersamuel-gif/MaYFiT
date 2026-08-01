@@ -1,7 +1,9 @@
 const STORE='mayfit_v8';
 const CATALOG_KEY='mayfit_exercise_catalog_v1';
 const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
+const IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const PAGE_SIZE=70;
+const EAGER_IMAGES=18;
 let catalog=[];
 let fetching=false;
 
@@ -9,6 +11,7 @@ function currentUser(){try{return JSON.parse(sessionStorage.getItem('mayfit_user
 function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}}
 function writeStore(data){localStorage.setItem(STORE,JSON.stringify(data));window.dispatchEvent(new Event('mayfit-store-updated'))}
 function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
+function imageUrl(item){return item?.image?IMAGE_BASE+item.image:''}
 
 function cachedCatalog(){
   if(catalog.length)return catalog;
@@ -17,6 +20,13 @@ function cachedCatalog(){
     if(Array.isArray(parsed)&&parsed.length)catalog=parsed;
   }catch{}
   return catalog;
+}
+
+function prewarmVisibleImages(items){
+  items.slice(0,EAGER_IMAGES).forEach(item=>{
+    const src=imageUrl(item);if(!src)return;
+    const image=new Image();image.decoding='async';image.fetchPriority='high';image.src=src;
+  });
 }
 
 async function refreshCatalog(modal){
@@ -28,6 +38,7 @@ async function refreshCatalog(modal){
     const data=await response.json();
     catalog=(Array.isArray(data)?data:[]).map(item=>({id:item.id,name:item.name,image:Array.isArray(item.images)?item.images[0]:''})).filter(item=>item.id&&item.name).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
     try{localStorage.setItem(CATALOG_KEY,JSON.stringify(catalog))}catch{}
+    prewarmVisibleImages(catalog);
     if(modal?.isConnected)render(modal,true);
   }catch{}finally{fetching=false}
 }
@@ -67,9 +78,12 @@ function render(modal,reset=false){
   const filtered=source.filter(item=>!query||String(item.name||'').toLowerCase().includes(query));
   const limit=Math.max(PAGE_SIZE,Number(modal.dataset.limit)||PAGE_SIZE);
   const visible=filtered.slice(0,limit);
-  list.innerHTML=visible.map(item=>{
+  prewarmVisibleImages(visible);
+  list.innerHTML=visible.map((item,index)=>{
     const existing=used.get(item.id);
-    return `<article class="mse-item" data-type="${esc(item.id)}" style="grid-template-columns:minmax(0,1fr) auto"><span class="mse-info"><strong>${esc(item.name)}</strong><small>${existing?'Já está no seu treino':'Disponível para adicionar'}</small></span><button type="button" class="mse-action ${existing?'remove':''}" data-action="${existing?'remove':'add'}" data-id="${existing?.id??''}">${existing?'Remover':'Adicionar'}</button></article>`;
+    const src=imageUrl(item);
+    const thumb=src?`<img class="mse-thumb" src="${esc(src)}" alt="${esc(item.name)}" loading="${index<EAGER_IMAGES?'eager':'lazy'}" decoding="async" fetchpriority="${index<EAGER_IMAGES?'high':'auto'}" onerror="this.style.visibility='hidden'">`:'<span class="mse-thumb" aria-hidden="true"></span>';
+    return `<article class="mse-item" data-type="${esc(item.id)}">${thumb}<span class="mse-info"><strong>${esc(item.name)}</strong><small>${existing?'Já está no seu treino':'Disponível para adicionar'}</small></span><button type="button" class="mse-action ${existing?'remove':''}" data-action="${existing?'remove':'add'}" data-id="${existing?.id??''}">${existing?'Remover':'Adicionar'}</button></article>`;
   }).join('')||'<div style="padding:20px;text-align:center;color:#96a49a">Carregando exercícios...</div>';
   if(visible.length<filtered.length){
     const more=document.createElement('button');
@@ -84,6 +98,7 @@ function render(modal,reset=false){
 function openFastManager(){
   document.getElementById('mse-modal')?.remove();
   cachedCatalog();
+  prewarmVisibleImages(catalog);
   const modal=document.createElement('div');
   modal.id='mse-modal';modal.dataset.fastManager='1';modal.dataset.limit=String(PAGE_SIZE);
   modal.innerHTML='<div class="mse-card"><div class="mse-top"><div><h2>Adicionar ou remover exercícios</h2><div style="color:#9cac9f;font-size:13px;margin-top:4px">Lista otimizada para abrir rapidamente.</div></div><button class="mse-back" type="button">← Voltar</button></div><input class="mse-search" placeholder="Pesquisar exercício"><div class="mse-list"></div><div class="mse-footer"></div></div>';
@@ -114,3 +129,6 @@ document.addEventListener('click',event=>{
   event.stopImmediatePropagation();
   openFastManager();
 },true);
+
+cachedCatalog();
+prewarmVisibleImages(catalog);
