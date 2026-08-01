@@ -116,3 +116,13 @@ body{margin:0;background:#020403;color:#fff}
  .workout-screen .rest-label input{font-size:25px!important}
  .workout-screen .progress-cell>strong{font-size:17px!important}
 }
+
+/* Estabilidade visual em Android/Chrome: remove o flash de toque e evita repintura ampla. */
+html,body,#root,.app{min-height:100%;background:#020403;-webkit-tap-highlight-color:transparent}
+*,*::before,*::after{-webkit-tap-highlight-color:transparent}
+button,a,[role="button"],label,input,select,textarea{touch-action:manipulation}
+button:focus:not(:focus-visible),a:focus:not(:focus-visible),[role="button"]:focus:not(:focus-visible){outline:none}
+@media(hover:none) and (pointer:coarse){
+  .workout-screen .sheet-row{transition:none!important}
+  .app,.workout-screen,.workout-screen .sheet,.workout-screen .sheet-row{backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(0)}
+}
