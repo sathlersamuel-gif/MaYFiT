@@ -40,7 +40,13 @@ function installEditableName(){
   input.value=defaultName;
   input.placeholder='seu nome';
   input.setAttribute('aria-label','Nome do treino');
+  input.autocomplete='name';
   input.style.cssText='min-width:130px;max-width:100%;flex:1;border:0;border-bottom:2px solid #78d532;border-radius:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;line-height:1.15;padding:0 2px 2px;outline:none';
+
+  const stopCardAction=event=>event.stopPropagation();
+  input.addEventListener('click',stopCardAction);
+  input.addEventListener('pointerdown',stopCardAction);
+  input.addEventListener('touchstart',stopCardAction,{passive:true});
 
   const saveName=()=>{
     const value=input.value.trim();
@@ -51,6 +57,7 @@ function installEditableName(){
   input.addEventListener('input',saveName);
   input.addEventListener('blur',saveName);
   input.addEventListener('keydown',event=>{
+    event.stopPropagation();
     if(event.key==='Enter'){
       event.preventDefault();
       input.blur();
