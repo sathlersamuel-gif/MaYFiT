@@ -1,3 +1,4 @@
+import './student-layout-fix.js';
 import { supabase } from './lib/supabase.js';
 
 function currentUser(){
