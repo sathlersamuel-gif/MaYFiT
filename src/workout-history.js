@@ -78,17 +78,28 @@ function renderHistory(){
   overlay.querySelector('[data-close-history]').onclick=()=>overlay.remove();
   document.body.appendChild(overlay);
 }
-function findSavedCard(){
-  return [...document.querySelectorAll('body *')].find(element=>element.children.length<8&&/(treinos salvos|evolução de cargas)/i.test(element.textContent||'')&&element.getBoundingClientRect().width>120)?.closest('button,article,div');
+function findEvolutionCard(){
+  return [...document.querySelectorAll('.app main .summary article')].find(card=>/evolução de cargas/i.test(card.textContent||''))||null;
+}
+function bindEvolutionCard(){
+  const card=findEvolutionCard();
+  if(!card||card.dataset.historyBound==='1')return;
+  card.dataset.historyBound='1';
+  card.style.cursor='pointer';
+  card.setAttribute('role','button');
+  card.setAttribute('tabindex','0');
+  card.setAttribute('aria-label','Abrir evolução de cargas');
+  const open=event=>{event.preventDefault();event.stopPropagation();renderHistory()};
+  card.addEventListener('click',open);
+  card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){open(event)}});
 }
 function install(){
   document.addEventListener('click',event=>{
     const finish=event.target.closest('button.finish');
     if(finish)captureWorkout();
-    const target=event.target.closest('button,article,div');
-    if(target&&/(treinos salvos|evolução de cargas)/i.test(target.textContent||'')&&!target.closest('.mayfit-history-overlay')){event.preventDefault();event.stopPropagation();renderHistory()}
   },true);
-  const observer=new MutationObserver(()=>{const card=findSavedCard();if(card){card.style.cursor='pointer';card.setAttribute('role','button');card.setAttribute('aria-label','Abrir evolução de cargas')}});
+  const observer=new MutationObserver(()=>requestAnimationFrame(bindEvolutionCard));
   observer.observe(document.documentElement,{childList:true,subtree:true});
+  bindEvolutionCard();
 }
 install();
