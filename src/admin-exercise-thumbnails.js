@@ -1,9 +1,3 @@
-import './body-evolution.js?v=3';
-import './body-evolution-save-fix.js?v=3';
-import './body-evolution-delete-record.js?v=2';
-import './student-performance-fix.js?v=2';
-import './body-evolution-preserve.js?v=1';
-
 const MAYFIT_EXERCISE_DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 const MAYFIT_IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 let mayfitExerciseMap=null;
