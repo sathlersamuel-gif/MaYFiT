@@ -2,6 +2,7 @@ import './body-evolution.js';
 import './body-evolution-save-fix.js';
 import './body-evolution-delete-record.js';
 import './student-navigation-guard.js';
+import './workout-return-refresh.js';
 
 const MAYFIT_EXERCISE_DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 const MAYFIT_IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
