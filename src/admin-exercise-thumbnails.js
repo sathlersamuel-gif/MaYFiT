@@ -4,6 +4,7 @@ import './body-evolution-delete-record.js';
 import './student-navigation-guard.js';
 import './workout-return-refresh.js';
 import './ui-performance-adjustments.js';
+import './workout-name-edit.js';
 
 const MAYFIT_EXERCISE_DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 const MAYFIT_IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
