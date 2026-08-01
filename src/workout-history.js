@@ -1,3 +1,5 @@
+import './admin-exercise-thumbnails.js';
+
 const HISTORY_PREFIX='mayfit_workout_history_';
 
 function currentUserId(){
@@ -28,7 +30,7 @@ function captureWorkout(){
   items.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),name:'Treino A',exercises});
   writeHistory(items);
 }
-function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
+function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt',"'":'&#39;','"':'&quot;'}[char]))}
 function formatDate(value){return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(value))}
 function styles(){
   if(document.getElementById('mayfit-history-style'))return;
