@@ -6,11 +6,24 @@ let mayfitLoading=false;
 const style=document.createElement('style');
 style.textContent=`
 .exercise-picker .picker-item{display:grid!important;grid-template-columns:auto 76px minmax(0,1fr)!important;align-items:center!important;gap:10px!important}
-.exercise-picker .picker-item .mayfit-picker-thumb{width:76px;height:60px;display:block;object-fit:cover;border:1px solid #36513f;border-radius:10px;background:#07100a}
+.exercise-picker .picker-item .mayfit-picker-thumb{width:76px;height:60px;display:block;object-fit:cover;border:1px solid #36513f;border-radius:10px;background:#07100a;cursor:zoom-in}
 .exercise-picker .picker-item>span:not(.mayfit-picker-thumb){min-width:0}
+.mayfit-image-zoom{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.9)}
+.mayfit-image-zoom img{max-width:min(920px,96vw);max-height:86vh;object-fit:contain;border-radius:16px;background:#050706}
+.mayfit-image-zoom button{position:fixed;top:max(18px,env(safe-area-inset-top));right:18px;width:44px;height:44px;border:1px solid #49664f;border-radius:14px;background:#132018;color:#fff;font-size:26px}
 @media(max-width:620px){.exercise-picker .picker-item{grid-template-columns:auto 68px minmax(0,1fr)!important}.exercise-picker .picker-item .mayfit-picker-thumb{width:68px;height:56px}}
 `;
 document.head.appendChild(style);
+
+function openZoom(src,alt){
+  document.querySelector('.mayfit-image-zoom')?.remove();
+  const zoom=document.createElement('div');
+  zoom.className='mayfit-image-zoom';
+  zoom.innerHTML=`<button type="button" aria-label="Fechar">×</button><img src="${src}" alt="${alt||''}">`;
+  zoom.querySelector('button').onclick=()=>zoom.remove();
+  zoom.onclick=event=>{if(event.target===zoom)zoom.remove()};
+  document.body.appendChild(zoom);
+}
 
 async function loadExerciseMap(){
   if(mayfitExerciseMap)return mayfitExerciseMap;
@@ -48,10 +61,9 @@ async function applyAdminExerciseThumbnails(){
       thumb.alt=name;
       thumb.loading='lazy';
       thumb.decoding='async';
+      thumb.onclick=event=>{event.preventDefault();event.stopPropagation();openZoom(image,name)};
       thumb.onerror=()=>{thumb.style.visibility='hidden'};
-    }else{
-      thumb.setAttribute('aria-hidden','true');
-    }
+    }else thumb.setAttribute('aria-hidden','true');
     const text=item.querySelector('span');
     item.insertBefore(thumb,text||null);
   }
