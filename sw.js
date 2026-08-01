@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v21-stable';
+const VERSION='mayfit-sw-v22-ui-aluno';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
