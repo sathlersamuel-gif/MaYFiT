@@ -33,7 +33,7 @@ function isStudentHome(){
   const account=currentUser();
   const main=document.querySelector('.app main');
   if(account?.role!=='student'||!main||document.querySelector('.workout-screen'))return false;
-  return Boolean(main.querySelector('.hero,.summary,#mayfit-student-exercises'));
+  return Boolean(main.querySelector('.hero,.summary'));
 }
 
 function findEvolutionPanel(node){
@@ -49,7 +49,16 @@ function captureExistingPanel(){
 
 function restoreStudentHome(){
   restoreScheduled=false;
-  if(!isStudentHome())return;
+  const panel=document.getElementById('mayfit-body-evolution');
+
+  if(!isStudentHome()){
+    if(panel){
+      cachedEvolutionPanel=panel;
+      panel.remove();
+    }
+    return;
+  }
+
   const main=document.querySelector('.app main');
   if(!main)return;
 
@@ -91,9 +100,9 @@ const observer=new MutationObserver(mutations=>{
 observer.observe(document.getElementById('root')||document.documentElement,{childList:true,subtree:true});
 
 document.addEventListener('click',event=>{
-  if(event.target.closest('button,a,[role="button"]')){
+  if(event.target.closest('.app>nav button')){
     setTimeout(scheduleRestore,0);
-    setTimeout(scheduleRestore,120);
+    setTimeout(scheduleRestore,80);
   }
 },true);
 
