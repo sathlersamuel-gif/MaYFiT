@@ -1,5 +1,12 @@
 const CATALOG_KEY='mayfit_exercise_catalog_v1';
 const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
+let evolutionLoading=false;
+let evolutionAttempt=0;
+let evolutionTimer=null;
+
+function currentUser(){
+  try{return JSON.parse(sessionStorage.getItem('mayfit_user')||'null')}catch{return null}
+}
 
 function hasValidCatalog(){
   try{
@@ -28,6 +35,46 @@ function scheduleWarmup(){
   else setTimeout(warmCatalog,250);
 }
 
+function isHomeScreen(){
+  const user=currentUser();
+  const main=document.querySelector('.app main');
+  return Boolean(user&&main&&!document.querySelector('.workout-screen'));
+}
+
+async function ensureBodyEvolution(){
+  if(!isHomeScreen())return;
+  if(document.getElementById('mayfit-body-evolution'))return;
+  if(evolutionLoading)return;
+  evolutionLoading=true;
+  try{
+    evolutionAttempt+=1;
+    await import(`./body-evolution.js?screen-remount=${evolutionAttempt}`);
+  }catch(error){
+    console.error('Falha ao restaurar evolução corporal:',error);
+  }finally{
+    evolutionLoading=false;
+  }
+}
+
+function scheduleEvolutionCheck(){
+  clearTimeout(evolutionTimer);
+  evolutionTimer=setTimeout(ensureBodyEvolution,40);
+}
+
+const navigationObserver=new MutationObserver(scheduleEvolutionCheck);
+navigationObserver.observe(document.documentElement,{childList:true,subtree:true});
+
+document.addEventListener('click',event=>{
+  if(event.target.closest('nav button,.bottom-nav button,.back-button,[data-tab]')){
+    setTimeout(scheduleEvolutionCheck,0);
+    setTimeout(scheduleEvolutionCheck,120);
+  }
+},true);
+
+window.addEventListener('pageshow',()=>{scheduleWarmup();scheduleEvolutionCheck()});
+window.addEventListener('focus',scheduleEvolutionCheck);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleEvolutionCheck()});
 window.addEventListener('load',scheduleWarmup,{once:true});
-window.addEventListener('pageshow',scheduleWarmup);
+
 scheduleWarmup();
+scheduleEvolutionCheck();
