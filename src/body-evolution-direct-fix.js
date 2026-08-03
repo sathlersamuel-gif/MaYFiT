@@ -28,26 +28,75 @@ function installStyles(){
   const style=document.createElement('style');
   style.id='mayfit-body-direct-fix-style';
   style.textContent=`
+    .be-modal{
+      overflow:hidden!important;
+      padding:0!important;
+    }
     .be-modal .be-wrap{
-      padding-top:128px!important;
+      width:min(900px,100%)!important;
+      height:100dvh!important;
+      max-height:100dvh!important;
+      margin:0 auto!important;
+      padding:0 14px!important;
       box-sizing:border-box!important;
+      display:flex!important;
+      flex-direction:column!important;
     }
     .be-modal .be-top{
-      position:fixed!important;
-      top:0!important;
-      left:50%!important;
-      transform:translateX(-50%)!important;
-      z-index:100002!important;
-      width:min(900px,calc(100% - 28px))!important;
-      min-height:112px!important;
+      position:relative!important;
+      inset:auto!important;
+      transform:none!important;
+      flex:0 0 auto!important;
+      width:100%!important;
+      min-height:0!important;
       margin:0!important;
       padding:max(18px,env(safe-area-inset-top)) 0 14px!important;
       box-sizing:border-box!important;
       background:#050806!important;
       border-bottom:1px solid #23382a!important;
-      box-shadow:0 8px 18px rgba(0,0,0,.28)!important;
+      box-shadow:none!important;
+      z-index:2!important;
     }
     .be-modal .be-top h1{margin:0!important}
+    .be-modal .be-scroll{
+      flex:1 1 auto!important;
+      min-height:0!important;
+      overflow-y:auto!important;
+      overflow-x:hidden!important;
+      -webkit-overflow-scrolling:touch!important;
+      padding:14px 0 max(24px,env(safe-area-inset-bottom))!important;
+      box-sizing:border-box!important;
+    }
+    .be-modal .be-grid{
+      display:grid!important;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+      column-gap:12px!important;
+      row-gap:10px!important;
+      width:100%!important;
+    }
+    .be-modal .be-grid label{
+      display:block!important;
+      min-width:0!important;
+      max-width:100%!important;
+      overflow:hidden!important;
+    }
+    .be-modal .be-grid input{
+      display:block!important;
+      width:100%!important;
+      min-width:0!important;
+      max-width:100%!important;
+      box-sizing:border-box!important;
+    }
+    .be-modal .be-grid input[type='date']{
+      width:100%!important;
+      min-width:0!important;
+      max-width:100%!important;
+      box-sizing:border-box!important;
+      font-size:13px!important;
+      line-height:1.2!important;
+      padding-left:8px!important;
+      padding-right:8px!important;
+    }
     .be-modal .be-label-editor{
       display:inline-flex!important;
       align-items:center!important;
@@ -61,6 +110,7 @@ function installStyles(){
       font-weight:800!important;
       text-align:left!important;
       cursor:pointer!important;
+      overflow-wrap:anywhere!important;
     }
     .be-modal .be-label-editor::after{
       content:'✎';
@@ -74,15 +124,26 @@ function installStyles(){
       outline-offset:3px!important;
       border-radius:4px!important;
     }
-    @media(max-width:620px){
-      .be-modal .be-wrap{padding-top:136px!important}
-      .be-modal .be-top{
-        width:calc(100% - 28px)!important;
-        min-height:120px!important;
-      }
+    @media(max-width:380px){
+      .be-modal .be-wrap{padding-left:10px!important;padding-right:10px!important}
+      .be-modal .be-grid{column-gap:8px!important}
+      .be-modal .be-grid input[type='date']{font-size:12px!important;padding-left:6px!important;padding-right:6px!important}
     }
   `;
   document.head.appendChild(style);
+}
+
+function organizeModal(modal){
+  if(modal.dataset.scrollOrganized==='1')return;
+  const wrap=modal.querySelector('.be-wrap');
+  const top=wrap?.querySelector(':scope > .be-top');
+  if(!wrap||!top)return;
+
+  const scroll=document.createElement('div');
+  scroll.className='be-scroll';
+  [...wrap.children].filter(child=>child!==top).forEach(child=>scroll.appendChild(child));
+  wrap.appendChild(scroll);
+  modal.dataset.scrollOrganized='1';
 }
 
 function makeLabelEditable(label,index,saved){
@@ -126,6 +187,7 @@ function apply(){
   installStyles();
   const saved=readSaved();
   document.querySelectorAll('.be-modal').forEach(modal=>{
+    organizeModal(modal);
     modal.querySelectorAll('form label').forEach((label,index)=>makeLabelEditable(label,index,saved));
   });
 }
