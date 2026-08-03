@@ -11,6 +11,14 @@ function normalize(text){return String(text||'').replace(/\s+/g,' ').trim()}
 const style=document.createElement('style');
 style.id='mayfit-body-evolution-form-fix-style';
 style.textContent=`
+.be-modal .be-top{
+  position:sticky!important;
+  top:0!important;
+  z-index:50!important;
+  padding:10px 0 14px!important;
+  margin-bottom:14px!important;
+  background:#050806!important;
+}
 .be-modal .be-grid{
   display:grid!important;
   grid-template-columns:calc((100% - 10px)/2) calc((100% - 10px)/2)!important;
@@ -59,6 +67,8 @@ style.textContent=`
   outline:none!important;
   cursor:text!important;
   overflow-wrap:anywhere!important;
+  -webkit-user-select:text!important;
+  user-select:text!important;
 }
 .be-modal .be-editable-label:focus{
   text-decoration:underline!important;
@@ -68,45 +78,46 @@ style.textContent=`
 `;
 document.head.appendChild(style);
 
+function makeEditable(label,index,labels){
+  const control=label.querySelector('input[name],textarea[name],select[name],input[data-photo]');
+  if(!control||label.querySelector('.be-editable-label'))return;
+
+  const key=control.name||control.dataset.photo||`label_${index}`;
+  const textNodes=[...label.childNodes].filter(node=>node.nodeType===Node.TEXT_NODE&&normalize(node.textContent));
+  const original=normalize(textNodes.map(node=>node.textContent).join(' '));
+  if(!original)return;
+  textNodes.forEach(node=>node.remove());
+
+  const title=document.createElement('span');
+  title.className='be-editable-label';
+  title.contentEditable='true';
+  title.spellcheck=false;
+  title.dataset.field=key;
+  title.dataset.defaultLabel=original;
+  title.textContent=labels[key]||original;
+  label.insertBefore(title,label.firstChild);
+
+  title.addEventListener('click',event=>event.stopPropagation());
+  title.addEventListener('pointerdown',event=>event.stopPropagation());
+  title.addEventListener('keydown',event=>{
+    if(event.key==='Enter'){
+      event.preventDefault();
+      title.blur();
+    }
+  });
+  title.addEventListener('blur',()=>{
+    const value=normalize(title.textContent)||original;
+    title.textContent=value;
+    const updated=readLabels();
+    updated[key]=value;
+    saveLabels(updated);
+  });
+}
+
 function prepareEditableLabels(root){
   if(!root||root.dataset.labelsPrepared==='true')return;
   const labels=readLabels();
-  const grid=root.querySelector('.be-grid');
-  if(!grid)return;
-
-  grid.querySelectorAll('label').forEach(label=>{
-    const input=label.querySelector('input[name]');
-    if(!input||label.querySelector('.be-editable-label'))return;
-
-    const key=input.name;
-    const textNodes=[...label.childNodes].filter(node=>node.nodeType===Node.TEXT_NODE);
-    const original=normalize(textNodes.map(node=>node.textContent).join(' '));
-    textNodes.forEach(node=>node.remove());
-
-    const title=document.createElement('span');
-    title.className='be-editable-label';
-    title.contentEditable='true';
-    title.spellcheck=false;
-    title.dataset.field=key;
-    title.dataset.defaultLabel=original;
-    title.textContent=labels[key]||original;
-    label.insertBefore(title,input);
-
-    title.addEventListener('keydown',event=>{
-      if(event.key==='Enter'){
-        event.preventDefault();
-        title.blur();
-      }
-    });
-    title.addEventListener('blur',()=>{
-      const value=normalize(title.textContent)||original;
-      title.textContent=value;
-      const updated=readLabels();
-      updated[key]=value;
-      saveLabels(updated);
-    });
-  });
-
+  root.querySelectorAll('form label').forEach((label,index)=>makeEditable(label,index,labels));
   root.dataset.labelsPrepared='true';
 }
 
