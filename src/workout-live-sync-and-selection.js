@@ -1,5 +1,4 @@
 const STORE='mayfit_v8';
-const USER_KEY='mayfit_user';
 let reloadScheduled=false;
 
 const exactTranslations={
@@ -42,50 +41,51 @@ const exactTranslations={
   'Pushups':'Flexão de braços'
 };
 
-const replacements=[
-  [/\bbarbell\b/gi,'barra'],[/\bdumbbell\b/gi,'halter'],[/\bcable\b/gi,'polia'],
-  [/\bmachine\b/gi,'máquina'],[/\bbench press\b/gi,'supino'],[/\bpress\b/gi,'pressão'],
-  [/\bsquat\b/gi,'agachamento'],[/\bdeadlift\b/gi,'levantamento terra'],[/\brow\b/gi,'remada'],
-  [/\bpulldown\b/gi,'puxada'],[/\bpull-up(s)?\b/gi,'barra fixa'],[/\bchin-up(s)?\b/gi,'barra fixa supinada'],
-  [/\bcurl(s)?\b/gi,'rosca'],[/\bextension(s)?\b/gi,'extensão'],[/\braise(s)?\b/gi,'elevação'],
-  [/\bcalf\b/gi,'panturrilha'],[/\bleg\b/gi,'perna'],[/\bshoulder\b/gi,'ombro'],
-  [/\bchest\b/gi,'peito'],[/\bback\b/gi,'costas'],[/\bbiceps?\b/gi,'bíceps'],[/\btriceps?\b/gi,'tríceps'],
-  [/\bseated\b/gi,'sentado'],[/\bstanding\b/gi,'em pé'],[/\blying\b/gi,'deitado'],
-  [/\bincline\b/gi,'inclinado'],[/\bdecline\b/gi,'declinado'],[/\bfront\b/gi,'frontal'],
-  [/\brear\b/gi,'posterior'],[/\bwide[- ]grip\b/gi,'pegada aberta'],[/\bclose[- ]grip\b/gi,'pegada fechada'],
-  [/\bone arm\b/gi,'unilateral'],[/\balternating\b/gi,'alternado'],[/\bwith\b/gi,'com']
-];
+const englishWords={
+  barbell:'barra',dumbbell:'halter',cable:'polia',machine:'máquina',bench:'banco',press:'press',
+  squat:'agachamento',deadlift:'levantamento terra',row:'remada',pulldown:'puxada',pullups:'barra fixa',
+  curl:'rosca',curls:'rosca',extension:'extensão',extensions:'extensão',raise:'elevação',raises:'elevação',
+  calf:'panturrilha',leg:'perna',shoulder:'ombro',chest:'peito',back:'costas',biceps:'bíceps',triceps:'tríceps',
+  seated:'sentado',standing:'em pé',lying:'deitado',incline:'inclinado',decline:'declinado',front:'frontal',
+  rear:'posterior',wide:'aberta',close:'fechada',grip:'pegada',one:'um',arm:'braço',alternating:'alternado',with:'com'
+};
 
-function currentUser(){try{return JSON.parse(sessionStorage.getItem(USER_KEY)||'null')}catch{return null}}
 function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}}
 function writeStore(store){localStorage.setItem(STORE,JSON.stringify(store));window.dispatchEvent(new Event('mayfit-store-updated'))}
 function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 function normalizeName(value){return String(value||'').replaceAll('_',' ').replace(/\s+/g,' ').trim()}
-function translateName(value){
+function isCorrupted(value){const text=String(value||'');return text.length>90||/(?:ÃO|Ãƒ|Ã‚|PRESSÃO){4,}/i.test(text)||/(.{2,6})\1{5,}/i.test(text)}
+function looksEnglish(value){return /\b(barbell|dumbbell|cable|machine|bench|press|squat|deadlift|row|pulldown|pullups|curl|extension|raise|calf|leg|shoulder|chest|back|biceps|triceps|seated|standing|lying|incline|decline|front|rear|grip|arm|with)\b/i.test(value)}
+function titleCase(value){return value?value.charAt(0).toUpperCase()+value.slice(1):'Exercício'}
+function translateSafe(value){
   const original=normalizeName(value);
   if(!original)return 'Exercício';
   const exact=exactTranslations[original]||exactTranslations[original.replace(/ - /g,' ')];
   if(exact)return exact;
-  let translated=original;
-  replacements.forEach(([pattern,replacement])=>{translated=translated.replace(pattern,replacement)});
-  translated=translated.replace(/\s+-\s+/g,' – ').replace(/\s+/g,' ').trim();
-  return translated.charAt(0).toUpperCase()+translated.slice(1);
+  if(!looksEnglish(original))return original;
+  const translated=original.split(/([\s-]+)/).map(part=>englishWords[part.toLowerCase()]||part).join('').replace(/\s+/g,' ').trim();
+  return titleCase(translated);
+}
+function repairedName(item){
+  const current=normalizeName(item?.name);
+  const typeName=normalizeName(item?.type);
+  if(isCorrupted(current))return translateSafe(typeName);
+  return translateSafe(current||typeName);
 }
 
 function scheduleReload(){
   if(reloadScheduled)return;
   reloadScheduled=true;
-  sessionStorage.setItem('mayfit_live_refresh','1');
-  setTimeout(()=>location.reload(),80);
+  setTimeout(()=>location.reload(),100);
 }
 
-function migrateStoredNames(){
+function repairStoredNames(){
   const store=readStore();
   if(!store||!Array.isArray(store.exercises))return;
   let changed=false;
   const exercises=store.exercises.map(item=>{
-    const translated=translateName(item.name||item.type);
-    if(translated&&translated!==item.name){changed=true;return {...item,name:translated}}
+    const name=repairedName(item);
+    if(name&&name!==item.name){changed=true;return {...item,name}}
     return item;
   });
   if(changed)localStorage.setItem(STORE,JSON.stringify({...store,exercises}));
@@ -114,40 +114,27 @@ function removeSelectedExercise(id){
   if(!store||!Array.isArray(store.exercises))return;
   const exercise=store.exercises.find(item=>String(item.id)===String(id));
   if(!exercise)return;
-  if(!confirm(`Remover ${translateName(exercise.name||exercise.type)} do treino?`))return;
+  if(!confirm(`Remover ${repairedName(exercise)} do treino?`))return;
   writeStore({...store,exercises:store.exercises.filter(item=>String(item.id)!==String(id))});
 }
 
 function renderSelectedPanel(modal){
-  const card=modal.querySelector('.mse-card');
   const search=modal.querySelector('.mse-search');
-  if(!card||!search)return;
+  if(!search)return;
   let panel=modal.querySelector('.mse-selected-panel');
   if(!panel){panel=document.createElement('section');panel.className='mse-selected-panel';search.before(panel)}
   const exercises=readStore()?.exercises||[];
-  panel.innerHTML=`<div class="mse-selected-head"><strong>Já selecionados</strong><span>${exercises.length} exercício(s)</span></div><div class="mse-selected-list">${exercises.length?exercises.map(item=>`<div class="mse-selected-chip"><span>${esc(translateName(item.name||item.type))}</span><button type="button" data-remove-selected="${esc(item.id)}" aria-label="Remover exercício">×</button></div>`).join(''):'<div class="mse-empty-selected">Nenhum exercício selecionado.</div>'}</div>`;
+  panel.innerHTML=`<div class="mse-selected-head"><strong>Já selecionados</strong><span>${exercises.length} exercício(s)</span></div><div class="mse-selected-list">${exercises.length?exercises.map(item=>`<div class="mse-selected-chip"><span>${esc(repairedName(item))}</span><button type="button" data-remove-selected="${esc(item.id)}" aria-label="Remover exercício">×</button></div>`).join(''):'<div class="mse-empty-selected">Nenhum exercício selecionado.</div>'}</div>`;
   panel.querySelectorAll('[data-remove-selected]').forEach(button=>button.onclick=()=>removeSelectedExercise(button.dataset.removeSelected));
 }
 
-function translateVisibleNames(root=document){
-  root.querySelectorAll('#mse-modal .mse-info strong,.workout-screen .exercise-col>strong').forEach(node=>{
-    const translated=translateName(node.textContent);
-    if(translated&&translated!==node.textContent)node.textContent=translated;
-  });
-}
-
-function enhanceManager(){
-  const modal=document.getElementById('mse-modal');
-  if(!modal)return;
-  renderSelectedPanel(modal);
-  translateVisibleNames(modal);
-}
+function enhanceManager(){const modal=document.getElementById('mse-modal');if(modal)renderSelectedPanel(modal)}
 
 ensureStyles();
-migrateStoredNames();
-const observer=new MutationObserver(()=>requestAnimationFrame(()=>{enhanceManager();translateVisibleNames()}));
+repairStoredNames();
+const observer=new MutationObserver(()=>requestAnimationFrame(enhanceManager));
 observer.observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('mayfit-store-updated',scheduleReload);
 window.addEventListener('storage',event=>{if(event.key===STORE)scheduleReload()});
-window.addEventListener('pageshow',()=>{enhanceManager();translateVisibleNames()});
-enhanceManager();translateVisibleNames();
+window.addEventListener('pageshow',enhanceManager);
+enhanceManager();
