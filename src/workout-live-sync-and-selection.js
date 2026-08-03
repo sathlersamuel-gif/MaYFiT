@@ -1,5 +1,6 @@
 const STORE='mayfit_v8';
 let reloadScheduled=false;
+let activeTab='all';
 
 const exactTranslations={
   'Barbell Bench Press - Medium Grip':'Supino reto com barra',
@@ -41,36 +42,22 @@ const exactTranslations={
   'Pushups':'Flexão de braços'
 };
 
-const englishWords={
-  barbell:'barra',dumbbell:'halter',cable:'polia',machine:'máquina',bench:'banco',press:'press',
-  squat:'agachamento',deadlift:'levantamento terra',row:'remada',pulldown:'puxada',pullups:'barra fixa',
-  curl:'rosca',curls:'rosca',extension:'extensão',extensions:'extensão',raise:'elevação',raises:'elevação',
-  calf:'panturrilha',leg:'perna',shoulder:'ombro',chest:'peito',back:'costas',biceps:'bíceps',triceps:'tríceps',
-  seated:'sentado',standing:'em pé',lying:'deitado',incline:'inclinado',decline:'declinado',front:'frontal',
-  rear:'posterior',wide:'aberta',close:'fechada',grip:'pegada',one:'um',arm:'braço',alternating:'alternado',with:'com'
-};
-
 function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}}
-function writeStore(store){localStorage.setItem(STORE,JSON.stringify(store));window.dispatchEvent(new Event('mayfit-store-updated'))}
-function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 function normalizeName(value){return String(value||'').replaceAll('_',' ').replace(/\s+/g,' ').trim()}
 function isCorrupted(value){const text=String(value||'');return text.length>90||/(?:ÃO|Ãƒ|Ã‚|PRESSÃO){4,}/i.test(text)||/(.{2,6})\1{5,}/i.test(text)}
-function looksEnglish(value){return /\b(barbell|dumbbell|cable|machine|bench|press|squat|deadlift|row|pulldown|pullups|curl|extension|raise|calf|leg|shoulder|chest|back|biceps|triceps|seated|standing|lying|incline|decline|front|rear|grip|arm|with)\b/i.test(value)}
-function titleCase(value){return value?value.charAt(0).toUpperCase()+value.slice(1):'Exercício'}
-function translateSafe(value){
-  const original=normalizeName(value);
-  if(!original)return 'Exercício';
-  const exact=exactTranslations[original]||exactTranslations[original.replace(/ - /g,' ')];
-  if(exact)return exact;
-  if(!looksEnglish(original))return original;
-  const translated=original.split(/([\s-]+)/).map(part=>englishWords[part.toLowerCase()]||part).join('').replace(/\s+/g,' ').trim();
-  return titleCase(translated);
-}
 function repairedName(item){
   const current=normalizeName(item?.name);
-  const typeName=normalizeName(item?.type);
-  if(isCorrupted(current))return translateSafe(typeName);
-  return translateSafe(current||typeName);
+  const type=normalizeName(item?.type);
+  if(isCorrupted(current))return exactTranslations[type]||type||'Exercício';
+  return exactTranslations[current]||current||exactTranslations[type]||type||'Exercício';
+}
+
+function repairStoredNames(){
+  const store=readStore();
+  if(!store||!Array.isArray(store.exercises))return;
+  let changed=false;
+  const exercises=store.exercises.map(item=>{const name=repairedName(item);if(name!==item.name){changed=true;return {...item,name}}return item});
+  if(changed)localStorage.setItem(STORE,JSON.stringify({...store,exercises}));
 }
 
 function scheduleReload(){
@@ -79,59 +66,66 @@ function scheduleReload(){
   setTimeout(()=>location.reload(),100);
 }
 
-function repairStoredNames(){
-  const store=readStore();
-  if(!store||!Array.isArray(store.exercises))return;
-  let changed=false;
-  const exercises=store.exercises.map(item=>{
-    const name=repairedName(item);
-    if(name&&name!==item.name){changed=true;return {...item,name}}
-    return item;
-  });
-  if(changed)localStorage.setItem(STORE,JSON.stringify({...store,exercises}));
-}
-
 function ensureStyles(){
-  if(document.getElementById('mayfit-selected-workouts-style'))return;
+  document.getElementById('mayfit-selected-workouts-style')?.remove();
+  if(document.getElementById('mayfit-workout-tabs-style'))return;
   const style=document.createElement('style');
-  style.id='mayfit-selected-workouts-style';
+  style.id='mayfit-workout-tabs-style';
   style.textContent=`
-  #mse-modal .mse-selected-panel{margin:12px 15px 0;padding:13px;border:1px solid #456a50;border-radius:15px;background:#122019}
-  #mse-modal .mse-selected-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
-  #mse-modal .mse-selected-head strong{font-size:15px;color:#fff}#mse-modal .mse-selected-head span{color:#9cac9f;font-size:12px}
-  #mse-modal .mse-selected-list{display:flex;flex-wrap:wrap;gap:7px;max-height:150px;overflow:auto}
-  #mse-modal .mse-selected-chip{display:flex;align-items:center;gap:7px;max-width:100%;padding:8px 9px;border:1px solid #54775e;border-radius:11px;background:#1a2b20;color:#fff}
-  #mse-modal .mse-selected-chip span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:800}
-  #mse-modal .mse-selected-chip button{flex:0 0 auto;width:27px;height:27px;min-width:27px;padding:0!important;border:1px solid #8b4141!important;border-radius:8px!important;background:#4a2020!important;color:#ffd0d0!important;font-size:17px!important;line-height:1!important}
-  #mse-modal .mse-empty-selected{color:#9cac9f;font-size:13px}
-  @media(max-width:620px){#mse-modal .mse-selected-panel{margin:10px 12px 0;padding:11px}#mse-modal .mse-selected-list{max-height:125px}.mse-card .mse-search{margin-top:10px!important}}
+  #mse-modal .mse-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 15px 0;padding:4px;border:1px solid #334d3a;border-radius:14px;background:#0a120d}
+  #mse-modal .mse-tab{height:42px;padding:0 10px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:#aab8ae!important;font-size:14px!important;font-weight:900!important}
+  #mse-modal .mse-tab.active{background:#78d532!important;color:#07110c!important;box-shadow:0 3px 12px rgba(120,213,50,.24)!important}
+  #mse-modal .mse-item.mse-hidden-by-tab{display:none!important}
+  #mse-modal .mse-tab-empty{padding:26px 16px;text-align:center;color:#9cac9f;font-size:14px}
+  @media(max-width:620px){#mse-modal .mse-tabs{margin:10px 12px 0}.mse-card .mse-search{margin-top:10px!important}}
   `;
   document.head.appendChild(style);
 }
 
-function removeSelectedExercise(id){
-  const store=readStore();
-  if(!store||!Array.isArray(store.exercises))return;
-  const exercise=store.exercises.find(item=>String(item.id)===String(id));
-  if(!exercise)return;
-  if(!confirm(`Remover ${repairedName(exercise)} do treino?`))return;
-  writeStore({...store,exercises:store.exercises.filter(item=>String(item.id)!==String(id))});
+function selectedTypes(){return new Set((readStore()?.exercises||[]).map(item=>String(item.type)))}
+
+function applyTab(modal){
+  const list=modal.querySelector('.mse-list');
+  if(!list)return;
+  const selected=selectedTypes();
+  let visible=0;
+  list.querySelectorAll('.mse-item').forEach(item=>{
+    const show=activeTab==='all'||selected.has(String(item.dataset.type));
+    item.classList.toggle('mse-hidden-by-tab',!show);
+    if(show)visible++;
+  });
+  let empty=list.querySelector('.mse-tab-empty');
+  if(activeTab==='selected'&&visible===0){
+    if(!empty){empty=document.createElement('div');empty.className='mse-tab-empty';empty.textContent='Nenhum exercício selecionado.';list.appendChild(empty)}
+  }else empty?.remove();
+  const count=selected.size;
+  modal.querySelector('[data-tab="selected"]')?.replaceChildren(document.createTextNode(`Selecionados (${count})`));
+  modal.querySelectorAll('.mse-tab').forEach(button=>button.classList.toggle('active',button.dataset.tab===activeTab));
 }
 
-function renderSelectedPanel(modal){
+function installTabs(modal){
+  modal.querySelector('.mse-selected-panel')?.remove();
   const search=modal.querySelector('.mse-search');
   if(!search)return;
-  let panel=modal.querySelector('.mse-selected-panel');
-  if(!panel){panel=document.createElement('section');panel.className='mse-selected-panel';search.before(panel)}
-  const exercises=readStore()?.exercises||[];
-  panel.innerHTML=`<div class="mse-selected-head"><strong>Já selecionados</strong><span>${exercises.length} exercício(s)</span></div><div class="mse-selected-list">${exercises.length?exercises.map(item=>`<div class="mse-selected-chip"><span>${esc(repairedName(item))}</span><button type="button" data-remove-selected="${esc(item.id)}" aria-label="Remover exercício">×</button></div>`).join(''):'<div class="mse-empty-selected">Nenhum exercício selecionado.</div>'}</div>`;
-  panel.querySelectorAll('[data-remove-selected]').forEach(button=>button.onclick=()=>removeSelectedExercise(button.dataset.removeSelected));
+  let tabs=modal.querySelector('.mse-tabs');
+  if(!tabs){
+    tabs=document.createElement('div');
+    tabs.className='mse-tabs';
+    tabs.innerHTML='<button type="button" class="mse-tab" data-tab="all">Todos</button><button type="button" class="mse-tab" data-tab="selected">Selecionados (0)</button>';
+    search.before(tabs);
+    tabs.addEventListener('click',event=>{
+      const button=event.target.closest('.mse-tab');if(!button)return;
+      activeTab=button.dataset.tab;
+      applyTab(modal);
+    });
+  }
+  applyTab(modal);
 }
 
-function enhanceManager(){const modal=document.getElementById('mse-modal');if(modal)renderSelectedPanel(modal)}
+function enhanceManager(){const modal=document.getElementById('mse-modal');if(modal)installTabs(modal)}
 
-ensureStyles();
 repairStoredNames();
+ensureStyles();
 const observer=new MutationObserver(()=>requestAnimationFrame(enhanceManager));
 observer.observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('mayfit-store-updated',scheduleReload);
