@@ -10,21 +10,32 @@ function storageKey(){
   return NAME_PREFIX+(user?.id||'student');
 }
 
+function cleanText(value){
+  return String(value||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').replace(/\s+/g,' ').trim();
+}
+
 function findWorkoutTitle(){
   const user=currentUser();
   if(user?.role!=='student')return null;
+  const preferred=document.querySelector('.app main .hero h1');
+  if(preferred)return preferred;
   const candidates=[...document.querySelectorAll('.app main h1,.app main h2,.app main h3,.app main strong')];
-  return candidates.find(element=>/^treino\s+a$/i.test((element.textContent||'').trim())||element.dataset.workoutNameHost==='true')||null;
+  return candidates.find(element=>{
+    const text=cleanText(element.textContent).toLowerCase();
+    return element.dataset.workoutNameHost==='true'||text==='treino a'||text.startsWith('treino de')||text==='meu treino';
+  })||null;
 }
 
 function installEditableName(){
   const title=findWorkoutTitle();
-  if(!title||title.dataset.workoutNameReady==='true')return;
+  if(!title)return;
+  const existing=title.querySelector('input[data-workout-name-input]');
+  if(existing)return;
 
   title.dataset.workoutNameReady='true';
   title.dataset.workoutNameHost='true';
   const saved=(localStorage.getItem(storageKey())||'').trim();
-  const defaultName=saved||currentUser()?.name||currentUser()?.full_name||'';
+  const defaultName=saved||currentUser()?.name||currentUser()?.full_name||'Meu treino';
 
   title.innerHTML='';
   title.style.display='flex';
@@ -33,25 +44,25 @@ function installEditableName(){
   title.style.gap='6px';
 
   const prefix=document.createElement('span');
-  prefix.textContent='Treino de';
+  prefix.textContent='Treino:';
 
   const input=document.createElement('input');
+  input.dataset.workoutNameInput='true';
   input.type='text';
   input.value=defaultName;
-  input.placeholder='seu nome';
+  input.placeholder='Digite o nome do treino';
   input.setAttribute('aria-label','Nome do treino');
-  input.autocomplete='name';
-  input.style.cssText='min-width:130px;max-width:100%;flex:1;border:0;border-bottom:2px solid #78d532;border-radius:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;line-height:1.15;padding:0 2px 2px;outline:none';
+  input.autocomplete='off';
+  input.style.cssText='min-width:150px;max-width:100%;flex:1;border:0;border-bottom:2px solid #78d532;border-radius:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;line-height:1.15;padding:0 2px 2px;outline:none';
 
-  const stopCardAction=event=>event.stopPropagation();
-  input.addEventListener('click',stopCardAction);
-  input.addEventListener('pointerdown',stopCardAction);
-  input.addEventListener('touchstart',stopCardAction,{passive:true});
+  const stop=event=>event.stopPropagation();
+  ['click','pointerdown','touchstart'].forEach(type=>input.addEventListener(type,stop,{passive:type==='touchstart'}));
 
   const saveName=()=>{
     const value=input.value.trim();
     if(value)localStorage.setItem(storageKey(),value);
     else localStorage.removeItem(storageKey());
+    window.dispatchEvent(new CustomEvent('mayfit-workout-name-updated',{detail:{name:value}}));
   };
 
   input.addEventListener('input',saveName);
