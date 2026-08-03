@@ -1,3 +1,5 @@
+import './exercise-rename-translate.js?v=2';
+
 const STORAGE_KEY='mayfit_body_field_labels_v2';
 
 function readSaved(){
