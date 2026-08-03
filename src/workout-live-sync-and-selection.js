@@ -1,5 +1,4 @@
 const STORE='mayfit_v8';
-let reloadScheduled=false;
 let activeTab='all';
 
 const exactTranslations={
@@ -60,12 +59,6 @@ function repairStoredNames(){
   if(changed)localStorage.setItem(STORE,JSON.stringify({...store,exercises}));
 }
 
-function scheduleReload(){
-  if(reloadScheduled)return;
-  reloadScheduled=true;
-  setTimeout(()=>location.reload(),100);
-}
-
 function ensureStyles(){
   document.getElementById('mayfit-selected-workouts-style')?.remove();
   if(document.getElementById('mayfit-workout-tabs-style'))return;
@@ -98,8 +91,7 @@ function applyTab(modal){
   if(activeTab==='selected'&&visible===0){
     if(!empty){empty=document.createElement('div');empty.className='mse-tab-empty';empty.textContent='Nenhum exercício selecionado.';list.appendChild(empty)}
   }else empty?.remove();
-  const count=selected.size;
-  modal.querySelector('[data-tab="selected"]')?.replaceChildren(document.createTextNode(`Selecionados (${count})`));
+  modal.querySelector('[data-tab="selected"]')?.replaceChildren(document.createTextNode(`Selecionados (${selected.size})`));
   modal.querySelectorAll('.mse-tab').forEach(button=>button.classList.toggle('active',button.dataset.tab===activeTab));
 }
 
@@ -122,13 +114,20 @@ function installTabs(modal){
   applyTab(modal);
 }
 
-function enhanceManager(){const modal=document.getElementById('mse-modal');if(modal)installTabs(modal)}
+function refreshManagerInPlace(){
+  const modal=document.getElementById('mse-modal');
+  if(!modal)return;
+  requestAnimationFrame(()=>{
+    installTabs(modal);
+    applyTab(modal);
+  });
+}
 
 repairStoredNames();
 ensureStyles();
-const observer=new MutationObserver(()=>requestAnimationFrame(enhanceManager));
+const observer=new MutationObserver(()=>requestAnimationFrame(refreshManagerInPlace));
 observer.observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('mayfit-store-updated',scheduleReload);
-window.addEventListener('storage',event=>{if(event.key===STORE)scheduleReload()});
-window.addEventListener('pageshow',enhanceManager);
-enhanceManager();
+window.addEventListener('mayfit-store-updated',refreshManagerInPlace);
+window.addEventListener('storage',event=>{if(event.key===STORE)refreshManagerInPlace()});
+window.addEventListener('pageshow',refreshManagerInPlace);
+refreshManagerInPlace();
