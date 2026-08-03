@@ -123,11 +123,43 @@ function refreshManagerInPlace(){
   });
 }
 
+const DIRTY_KEY='mayfit_workout_data_dirty';
+const OPEN_KEY='mayfit_open_workout_after_sync';
+function normalizeButtonText(value){return String(value||'').replace(/\s+/g,' ').trim().toLowerCase()}
+function isWorkoutButton(element){
+  const text=normalizeButtonText(element?.textContent);
+  return text==='meu treino'||text==='iniciar meu treino'||text==='iniciar treino'||text==='treinos';
+}
+function markWorkoutDirty(){sessionStorage.setItem(DIRTY_KEY,'1');refreshManagerInPlace()}
+function openWorkoutAfterSync(){
+  if(sessionStorage.getItem(OPEN_KEY)!=='1')return;
+  sessionStorage.removeItem(OPEN_KEY);
+  let attempts=0;
+  const timer=setInterval(()=>{
+    attempts++;
+    const target=[...document.querySelectorAll('button,a,[role="button"]')].find(isWorkoutButton);
+    if(target){clearInterval(timer);target.click();return}
+    if(attempts>30)clearInterval(timer);
+  },100);
+}
+
+document.addEventListener('click',event=>{
+  const target=event.target.closest?.('button,a,[role="button"]');
+  if(!target||!isWorkoutButton(target)||sessionStorage.getItem(DIRTY_KEY)!=='1')return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  sessionStorage.removeItem(DIRTY_KEY);
+  sessionStorage.setItem(OPEN_KEY,'1');
+  location.reload();
+},true);
+
 repairStoredNames();
 ensureStyles();
 const observer=new MutationObserver(()=>requestAnimationFrame(refreshManagerInPlace));
 observer.observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('mayfit-store-updated',refreshManagerInPlace);
-window.addEventListener('storage',event=>{if(event.key===STORE)refreshManagerInPlace()});
-window.addEventListener('pageshow',refreshManagerInPlace);
+window.addEventListener('mayfit-store-updated',markWorkoutDirty);
+window.addEventListener('storage',event=>{if(event.key===STORE)markWorkoutDirty()});
+window.addEventListener('pageshow',()=>{refreshManagerInPlace();openWorkoutAfterSync()});
 refreshManagerInPlace();
+openWorkoutAfterSync();
