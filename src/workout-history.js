@@ -1,4 +1,4 @@
-import './workout-name-edit.js?v=4';
+import './workout-name-edit.js?v=5';
 import './admin-exercise-thumbnails.js?v=3';
 
 const HISTORY_PREFIX='mayfit_workout_history_';
