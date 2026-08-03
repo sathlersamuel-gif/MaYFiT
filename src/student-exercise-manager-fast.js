@@ -64,6 +64,20 @@ function removeExercise(type,id){
   return true;
 }
 
+function openImagePreview(src,alt){
+  document.getElementById('mse-image-preview')?.remove();
+  const preview=document.createElement('div');
+  preview.id='mse-image-preview';
+  preview.setAttribute('role','dialog');
+  preview.setAttribute('aria-label',alt||'Imagem ampliada do exercício');
+  preview.style.cssText='position:fixed;inset:0;z-index:200000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.94);';
+  preview.innerHTML=`<button type="button" aria-label="Fechar imagem" style="position:absolute;top:max(18px,env(safe-area-inset-top));right:18px;width:46px;height:46px;border:0;border-radius:14px;background:#17231b;color:#fff;font-size:28px;font-weight:900">×</button><img src="${esc(src)}" alt="${esc(alt||'Exercício')}" style="display:block;max-width:min(92vw,760px);max-height:84vh;width:auto;height:auto;object-fit:contain;border-radius:16px;background:#050806">`;
+  const close=()=>preview.remove();
+  preview.querySelector('button').onclick=close;
+  preview.addEventListener('click',event=>{if(event.target===preview)close()});
+  document.body.appendChild(preview);
+}
+
 function render(modal,reset=false){
   if(!modal?.isConnected)return;
   const search=modal.querySelector('.mse-search');
@@ -82,7 +96,7 @@ function render(modal,reset=false){
   list.innerHTML=visible.map((item,index)=>{
     const existing=used.get(item.id);
     const src=imageUrl(item);
-    const thumb=src?`<img class="mse-thumb" src="${esc(src)}" alt="${esc(item.name)}" loading="${index<EAGER_IMAGES?'eager':'lazy'}" decoding="async" fetchpriority="${index<EAGER_IMAGES?'high':'auto'}" onerror="this.style.visibility='hidden'">`:'<span class="mse-thumb" aria-hidden="true"></span>';
+    const thumb=src?`<img class="mse-thumb" src="${esc(src)}" alt="${esc(item.name)}" loading="${index<EAGER_IMAGES?'eager':'lazy'}" decoding="async" fetchpriority="${index<EAGER_IMAGES?'high':'auto'}" data-expand-image="true" style="cursor:zoom-in" onerror="this.style.visibility='hidden'">`:'<span class="mse-thumb" aria-hidden="true"></span>';
     return `<article class="mse-item" data-type="${esc(item.id)}">${thumb}<span class="mse-info"><strong>${esc(item.name)}</strong><small>${existing?'Já está no seu treino':'Disponível para adicionar'}</small></span><button type="button" class="mse-action ${existing?'remove':''}" data-action="${existing?'remove':'add'}" data-id="${existing?.id??''}">${existing?'Remover':'Adicionar'}</button></article>`;
   }).join('')||'<div style="padding:20px;text-align:center;color:#96a49a">Carregando exercícios...</div>';
   if(visible.length<filtered.length){
@@ -109,6 +123,13 @@ function openFastManager(){
   let searchTimer;
   modal.querySelector('.mse-search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>render(modal,true),80)});
   modal.querySelector('.mse-list').addEventListener('click',event=>{
+    const image=event.target.closest('img[data-expand-image="true"]');
+    if(image){
+      event.preventDefault();
+      event.stopPropagation();
+      openImagePreview(image.currentSrc||image.src,image.alt);
+      return;
+    }
     const button=event.target.closest('.mse-action[data-action]');if(!button)return;
     const item=button.closest('.mse-item');const type=item?.dataset.type;if(!type)return;
     button.disabled=true;
