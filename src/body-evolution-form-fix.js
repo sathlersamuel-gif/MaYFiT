@@ -12,24 +12,36 @@ const style=document.createElement('style');
 style.id='mayfit-body-evolution-form-fix-style';
 style.textContent=`
 .be-modal .be-grid{
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  display:grid!important;
+  grid-template-columns:calc((100% - 10px)/2) calc((100% - 10px)/2)!important;
+  column-gap:10px!important;
+  row-gap:10px!important;
 }
 .be-modal .be-grid label{
-  min-width:0!important;
-  max-width:100%!important;
-  overflow:hidden!important;
-}
-.be-modal .be-grid input{
   width:100%!important;
   min-width:0!important;
   max-width:100%!important;
+  overflow:visible!important;
+}
+.be-modal .be-grid input{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  inline-size:100%!important;
+  min-inline-size:0!important;
+  max-inline-size:100%!important;
   box-sizing:border-box!important;
-  overflow:hidden!important;
-  text-overflow:ellipsis!important;
 }
 .be-modal .be-grid input[type="date"]{
-  font-size:16px!important;
+  -webkit-appearance:none!important;
+  appearance:none!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  font-size:14px!important;
   line-height:1.2!important;
+  text-align:left!important;
   padding-left:10px!important;
   padding-right:10px!important;
 }
