@@ -55,12 +55,14 @@ style.textContent=`
 }
 
 .mayfit-reference-hero{
-  min-height:420px!important;
-  height:420px!important;
+  min-height:440px!important;
+  height:440px!important;
   margin:0 0 18px!important;
   padding:36px 30px 24px!important;
   border-radius:25px!important;
   background-position:center!important;
+  display:flex!important;
+  flex-direction:column!important;
 }
 .mayfit-reference-hero>span{font-size:18px!important}
 .mayfit-reference-hero h1,.mayfit-reference-hero .mayfit-workout-name{
@@ -74,12 +76,14 @@ style.textContent=`
   line-height:1.02!important;
   padding-bottom:8px!important;
 }
-.mayfit-workout-meta{gap:12px!important;margin:0 0 16px!important}
+.mayfit-workout-meta,.mayfit-hero-stats{gap:12px!important;margin:4px 0 16px!important}
 .mayfit-workout-meta>div{min-width:142px!important;min-height:68px!important;padding:10px 14px!important}
 .mayfit-reference-hero button.primary{
   min-height:76px!important;
   height:76px!important;
   font-size:25px!important;
+  margin-top:auto!important;
+  flex:0 0 auto!important;
 }
 
 .mayfit-reference-summary{gap:16px!important;margin:0!important}
@@ -100,7 +104,6 @@ style.textContent=`
 .app>nav button{min-height:64px!important;font-size:16px!important}
 .app>nav svg{width:27px!important;height:27px!important}
 
-/* Remove qualquer altura ou margem residual que criou o grande espaço preto */
 body.mayfit-tab-inicio .app>main>*:last-child{margin-bottom:0!important}
 body.mayfit-tab-inicio .app>main{min-height:0!important;height:auto!important}
 
@@ -122,14 +125,14 @@ body.mayfit-tab-inicio .app>main{min-height:0!important;height:auto!important}
   #mayfit-feature-grid h2,#mayfit-feature-grid h3,#mayfit-feature-grid strong{font-size:clamp(17px,5.2vw,22px)!important}
   #mayfit-feature-grid p{font-size:clamp(13px,4vw,16px)!important;line-height:1.35!important}
   #mayfit-feature-grid button{height:56px!important;min-height:56px!important;font-size:clamp(14px,4.2vw,17px)!important}
-  .mayfit-reference-hero{height:365px!important;min-height:365px!important;padding:27px 18px 20px!important;margin-bottom:14px!important;background-position:58% center!important}
+  .mayfit-reference-hero{height:392px!important;min-height:392px!important;padding:27px 18px 20px!important;margin-bottom:14px!important;background-position:58% center!important}
   .mayfit-reference-hero>span{font-size:15px!important}
-  .mayfit-reference-hero h1,.mayfit-reference-hero .mayfit-workout-name{width:64%!important;max-width:64%!important;margin:10px 0 14px!important}
+  .mayfit-reference-hero h1,.mayfit-reference-hero .mayfit-workout-name{width:64%!important;max-width:64%!important;margin:10px 0 12px!important}
   .mayfit-reference-hero .mayfit-workout-name>span{font-size:18px!important}
   .mayfit-reference-hero .mayfit-workout-name input{font-size:clamp(27px,8vw,37px)!important}
-  .mayfit-workout-meta{gap:8px!important}
+  .mayfit-workout-meta,.mayfit-hero-stats{gap:8px!important;margin-bottom:12px!important}
   .mayfit-workout-meta>div{min-width:0!important;min-height:58px!important;padding:8px 10px!important;font-size:13px!important}
-  .mayfit-reference-hero button.primary{height:62px!important;min-height:62px!important;font-size:20px!important}
+  .mayfit-reference-hero button.primary{height:62px!important;min-height:62px!important;font-size:20px!important;margin-top:auto!important}
   .mayfit-reference-summary{gap:10px!important}
   .mayfit-reference-summary article{height:100px!important;min-height:100px!important;padding:14px!important}
   .mayfit-reference-summary strong{font-size:31px!important}
@@ -145,6 +148,7 @@ body.mayfit-tab-inicio .app>main{min-height:0!important;height:auto!important}
   #mayfit-feature-grid h2,#mayfit-feature-grid h3,#mayfit-feature-grid strong{font-size:17px!important}
   #mayfit-feature-grid p{font-size:13px!important}
   #mayfit-feature-grid button{font-size:14px!important}
+  .mayfit-reference-hero{height:380px!important;min-height:380px!important}
   .mayfit-reference-hero h1,.mayfit-reference-hero .mayfit-workout-name{width:70%!important;max-width:70%!important}
 }
 `;
