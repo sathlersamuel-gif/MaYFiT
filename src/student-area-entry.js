@@ -6,3 +6,4 @@ import './student-exercise-manager-fast.js?v=2';
 import './student-tab-isolation.js?v=1';
 import './student-reference-dashboard.js?v=1';
 import './student-reference-responsive-fix.js?v=2';
+import './student-reference-fidelity-fix.js?v=1';
