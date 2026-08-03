@@ -1,3 +1,5 @@
+import './body-evolution-direct-fix.js?v=1';
+
 const STORE='mayfit_v8';
 const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 const IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
