@@ -42,6 +42,7 @@ const exactTranslations={
 };
 
 function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}}
+function writeStore(store){localStorage.setItem(STORE,JSON.stringify(store));window.dispatchEvent(new Event('mayfit-store-updated'))}
 function normalizeName(value){return String(value||'').replaceAll('_',' ').replace(/\s+/g,' ').trim()}
 function isCorrupted(value){const text=String(value||'');return text.length>90||/(?:ÃO|Ãƒ|Ã‚|PRESSÃO){4,}/i.test(text)||/(.{2,6})\1{5,}/i.test(text)}
 function repairedName(item){
@@ -70,6 +71,7 @@ function ensureStyles(){
   #mse-modal .mse-tab.active{background:#78d532!important;color:#07110c!important;box-shadow:0 3px 12px rgba(120,213,50,.24)!important}
   #mse-modal .mse-item.mse-hidden-by-tab{display:none!important}
   #mse-modal .mse-tab-empty{padding:26px 16px;text-align:center;color:#9cac9f;font-size:14px}
+  #mse-modal .mse-action.mse-saving{opacity:.72;pointer-events:none}
   @media(max-width:620px){#mse-modal .mse-tabs{margin:10px 12px 0}.mse-card .mse-search{margin-top:10px!important}}
   `;
   document.head.appendChild(style);
@@ -114,13 +116,63 @@ function installTabs(modal){
   applyTab(modal);
 }
 
+function refreshFooter(modal){
+  const store=readStore();
+  const total=Array.isArray(store?.exercises)?store.exercises.length:0;
+  const footer=modal.querySelector('.mse-footer');
+  if(!footer)return;
+  const shown=modal.querySelectorAll('.mse-item').length;
+  footer.textContent=`${total} exercício(s) no seu treino • ${shown} exibido(s)`;
+}
+
+function updateRowInPlace(item,exercise){
+  const button=item.querySelector('.mse-action');
+  const info=item.querySelector('.mse-info small');
+  if(!button)return;
+  if(exercise){
+    button.dataset.action='remove';
+    button.dataset.id=String(exercise.id);
+    button.classList.add('remove');
+    button.textContent='Remover';
+    if(info)info.textContent='Já está no seu treino';
+  }else{
+    button.dataset.action='add';
+    button.dataset.id='';
+    button.classList.remove('remove');
+    button.textContent='Adicionar';
+    if(info)info.textContent='Disponível para adicionar';
+  }
+}
+
+function silentToggleExercise(button,item){
+  const type=String(item?.dataset.type||'');
+  if(!type)return;
+  const store=readStore();
+  if(!store||!Array.isArray(store.exercises))return;
+  button.classList.add('mse-saving');
+  const existing=store.exercises.find(exercise=>String(exercise.type)===type||String(exercise.id)===String(button.dataset.id||''));
+  let nextExercises;
+  let nextExercise=null;
+  if(existing){
+    if(!confirm(`Remover ${repairedName(existing)} do treino?`)){button.classList.remove('mse-saving');return}
+    nextExercises=store.exercises.filter(exercise=>String(exercise.id)!==String(existing.id));
+  }else{
+    const name=normalizeName(item.querySelector('.mse-info strong')?.textContent)||type;
+    const nextId=Math.max(0,...store.exercises.map(exercise=>Number(exercise.id)||0))+1;
+    nextExercise={id:nextId,type,name,sets:3,reps:12,load:0,previousLoad:0,rest:60,tip:'Execute o movimento com controle e postura correta.'};
+    nextExercises=[...store.exercises,nextExercise];
+  }
+  writeStore({...store,exercises:nextExercises});
+  updateRowInPlace(item,nextExercise);
+  const modal=item.closest('#mse-modal');
+  if(modal){refreshFooter(modal);applyTab(modal)}
+  requestAnimationFrame(()=>button.classList.remove('mse-saving'));
+}
+
 function refreshManagerInPlace(){
   const modal=document.getElementById('mse-modal');
   if(!modal)return;
-  requestAnimationFrame(()=>{
-    installTabs(modal);
-    applyTab(modal);
-  });
+  requestAnimationFrame(()=>{installTabs(modal);applyTab(modal);refreshFooter(modal)});
 }
 
 const DIRTY_KEY='mayfit_workout_data_dirty';
@@ -144,6 +196,14 @@ function openWorkoutAfterSync(){
 }
 
 document.addEventListener('click',event=>{
+  const action=event.target.closest?.('#mse-modal .mse-action');
+  if(action){
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    silentToggleExercise(action,action.closest('.mse-item'));
+    return;
+  }
   const target=event.target.closest?.('button,a,[role="button"]');
   if(!target||!isWorkoutButton(target)||sessionStorage.getItem(DIRTY_KEY)!=='1')return;
   event.preventDefault();
