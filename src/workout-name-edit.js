@@ -1,1 +1,1 @@
-import './exercise-rename-translate.js?v=1';
+// O renomear exercícios agora é carregado diretamente pelo gerenciador ativo.
