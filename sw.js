@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v23-student-access-audit';
+const VERSION='mayfit-sw-v24-workout-name-direct-load';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
