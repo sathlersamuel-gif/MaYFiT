@@ -1,4 +1,4 @@
-import './body-evolution-direct-fix.js?v=1';
+import './body-evolution-direct-fix.js?v=2';
 
 const STORE='mayfit_v8';
 const DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
