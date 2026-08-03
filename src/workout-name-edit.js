@@ -1,72 +1,81 @@
 const USER_KEY='mayfit_user';
-const NAME_PREFIX='mayfit_workout_name_';
+const NAME_PREFIX='mayfit_workout_title_';
 
 function currentUser(){
   try{return JSON.parse(sessionStorage.getItem(USER_KEY)||'null')}catch{return null}
 }
 
-function storageKey(){
-  const user=currentUser();
-  return NAME_PREFIX+(user?.id||'student');
-}
-
-function cleanText(value){
+function clean(value){
   return String(value||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').replace(/\s+/g,' ').trim();
 }
 
-function findWorkoutTitle(){
+function keyFor(title){
   const user=currentUser();
-  if(user?.role!=='student')return null;
-  const preferred=document.querySelector('.app main .hero h1');
-  if(preferred)return preferred;
-  const candidates=[...document.querySelectorAll('.app main h1,.app main h2,.app main h3,.app main strong')];
-  return candidates.find(element=>{
-    const text=cleanText(element.textContent).toLowerCase();
-    return element.dataset.workoutNameHost==='true'||text==='treino a'||text.startsWith('treino de')||text==='meu treino';
-  })||null;
+  const original=title.dataset.originalWorkoutTitle||clean(title.textContent)||'treino';
+  return `${NAME_PREFIX}${user?.id||'student'}_${original.toLowerCase().replace(/[^a-z0-9]+/g,'_')}`;
 }
 
-function installEditableName(){
-  const title=findWorkoutTitle();
-  if(!title)return;
-  const existing=title.querySelector('input[data-workout-name-input]');
-  if(existing)return;
+function isWorkoutTitle(element){
+  if(!element||element.closest('#mse-modal,.workout-screen'))return false;
+  const text=clean(element.textContent).toLowerCase();
+  if(!/^treino\b/.test(text))return false;
+  const container=element.closest('article,section,div');
+  return Boolean(container?.querySelector('button'));
+}
 
-  title.dataset.workoutNameReady='true';
-  title.dataset.workoutNameHost='true';
-  const saved=(localStorage.getItem(storageKey())||'').trim();
-  const defaultName=saved||currentUser()?.name||currentUser()?.full_name||'Meu treino';
+function findTitles(){
+  if(currentUser()?.role!=='student')return [];
+  return [...document.querySelectorAll('.app main h1,.app main h2,.app main h3,.app main strong')].filter(isWorkoutTitle);
+}
 
-  title.innerHTML='';
-  title.style.display='flex';
-  title.style.alignItems='baseline';
-  title.style.flexWrap='wrap';
-  title.style.gap='6px';
+function installStyle(){
+  if(document.getElementById('mayfit-workout-title-edit-style'))return;
+  const style=document.createElement('style');
+  style.id='mayfit-workout-title-edit-style';
+  style.textContent=`
+    .mayfit-workout-title-editor{display:flex!important;align-items:center!important;gap:8px!important;min-width:0!important}
+    .mayfit-workout-title-input{min-width:0!important;width:100%!important;max-width:260px!important;padding:4px 6px!important;border:0!important;border-bottom:2px solid #78d532!important;border-radius:0!important;background:transparent!important;color:inherit!important;font:inherit!important;font-weight:inherit!important;outline:none!important}
+    .mayfit-workout-title-input:focus{border-bottom-color:#a7ef70!important}
+    .mayfit-workout-title-edit-icon{flex:0 0 auto!important;color:#78d532!important;font-size:14px!important}
+  `;
+  document.head.appendChild(style);
+}
 
-  const prefix=document.createElement('span');
-  prefix.textContent='Treino:';
+function makeEditable(title){
+  if(title.dataset.mayfitWorkoutEditable==='true')return;
+  const original=clean(title.textContent);
+  if(!original)return;
 
+  title.dataset.mayfitWorkoutEditable='true';
+  title.dataset.originalWorkoutTitle=original;
+  title.classList.add('mayfit-workout-title-editor');
+
+  const saved=localStorage.getItem(keyFor(title));
   const input=document.createElement('input');
-  input.dataset.workoutNameInput='true';
   input.type='text';
-  input.value=defaultName;
-  input.placeholder='Digite o nome do treino';
-  input.setAttribute('aria-label','Nome do treino');
-  input.autocomplete='off';
-  input.style.cssText='min-width:150px;max-width:100%;flex:1;border:0;border-bottom:2px solid #78d532;border-radius:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;line-height:1.15;padding:0 2px 2px;outline:none';
+  input.className='mayfit-workout-title-input';
+  input.value=saved||original;
+  input.placeholder='Nome do treino';
+  input.setAttribute('aria-label','Renomear treino');
+  input.maxLength=50;
 
-  const stop=event=>event.stopPropagation();
-  ['click','pointerdown','touchstart'].forEach(type=>input.addEventListener(type,stop,{passive:type==='touchstart'}));
+  const icon=document.createElement('span');
+  icon.className='mayfit-workout-title-edit-icon';
+  icon.textContent='✎';
+  icon.setAttribute('aria-hidden','true');
 
-  const saveName=()=>{
-    const value=input.value.trim();
-    if(value)localStorage.setItem(storageKey(),value);
-    else localStorage.removeItem(storageKey());
-    window.dispatchEvent(new CustomEvent('mayfit-workout-name-updated',{detail:{name:value}}));
+  const save=()=>{
+    const value=clean(input.value);
+    if(value)localStorage.setItem(keyFor(title),value);
+    else{
+      localStorage.removeItem(keyFor(title));
+      input.value=original;
+    }
   };
 
-  input.addEventListener('input',saveName);
-  input.addEventListener('blur',saveName);
+  ['click','pointerdown','touchstart'].forEach(type=>input.addEventListener(type,event=>event.stopPropagation(),{passive:type==='touchstart'}));
+  input.addEventListener('input',save);
+  input.addEventListener('blur',save);
   input.addEventListener('keydown',event=>{
     event.stopPropagation();
     if(event.key==='Enter'){
@@ -75,12 +84,22 @@ function installEditableName(){
     }
   });
 
-  title.append(prefix,input);
+  title.replaceChildren(input,icon);
 }
 
-const observer=new MutationObserver(()=>requestAnimationFrame(installEditableName));
+function apply(){
+  installStyle();
+  findTitles().forEach(makeEditable);
+}
+
+let queued=false;
+const observer=new MutationObserver(()=>{
+  if(queued)return;
+  queued=true;
+  requestAnimationFrame(()=>{queued=false;apply()});
+});
 observer.observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('pageshow',installEditableName);
-window.addEventListener('focus',installEditableName);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)installEditableName()});
-installEditableName();
+window.addEventListener('pageshow',apply);
+window.addEventListener('focus',apply);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)apply()});
+apply();
