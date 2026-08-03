@@ -7,5 +7,5 @@ import './student-tab-isolation.js?v=1';
 import './student-reference-dashboard.js?v=1';
 import './student-reference-responsive-fix.js?v=2';
 import './student-reference-fidelity-fix.js?v=1';
-import './student-reference-final-layout.js?v=1';
-import './student-reference-mobile-exact.js?v=1';
+import './student-reference-final-layout.js?v=2';
+import './student-reference-mobile-exact.js?v=2';
