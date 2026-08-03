@@ -1,3 +1,5 @@
+import './workout-live-sync-and-selection.js';
+
 const style=document.createElement('style');
 style.id='mayfit-workout-photo-modal-style';
 style.textContent=`
