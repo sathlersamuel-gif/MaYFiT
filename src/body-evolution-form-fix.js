@@ -11,8 +11,31 @@ function normalize(text){return String(text||'').replace(/\s+/g,' ').trim()}
 const style=document.createElement('style');
 style.id='mayfit-body-evolution-form-fix-style';
 style.textContent=`
+.be-modal .be-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+}
+.be-modal .be-grid label{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+.be-modal .be-grid input{
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.be-modal .be-grid input[type="date"]{
+  font-size:16px!important;
+  line-height:1.2!important;
+  padding-left:10px!important;
+  padding-right:10px!important;
+}
 .be-modal .be-editable-label{
   display:inline!important;
+  max-width:100%!important;
   padding:0!important;
   margin:0!important;
   border:0!important;
@@ -23,6 +46,7 @@ style.textContent=`
   line-height:inherit!important;
   outline:none!important;
   cursor:text!important;
+  overflow-wrap:anywhere!important;
 }
 .be-modal .be-editable-label:focus{
   text-decoration:underline!important;
