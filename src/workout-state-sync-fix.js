@@ -1,3 +1,5 @@
+import './workout-selection-integrity-fix.js?v=1';
+
 const STORE='mayfit_v8';
 const DIRTY_KEY='mayfit_workout_data_dirty';
 const SYNC_KEY='mayfit_sync_open_workout';
