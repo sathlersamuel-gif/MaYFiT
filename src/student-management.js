@@ -1,5 +1,9 @@
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase.js';
 
+const URL='https://hcijxrakfrvcksuanrdy.supabase.co';
+const KEY='sb_publishable_A7SHtwE7jpKGcP6yaPmcGw_mTJeodrN';
+const secondary=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 const USER_KEY='mayfit_user';
 let mounted=false;
 let loading=false;
@@ -10,6 +14,7 @@ const css=`
 #mayfit-students .ms-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
 #mayfit-students h2{margin:0;font-size:24px}
 #mayfit-students .ms-subtitle{margin:5px 0 0;color:#a9b6ad;font-size:13px}
+#mayfit-students .ms-actions{display:flex;gap:8px;flex-wrap:wrap}
 #mayfit-students .ms-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 13px}
 #mayfit-students .ms-stat{padding:12px 10px;border:1px solid #304638;border-radius:14px;background:linear-gradient(145deg,#111813,#090d0a);text-align:center}
 #mayfit-students .ms-stat strong{display:block;color:#9df20f;font-size:24px}.ms-stat span{font-size:11px;color:#a9b6ad}
@@ -33,7 +38,7 @@ const css=`
 #mayfit-students .ms-menu{position:relative}.ms-menu summary{list-style:none;width:38px;height:38px;display:grid;place-items:center;border:1px solid #34483a;border-radius:50%;background:#19211b;color:#fff;font-size:24px;line-height:1;cursor:pointer}.ms-menu summary::-webkit-details-marker{display:none}.ms-menu[open] summary{color:#9df20f;border-color:#66833c}.ms-menu-panel{display:grid;gap:7px;margin-top:9px;padding:9px;border:1px solid #304638;border-radius:12px;background:#0a100c}.ms-menu-panel button{width:100%;text-align:left}
 #mayfit-students .ms-empty{padding:18px;text-align:center;color:#98a69d}
 #mayfit-students .ms-msg{margin:8px 0;color:#a9b8af;font-size:13px}
-@media(max-width:620px){#mayfit-students{margin-top:4px;padding:16px;border-radius:18px}#mayfit-students .ms-row{gap:8px}.ms-stat strong{font-size:20px!important}}
+@media(max-width:620px){#mayfit-students{margin-top:4px;padding:16px;border-radius:18px}#mayfit-students .ms-head{align-items:flex-start;flex-direction:column}#mayfit-students .ms-actions{width:100%}#mayfit-students .ms-actions button{flex:1}#mayfit-students .ms-row{gap:8px}.ms-stat strong{font-size:20px!important}}
 `;
 
 function current(){try{return JSON.parse(sessionStorage.getItem(USER_KEY))}catch{return null}}
@@ -63,6 +68,21 @@ async function loadStudents(root){
   }finally{
     loading=false;
   }
+}
+
+async function createStudent(root){
+  const name=prompt('Nome completo do aluno:'); if(!name?.trim())return;
+  const email=prompt('E-mail do aluno:'); if(!email?.trim())return;
+  const password=prompt('Senha inicial com pelo menos 6 caracteres:');
+  if(!password||password.length<6){alert('A senha precisa ter pelo menos 6 caracteres.');return}
+  const {data,error}=await secondary.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim()}}});
+  if(error){alert('Não foi possível cadastrar: '+error.message);return}
+  if(data.user){
+    const {error:updateError}=await supabase.from('profiles').update({full_name:name.trim(),role:'student',status:'active'}).eq('id',data.user.id);
+    if(updateError){alert('O login foi criado, mas o perfil não pôde ser ativado: '+updateError.message);return}
+  }
+  alert('Aluno cadastrado com sucesso.');
+  await loadStudents(root);
 }
 
 function render(root){
@@ -144,8 +164,10 @@ function mount(){
   }
   const root=document.createElement('section');
   root.id='mayfit-students';
-  root.innerHTML='<div class="ms-head"><div><h2>Alunos</h2><p class="ms-subtitle">Gerencie o acesso de cada aluno.</p><div class="ms-msg">Conectando ao banco...</div></div></div><div class="ms-overview"><article class="ms-stat"><strong data-total>0</strong><span>Total</span></article><article class="ms-stat"><strong data-active>0</strong><span>Ativos</span></article><article class="ms-stat"><strong data-blocked>0</strong><span>Bloqueados</span></article></div><input class="ms-search" placeholder="Buscar aluno pelo nome"><div class="ms-list"></div>';
+  root.innerHTML='<div class="ms-head"><div><h2>Alunos</h2><p class="ms-subtitle">Gerencie o acesso de cada aluno.</p><div class="ms-msg">Conectando ao banco...</div></div><div class="ms-actions"><button class="ms-primary" data-new>Novo aluno</button><button class="ms-secondary" data-refresh>Atualizar</button></div></div><div class="ms-overview"><article class="ms-stat"><strong data-total>0</strong><span>Total</span></article><article class="ms-stat"><strong data-active>0</strong><span>Ativos</span></article><article class="ms-stat"><strong data-blocked>0</strong><span>Bloqueados</span></article></div><input class="ms-search" placeholder="Buscar aluno pelo nome"><div class="ms-list"></div>';
   main.prepend(root);
+  root.querySelector('[data-new]').onclick=()=>createStudent(root);
+  root.querySelector('[data-refresh]').onclick=()=>loadStudents(root);
   root.querySelector('.ms-search').oninput=()=>render(root);
   root.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button)handleCard(root,button)});
   loadStudents(root);
