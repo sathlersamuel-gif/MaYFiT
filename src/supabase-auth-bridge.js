@@ -235,16 +235,34 @@ function enhanceLogin() {
 }
 
 async function restoreSession() {
-  if (!supabase || sessionStorage.getItem(USER_KEY)) return;
-  const { data } = await supabase.auth.getSession();
-  if (!data.session?.user) return;
+  if (!supabase) return;
+  const stored = (() => {
+    try { return JSON.parse(sessionStorage.getItem(USER_KEY) || 'null'); }
+    catch { return null; }
+  })();
+  const { data, error } = await supabase.auth.getSession();
+  const authUser = data?.session?.user;
+
+  if (error || !authUser) {
+    if (stored) {
+      sessionStorage.removeItem(USER_KEY);
+      sessionStorage.removeItem('mayfit_admin_return');
+      location.reload();
+    }
+    return;
+  }
+
+  if (stored?.id === authUser.id) return;
 
   try {
-    const profile = await profileFor(data.session.user);
+    const profile = await profileFor(authUser);
     sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
     location.reload();
   } catch {
     await supabase.auth.signOut();
+    sessionStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem('mayfit_admin_return');
+    location.reload();
   }
 }
 
