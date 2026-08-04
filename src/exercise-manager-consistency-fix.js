@@ -1,4 +1,5 @@
 const STORE='mayfit_v8';
+const CATALOG_NAMES_KEY='mayfit_catalog_custom_names_v1';
 
 const translations={
   '3/4 Sit-Up':'Abdominal 3/4','90/90 Hamstring':'Alongamento posterior 90/90','Ab Crunch Machine':'Abdominal na máquina','Ab Roller':'Roda abdominal',
@@ -17,18 +18,14 @@ const translations={
 
 function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}}
 function writeStore(store){localStorage.setItem(STORE,JSON.stringify(store));window.dispatchEvent(new Event('mayfit-store-updated'))}
+function readCustomNames(){try{return JSON.parse(localStorage.getItem(CATALOG_NAMES_KEY)||'{}')||{}}catch{return {}}}
+function writeCustomNames(data){localStorage.setItem(CATALOG_NAMES_KEY,JSON.stringify(data))}
 function clean(value){return String(value||'').replaceAll('_',' ').replace(/\s+/g,' ').trim()}
 function translate(value){const text=clean(value);return translations[text]||text}
-function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]))}
+function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function exercises(){const store=readStore();return Array.isArray(store?.exercises)?store.exercises:[]}
 function exerciseByType(type){return exercises().find(item=>String(item.type)===String(type))||null}
-function exerciseByVisibleName(value){
-  const target=clean(value);
-  return exercises().find(item=>{
-    const candidates=[clean(item.type),clean(item.name),translate(item.type),translate(item.name)];
-    return candidates.some(candidate=>clean(candidate)===target);
-  })||null;
-}
+function customName(type,fallback=''){return clean(readCustomNames()[String(type)])||translate(fallback||type)}
 
 function ensureStyle(){
   if(document.getElementById('mayfit-manager-consistency-style'))return;
@@ -43,18 +40,36 @@ function ensureStyle(){
   document.head.appendChild(style);
 }
 
-function renameExercise(exercise){
-  const store=readStore();
-  if(!store||!Array.isArray(store.exercises)||!exercise)return;
-  const current=clean(exercise.name)||translate(exercise.type)||'Exercício';
+function renameCatalog(type,currentLabel){
+  const current=customName(type,currentLabel)||'Exercício';
   const answer=prompt('Digite o novo nome do exercício:',current);
   if(answer===null)return;
   const name=clean(answer);
   if(!name)return;
-  const updated=store.exercises.map(item=>String(item.id)===String(exercise.id)?{...item,name}:item);
-  writeStore({...store,exercises:updated});
-  sessionStorage.setItem('mayfit_reopen_exercise_manager','1');
-  location.reload();
+  const names=readCustomNames();
+  names[String(type)]=name;
+  writeCustomNames(names);
+
+  const store=readStore();
+  if(store&&Array.isArray(store.exercises)){
+    const updated=store.exercises.map(item=>String(item.type)===String(type)?{...item,name}:item);
+    writeStore({...store,exercises:updated});
+  }
+  apply();
+}
+
+function applyCustomNamesToStore(types){
+  const store=readStore();
+  if(!store||!Array.isArray(store.exercises))return;
+  const wanted=new Set((types||[]).map(String));
+  const names=readCustomNames();
+  let changed=false;
+  const updated=store.exercises.map(item=>{
+    const name=names[String(item.type)];
+    if(name&&(!wanted.size||wanted.has(String(item.type)))&&item.name!==name){changed=true;return {...item,name}}
+    return item;
+  });
+  if(changed)writeStore({...store,exercises:updated});
 }
 
 function enhanceStudentManager(){
@@ -70,29 +85,27 @@ function enhanceStudentManager(){
     const row=document.createElement('article');
     row.className='mse-item mse-restored-selected';
     row.dataset.type=type;
-    row.innerHTML=`<span class="mse-thumb" aria-hidden="true"></span><span class="mse-info"><strong>${esc(clean(exercise.name)||translate(type)||'Exercício')}</strong><small>Já está no seu treino</small></span><button type="button" class="mse-action remove" data-action="remove" data-id="${esc(exercise.id)}">Remover</button>`;
+    row.innerHTML=`<span class="mse-thumb" aria-hidden="true"></span><span class="mse-info"><strong>${esc(customName(type,exercise.name)||'Exercício')}</strong><small>Já está no seu treino</small></span><button type="button" class="mse-action remove" data-action="remove" data-id="${esc(exercise.id)}">Remover</button>`;
     list.prepend(row);
     existingTypes.add(type);
   }
 
   modal.querySelectorAll('.mse-item').forEach(row=>{
     const type=String(row.dataset.type||'');
-    const exercise=exerciseByType(type);
+    if(!type)return;
     const title=row.querySelector('.mse-info strong');
-    if(title){
-      const source=exercise?.name||title.textContent||type;
-      title.textContent=exercise?.name?clean(exercise.name):translate(source);
-    }
+    const original=row.dataset.originalName||clean(title?.textContent||type);
+    row.dataset.originalName=original;
+    if(title)title.textContent=customName(type,original);
     let rename=row.querySelector('.mse-rename');
-    if(exercise&&!rename){
+    if(!rename){
       rename=document.createElement('button');
       rename.type='button';
       rename.className='mse-rename';
       rename.textContent='Renomear';
-      rename.dataset.exerciseId=String(exercise.id);
+      rename.dataset.type=type;
       row.appendChild(rename);
     }
-    if(!exercise)rename?.remove();
   });
 
   const total=exercises().length;
@@ -104,37 +117,50 @@ function enhanceAdminPicker(){
   const picker=document.querySelector('.exercise-picker-overlay .exercise-picker');
   if(!picker)return;
   picker.querySelectorAll('.picker-item').forEach(item=>{
+    const input=item.querySelector('input[type="checkbox"]');
     const title=item.querySelector('strong');
     if(!title)return;
+    const type=String(input?.value||item.dataset.type||'');
     const original=item.dataset.originalName||clean(title.textContent);
     item.dataset.originalName=original;
-    title.textContent=translate(original);
+    if(type)item.dataset.type=type;
+    title.textContent=customName(type||original,original);
 
-    const already=item.classList.contains('already')||item.querySelector('input')?.disabled;
-    const exercise=exerciseByVisibleName(original)||exerciseByVisibleName(title.textContent);
     let rename=item.querySelector('.mayfit-picker-rename');
-    if(already&&exercise&&!rename){
+    if(!rename){
       rename=document.createElement('button');
       rename.type='button';
       rename.className='mayfit-picker-rename';
       rename.textContent='Renomear';
-      rename.dataset.exerciseId=String(exercise.id);
+      rename.dataset.type=type||original;
       item.appendChild(rename);
     }
-    if((!already||!exercise)&&rename)rename.remove();
   });
 }
 
 function apply(){ensureStyle();enhanceStudentManager();enhanceAdminPicker()}
 
 document.addEventListener('click',event=>{
-  const button=event.target.closest?.('.mse-rename,.mayfit-picker-rename');
-  if(!button)return;
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-  const exercise=exercises().find(item=>String(item.id)===String(button.dataset.exerciseId));
-  renameExercise(exercise);
+  const rename=event.target.closest?.('.mse-rename,.mayfit-picker-rename');
+  if(rename){
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    const holder=rename.closest('.mse-item,.picker-item');
+    renameCatalog(rename.dataset.type,holder?.dataset.originalName||holder?.querySelector('strong')?.textContent||'Exercício');
+    return;
+  }
+
+  const studentAdd=event.target.closest?.('#mse-modal .mse-action[data-action="add"]');
+  if(studentAdd){
+    const type=studentAdd.closest('.mse-item')?.dataset.type;
+    if(type)setTimeout(()=>applyCustomNamesToStore([type]),80);
+    return;
+  }
+
+  const adminAdd=event.target.closest?.('.exercise-picker .picker-footer .primary');
+  if(adminAdd){
+    const types=[...document.querySelectorAll('.exercise-picker .picker-item input[type="checkbox"]:checked')].map(input=>String(input.value||input.closest('.picker-item')?.dataset.type||'')).filter(Boolean);
+    setTimeout(()=>applyCustomNamesToStore(types),120);
+  }
 },true);
 
 let queued=false;
