@@ -2,7 +2,6 @@ import './body-evolution.js?v=4';
 import './body-evolution-save-fix.js?v=4';
 import './body-evolution-delete-record.js?v=4';
 import './body-evolution-history-ux.js?v=1';
-import './body-evolution-photo-input-fix.js?v=1';
 import './student-performance-fix.js?v=4';
 import './student-exercise-manager-fast.js?v=3';
 import './exercise-manager-consistency-fix.js?v=1';
