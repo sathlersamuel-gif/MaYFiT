@@ -145,7 +145,10 @@ function openManager(){
 }
 
 function mountStudentExercises(){
-  if(currentUser()?.role!=='student')return false;
+  if(currentUser()?.role!=='student'){
+    document.getElementById('mayfit-student-exercises')?.remove();
+    return false;
+  }
   if(document.querySelector('.workout-screen')){document.getElementById('mayfit-student-exercises')?.remove();return false}
   const main=document.querySelector('.app main');if(!main)return false;
   if(document.getElementById('mayfit-student-exercises'))return true;
