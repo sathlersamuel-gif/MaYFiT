@@ -1,9 +1,10 @@
 import './body-evolution.js?v=4';
 import './body-evolution-save-fix.js?v=4';
 import './body-evolution-delete-record.js?v=4';
-import './body-evolution-photo-viewer.js?v=1';
+import './body-evolution-history-ux.js?v=1';
 import './student-performance-fix.js?v=4';
 import './student-exercise-manager-fast.js?v=3';
+import './exercise-manager-consistency-fix.js?v=1';
 import './student-tab-isolation.js?v=1';
 import './student-reference-dashboard.js?v=1';
 import './student-reference-clean-layout.js?v=1';
