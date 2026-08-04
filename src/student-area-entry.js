@@ -1,3 +1,4 @@
+import './cache-refresh.js?v=1';
 import './body-evolution.js?v=5';
 import './body-evolution-delete-record.js?v=3';
 import './student-performance-fix.js?v=4';
