@@ -28,38 +28,69 @@ async function compressImage(file){
     canvas.height=Math.max(1,Math.round(bitmap.height*scale));
     canvas.getContext('2d',{alpha:false}).drawImage(bitmap,0,0,canvas.width,canvas.height);
     bitmap.close?.();
-    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.72));
-    return blob?new File([blob],'foto-evolucao.jpg',{type:'image/jpeg',lastModified:Date.now()}):file;
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.76));
+    return blob?new File([blob],`foto-evolucao-${Date.now()}.jpg`,{type:'image/jpeg',lastModified:Date.now()}):file;
   }catch{return file}
 }
 
 async function uploadWithRetry(file,uid,kind){
-  if(!file)return null;
   const prepared=await compressImage(file);
-  const path=`${uid}/${Date.now()}-${kind}.jpg`;
+  const path=`${uid}/${Date.now()}-${kind}-${Math.random().toString(36).slice(2,8)}.jpg`;
   let lastError;
-  for(let attempt=1;attempt<=2;attempt++){
+  for(let attempt=1;attempt<=3;attempt++){
     const {error}=await supabase.storage.from('body-progress').upload(path,prepared,{upsert:false,contentType:prepared.type||'image/jpeg',cacheControl:'31536000'});
     if(!error)return path;
     lastError=error;
-    if(attempt<2)await wait(450);
+    if(attempt<3)await wait(500*attempt);
   }
   throw lastError||new Error(`Falha ao enviar a foto ${kind}.`);
 }
 
-async function uploadPhotosInBackground(form,userId,recordId,message){
-  const selected=PHOTO_FIELDS.map(([kind,column])=>({kind,column,file:form.querySelector(`[data-photo="${kind}"]`)?.files?.[0]})).filter(item=>item.file);
-  if(!selected.length)return;
-  setMessage(message,'Medidas salvas. Enviando fotos em segundo plano...','success');
-  const results=await Promise.allSettled(selected.map(async item=>({column:item.column,path:await uploadWithRetry(item.file,userId,item.kind)})));
-  const updates={};
-  let failed=0;
-  results.forEach(result=>{if(result.status==='fulfilled')updates[result.value.column]=result.value.path;else failed++});
-  if(Object.keys(updates).length){
-    const {error}=await supabase.from('body_progress').update(updates).eq('id',recordId);
-    if(error)failed++;
+function selectedPhotos(form){
+  return PHOTO_FIELDS.map(([kind,column])=>({
+    kind,column,file:form.querySelector(`[data-photo="${kind}"]`)?.files?.[0]||null
+  })).filter(item=>item.file);
+}
+
+async function uploadAndAttachPhotos(files,userId,recordId,message){
+  if(!files.length)return {};
+  setMessage(message,'Enviando fotos...');
+  const uploaded={};
+  const pathsToRemove=[];
+  try{
+    for(const item of files){
+      const path=await uploadWithRetry(item.file,userId,item.kind);
+      uploaded[item.column]=path;
+      pathsToRemove.push(path);
+    }
+    const {error}=await supabase
+      .from('body_progress')
+      .update(uploaded)
+      .eq('id',recordId)
+      .eq('user_id',userId);
+    if(error)throw error;
+    return uploaded;
+  }catch(error){
+    if(pathsToRemove.length)await supabase.storage.from('body-progress').remove(pathsToRemove);
+    throw error;
   }
-  setMessage(message,failed?'Medidas salvas. Algumas fotos não foram enviadas.':'Avaliação e fotos salvas com sucesso.','success');
+}
+
+function resetPhotoHolders(form){
+  form.querySelectorAll('.be-photo').forEach(holder=>{
+    const input=holder.querySelector('input[type="file"]');
+    const preview=holder.querySelector('[data-photo-preview="true"]');
+    preview?.remove();
+    holder.querySelectorAll('span').forEach(span=>span.remove());
+    const label=document.createElement('span');
+    label.textContent='Adicionar foto';
+    holder.prepend(label);
+    if(input){
+      input.value='';
+      input.style.cssText='';
+      holder.appendChild(input);
+    }
+  });
 }
 
 async function handleSave(form){
@@ -71,27 +102,38 @@ async function handleSave(form){
   const original=button?.textContent||'Salvar avaliação';
   try{
     if(!user?.id)throw new Error('Sessão do aluno não encontrada. Saia e entre novamente.');
+    const photos=selectedPhotos(form);
     const fd=new FormData(form);
     const row={user_id:user.id,measured_at:fd.get('measured_at'),notes:fd.get('notes')||null,photo_front:null,photo_side:null,photo_back:null};
     for(const field of BODY_FIELDS)row[field]=numeric(fd.get(field));
+
     if(button){button.disabled=true;button.textContent='Salvando...'}
-    setMessage(message,'Salvando medidas...');
+    setMessage(message,'Salvando avaliação...');
     const {data,error}=await supabase.from('body_progress').insert(row).select('id').single();
     if(error)throw error;
-    setMessage(message,'Salvo com sucesso.','success');
+
+    try{
+      await uploadAndAttachPhotos(photos,user.id,data.id,message);
+    }catch(photoError){
+      await supabase.from('body_progress').delete().eq('id',data.id).eq('user_id',user.id);
+      throw new Error(`As fotos não foram salvas: ${photoError.message||'falha no envio'}`);
+    }
+
+    setMessage(message,photos.length?'Avaliação e fotos salvas com sucesso.':'Avaliação salva com sucesso.','success');
     if(button){button.textContent='✓ Salvo';button.style.background='#8df20b'}
-    const photoFiles=PHOTO_FIELDS.some(([kind])=>form.querySelector(`[data-photo="${kind}"]`)?.files?.[0]);
-    if(photoFiles)uploadPhotosInBackground(form,user.id,data.id,message).catch(()=>setMessage(message,'Medidas salvas. Não foi possível enviar uma ou mais fotos.','success'));
-    window.setTimeout(()=>{
-      form.reset();
-      form.querySelectorAll('.be-photo').forEach(holder=>{const input=holder.querySelector('input');holder.innerHTML='<span>Adicionar foto</span>';if(input)holder.appendChild(input)});
-      if(button){button.disabled=false;button.textContent=original;button.style.background=''}
-      document.dispatchEvent(new CustomEvent('mayfit:evolution-saved'));
-    },500);
+
+    document.dispatchEvent(new CustomEvent('mayfit:evolution-saved',{detail:{recordId:data.id,userId:user.id,hasPhotos:photos.length>0}}));
+    window.dispatchEvent(new Event('mayfit-body-progress-updated'));
+
+    await wait(900);
+    form.reset();
+    resetPhotoHolders(form);
   }catch(error){
     setMessage(message,`Não foi possível salvar: ${error.message||'erro desconhecido'}`,'error');
-    if(button){button.disabled=false;button.textContent=original}
-  }finally{window.setTimeout(()=>delete form.dataset.fastSaving,700)}
+  }finally{
+    if(button){button.disabled=false;button.textContent=original;button.style.background=''}
+    delete form.dataset.fastSaving;
+  }
 }
 
 function installFastForm(form){
@@ -99,7 +141,9 @@ function installFastForm(form){
   form.dataset.fastSaveInstalled='true';
   form.onsubmit=null;
   form.addEventListener('submit',event=>{
-    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
     handleSave(form);
   },true);
 }
@@ -128,8 +172,9 @@ async function addDeleteButtons(modal){
         const column=Object.entries(record).find(([,value])=>value===path)?.[0];
         const storageResult=await supabase.storage.from('body-progress').remove([path]);
         if(storageResult.error){alert('Não foi possível excluir a foto: '+storageResult.error.message);remove.disabled=false;remove.textContent='Excluir foto';return}
-        if(column)await supabase.from('body_progress').update({[column]:null}).eq('id',record.id);
+        if(column)await supabase.from('body_progress').update({[column]:null}).eq('id',record.id).eq('user_id',user.id);
         wrap.remove();
+        document.dispatchEvent(new CustomEvent('mayfit:evolution-saved'));
       };
       wrap.appendChild(remove);
     });
@@ -143,5 +188,8 @@ function scan(){
 
 const observer=new MutationObserver(()=>requestAnimationFrame(scan));
 observer.observe(document.documentElement,{childList:true,subtree:true});
-document.addEventListener('mayfit:evolution-saved',()=>setTimeout(scan,300));
+document.addEventListener('mayfit:evolution-saved',()=>setTimeout(()=>{
+  document.querySelectorAll('.be-modal').forEach(modal=>delete modal.dataset.photoDeleteReady);
+  scan();
+},300));
 scan();
