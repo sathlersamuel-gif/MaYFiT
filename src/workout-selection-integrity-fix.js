@@ -13,99 +13,100 @@ function esc(value){
   return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 }
 
-function cleanDuplicates(){
+function cleanStoredExercises(){
   const store=readStore();
-  if(!store||!Array.isArray(store.exercises))return;
+  if(!store||!Array.isArray(store.exercises))return [];
   const seen=new Set();
   let changed=false;
   const exercises=store.exercises.filter(exercise=>{
     const type=String(exercise?.type||'').trim();
     const id=String(exercise?.id??'').trim();
-    const key=type?`type:${type}`:`id:${id}`;
     if(!type&&!id){changed=true;return false}
+    const key=type?`type:${type}`:`id:${id}`;
     if(seen.has(key)){changed=true;return false}
     seen.add(key);
     return true;
   });
   if(changed)writeStore({...store,exercises});
+  return exercises;
 }
 
-function ensureAllSelectedRows(){
-  const modal=document.getElementById('mse-modal');
-  const list=modal?.querySelector('.mse-list');
-  if(!modal||!list)return;
-  const store=readStore();
-  const exercises=Array.isArray(store?.exercises)?store.exercises:[];
-  const existingTypes=new Set([...list.querySelectorAll('.mse-item[data-type]')].map(item=>String(item.dataset.type)));
+function selectedPanel(modal){
+  let panel=modal.querySelector('.mse-selected-complete');
+  if(panel)return panel;
+  panel=document.createElement('div');
+  panel.className='mse-selected-complete';
+  panel.style.cssText='display:none;gap:8px;padding:0 15px 15px;overflow:auto';
+  const list=modal.querySelector('.mse-list');
+  list?.insertAdjacentElement('beforebegin',panel);
+  return panel;
+}
 
-  exercises.forEach(exercise=>{
+function renderSelected(modal){
+  if(!modal)return;
+  const exercises=cleanStoredExercises();
+  const panel=selectedPanel(modal);
+  const list=modal.querySelector('.mse-list');
+  const selectedTab=modal.querySelector('[data-tab="selected"]');
+  const selectedActive=selectedTab?.classList.contains('active');
+
+  selectedTab?.replaceChildren(document.createTextNode(`Selecionados (${exercises.length})`));
+  const footer=modal.querySelector('.mse-footer');
+  if(footer)footer.textContent=`${exercises.length} exercício(s) no seu treino`;
+
+  panel.innerHTML=exercises.map(exercise=>{
     const type=String(exercise?.type||'').trim();
-    if(!type||existingTypes.has(type))return;
-    const row=document.createElement('article');
-    row.className='mse-item mse-saved-only';
-    row.dataset.type=type;
-    row.innerHTML=`<span class="mse-thumb" aria-hidden="true"></span><span class="mse-info"><strong>${esc(exercise.name||type||'Exercício')}</strong><small>Já está no seu treino</small></span><button type="button" class="mse-action remove" data-action="remove" data-id="${esc(exercise.id??'')}">Remover</button>`;
-    list.prepend(row);
-    existingTypes.add(type);
-  });
+    const id=String(exercise?.id??'').trim();
+    const name=String(exercise?.name||type||'Exercício').trim();
+    return `<article class="mse-item" data-type="${esc(type)}" style="display:grid"><span class="mse-thumb" aria-hidden="true"></span><span class="mse-info"><strong>${esc(name)}</strong><small>Já está no seu treino</small></span><button type="button" class="mse-action remove mse-force-remove" data-action="remove" data-id="${esc(id)}">Remover</button></article>`;
+  }).join('')||'<div class="mse-tab-empty">Nenhum exercício selecionado.</div>';
 
-  const selected=new Set(exercises.map(exercise=>String(exercise.type||'')).filter(Boolean));
-  modal.querySelector('[data-tab="selected"]')?.replaceChildren(document.createTextNode(`Selecionados (${selected.size})`));
+  panel.style.display=selectedActive?'grid':'none';
+  if(list)list.style.display=selectedActive?'none':'grid';
 }
 
-function removeEveryMatchingExercise(button,item){
+function removeStoredExercise(button){
+  const item=button.closest('.mse-item');
   const type=String(item?.dataset.type||'').trim();
-  const id=String(button?.dataset.id||'').trim();
+  const id=String(button.dataset.id||'').trim();
   const store=readStore();
-  if(!store||!Array.isArray(store.exercises))return false;
-  const matches=store.exercises.filter(exercise=>(type&&String(exercise?.type)===type)||(id&&String(exercise?.id)===id));
-  if(!matches.length)return false;
-  const name=matches[0]?.name||'este exercício';
-  if(!confirm(`Remover ${name} do treino?`))return true;
+  if(!store||!Array.isArray(store.exercises))return;
+  const found=store.exercises.find(exercise=>(type&&String(exercise?.type)===type)||(id&&String(exercise?.id)===id));
+  if(!found)return;
+  if(!confirm(`Remover ${found.name||'este exercício'} do treino?`))return;
   const exercises=store.exercises.filter(exercise=>!((type&&String(exercise?.type)===type)||(id&&String(exercise?.id)===id)));
   writeStore({...store,exercises});
-  item?.remove();
-  requestAnimationFrame(()=>{
-    ensureAllSelectedRows();
-    const modal=document.getElementById('mse-modal');
-    const selected=new Set((readStore()?.exercises||[]).map(exercise=>String(exercise.type)).filter(Boolean));
-    modal?.querySelector('[data-tab="selected"]')?.replaceChildren(document.createTextNode(`Selecionados (${selected.size})`));
-    const footer=modal?.querySelector('.mse-footer');
-    if(footer)footer.textContent=`${selected.size} exercício(s) no seu treino`;
-    if(!selected.size&&modal?.querySelector('[data-tab="selected"].active')){
-      modal.querySelectorAll('.mse-item').forEach(row=>row.classList.add('mse-hidden-by-tab'));
-      const list=modal.querySelector('.mse-list');
-      if(list&&!list.querySelector('.mse-tab-empty')){
-        const empty=document.createElement('div');
-        empty.className='mse-tab-empty';
-        empty.textContent='Nenhum exercício selecionado.';
-        list.appendChild(empty);
-      }
-    }
-  });
-  return true;
+  renderSelected(document.getElementById('mse-modal'));
 }
 
 document.addEventListener('click',event=>{
-  const button=event.target.closest?.('#mse-modal .mse-action[data-action="remove"]');
-  if(!button)return;
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-  removeEveryMatchingExercise(button,button.closest('.mse-item'));
+  const forced=event.target.closest?.('#mse-modal .mse-force-remove');
+  if(forced){
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    removeStoredExercise(forced);
+    return;
+  }
+  const tab=event.target.closest?.('#mse-modal .mse-tab');
+  if(tab)setTimeout(()=>renderSelected(document.getElementById('mse-modal')),0);
 },true);
 
 let queued=false;
-function scheduleSync(){
+function sync(){
   if(queued)return;
   queued=true;
-  requestAnimationFrame(()=>{queued=false;cleanDuplicates();ensureAllSelectedRows()});
+  requestAnimationFrame(()=>{
+    queued=false;
+    const modal=document.getElementById('mse-modal');
+    if(modal)renderSelected(modal);
+  });
 }
 
-cleanDuplicates();
-const observer=new MutationObserver(scheduleSync);
+cleanStoredExercises();
+const observer=new MutationObserver(sync);
 observer.observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('mayfit-store-updated',scheduleSync);
-window.addEventListener('pageshow',scheduleSync);
-window.addEventListener('storage',event=>{if(event.key===STORE)scheduleSync()});
-scheduleSync();
+window.addEventListener('mayfit-store-updated',sync);
+window.addEventListener('pageshow',sync);
+window.addEventListener('storage',event=>{if(event.key===STORE)sync()});
+sync();
