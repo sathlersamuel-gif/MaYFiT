@@ -26,7 +26,6 @@ const css=`
 #mayfit-students .ms-card.pending{border-color:#9b7625;background:#1c180d}
 #mayfit-students .ms-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 #mayfit-students .ms-name{font-weight:900;font-size:16px}
-#mayfit-students .ms-id{font-size:11px;color:#7f9185;margin-top:4px;word-break:break-all}
 #mayfit-students .ms-badge{font-size:11px;font-weight:900;padding:5px 8px;border-radius:999px;background:#233528;color:#b8c8bd;white-space:nowrap}
 #mayfit-students .ms-badge.active{background:#173b20;color:#91ea50}
 #mayfit-students .ms-badge.blocked{background:#3a2020;color:#ffadad}
@@ -75,7 +74,7 @@ function render(root){
     const status=normalizedStatus(x.status);
     const approve=status==='pending'?'<button class="ms-approve" data-action="approve">Aprovar aluno</button>':'';
     const toggle=status==='pending'?'':`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear':'Bloquear'}</button>`;
-    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`;
+    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`;
   }).join('');
 }
 
@@ -146,11 +145,15 @@ async function handleCard(root,button){
 }
 
 function mount(){
-  if(mounted||current()?.role!=='admin'||!supabase)return false;
+  if(current()?.role!=='admin'||!supabase){
+    document.getElementById('mayfit-students')?.remove();
+    mounted=false;
+    return false;
+  }
+  if(mounted&&document.getElementById('mayfit-students'))return true;
   const main=document.querySelector('.app main');
   if(!main)return false;
   mounted=true;
-  observer?.disconnect();
   if(!document.getElementById('mayfit-students-style')){
     const style=document.createElement('style');
     style.id='mayfit-students-style';
@@ -169,8 +172,8 @@ function mount(){
   return true;
 }
 
-if(!mount()){
-  observer=new MutationObserver(()=>mount());
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  window.setTimeout(()=>observer?.disconnect(),10000);
-}
+observer=new MutationObserver(()=>requestAnimationFrame(mount));
+observer.observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('pageshow',mount);
+window.addEventListener('focus',mount);
+mount();
