@@ -1,4 +1,5 @@
 import './exercise-rename-translate.js?v=2';
+import './exercise-manager-rename.js?v=1';
 
 const STORAGE_KEY='mayfit_body_field_labels_v2';
 
