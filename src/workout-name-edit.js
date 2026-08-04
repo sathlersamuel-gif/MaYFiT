@@ -28,12 +28,7 @@ function ensureStyle(){
   const style=document.createElement('style');
   style.id='mayfit-workout-name-style';
   style.textContent=`
-    .mayfit-workout-name-wrap{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important}
     .mayfit-editable-workout-title{cursor:pointer!important;text-decoration:underline dotted rgba(141,242,11,.65)!important;text-underline-offset:5px!important}
-    .mayfit-rename-workout{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:38px!important;padding:8px 13px!important;border:1px solid #8df20b!important;border-radius:12px!important;background:#102016!important;color:#8df20b!important;font:900 13px system-ui,-apple-system,sans-serif!important;cursor:pointer!important;white-space:nowrap!important}
-    .hero .mayfit-rename-workout{position:absolute!important;right:22px!important;top:22px!important;z-index:3!important;background:rgba(5,12,8,.92)!important}
-    .hero{position:relative!important}
-    @media(max-width:620px){.hero .mayfit-rename-workout{right:14px!important;top:14px!important;min-height:34px!important;padding:7px 10px!important;font-size:11px!important}}
   `;
   document.head.appendChild(style);
 }
@@ -49,44 +44,35 @@ function setTitle(title){
     title.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();askRename()});
   }
 }
-function installButton(container){
-  if(!container||container.querySelector(':scope > .mayfit-rename-workout'))return;
-  const button=document.createElement('button');
-  button.type='button';
-  button.className='mayfit-rename-workout';
-  button.textContent='Renomear treino';
-  button.setAttribute('aria-label','Renomear treino');
-  button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();askRename()});
-  container.appendChild(button);
-  if(!container.classList.contains('hero'))container.classList.add('mayfit-workout-name-wrap');
-}
 function translateDefaults(){
   document.querySelectorAll('h1,h2,h3,strong,span').forEach(element=>{
     const text=clean(element.textContent);
     if(translations[text])element.textContent=translations[text];
   });
 }
+function removeExtraButtons(){
+  document.querySelectorAll('.mayfit-rename-workout').forEach(button=>button.remove());
+  document.querySelectorAll('.mayfit-workout-name-wrap').forEach(element=>element.classList.remove('mayfit-workout-name-wrap'));
+}
 function apply(){
   ensureStyle();
+  removeExtraButtons();
   translateDefaults();
 
   const hero=document.querySelector('.hero');
   const heroTitle=hero?.querySelector('h1,h2,strong');
-  if(heroTitle&&/treino|workout/i.test(clean(heroTitle.textContent))){setTitle(heroTitle);installButton(hero)}
+  if(heroTitle&&/treino|workout/i.test(clean(heroTitle.textContent)))setTitle(heroTitle);
 
   document.querySelectorAll('.section-title,.admin-head,.page-head,.panel-head,.card-header,.workout-header').forEach(container=>{
     const title=container.querySelector('h1,h2,h3,strong');
     const text=clean(title?.textContent);
     if(!title||!/treino|workout/i.test(text))return;
-    if(/gerenciar|novo|criar|treino [a-d]|workout [a-d]|meu treino/i.test(text)){
-      if(/treino [a-d]|workout [a-d]|meu treino/i.test(text))setTitle(title);
-      installButton(container);
-    }
+    if(/treino [a-d]|workout [a-d]|meu treino/i.test(text))setTitle(title);
   });
 
   document.querySelectorAll('h1,h2,h3,strong').forEach(title=>{
     const text=clean(title.textContent);
-    if(/^(Workout|Treino) [A-D]$/i.test(text)){setTitle(title);installButton(title.parentElement)}
+    if(/^(Workout|Treino) [A-D]$/i.test(text))setTitle(title);
   });
 }
 
