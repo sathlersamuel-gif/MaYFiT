@@ -33,5 +33,28 @@ async function openStudent(uid,name){const modal=document.createElement('section
 
 async function openAdmin(){const modal=document.createElement('section');modal.className='be-modal';modal.innerHTML='<div class="be-wrap"><div class="be-top"><h1>Evolução dos alunos</h1><button class="be-close">×</button></div><div class="be-card"><select class="be-admin-select"><option>Carregando alunos...</option></select><div class="be-history"></div></div></div>';document.body.appendChild(modal);modal.querySelector('.be-close').onclick=()=>modal.remove();const select=modal.querySelector('select');const {data,error}=await supabase.from('profiles').select('id,full_name,role').neq('role','admin').order('full_name');if(error){select.innerHTML='<option>Falha ao carregar alunos</option>';return}select.innerHTML='<option value="">Selecione um aluno</option>'+data.map(x=>`<option value="${esc(x.id)}">${esc(x.full_name||'Aluno')}</option>`).join('');select.onchange=()=>select.value&&renderHistory(modal,select.value)}
 
-function mount(){if(mounted||!supabase)return false;const current=user();const main=document.querySelector('.app main');if(!current||!main||document.querySelector('.workout-screen'))return false;if(!document.getElementById('be-style')){const style=document.createElement('style');style.id='be-style';style.textContent=css;document.head.appendChild(style)}const root=document.createElement('section');root.id='mayfit-body-evolution';root.innerHTML=`<div class="be-head"><div class="be-title"><h2>Evolução corporal</h2><p>${current.role==='admin'?'Acompanhe peso, medidas e fotos dos alunos.':'Registre suas medidas, composição corporal e fotos de antes/depois.'}</p></div><button type="button">${current.role==='admin'?'Ver alunos':'Minha evolução'}</button></div>`;root.querySelector('button').onclick=()=>current.role==='admin'?openAdmin():openStudent(current.id,current.name||current.full_name);main.prepend(root);mounted=true;return true}
-if(!mount()){const observer=new MutationObserver(()=>mount());observer.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),15000)}
+function mount(){
+  if(!supabase)return false;
+  const current=user();
+  const main=document.querySelector('.app main');
+  const existing=document.getElementById('mayfit-body-evolution');
+  const profileKey=current?`${current.role}:${current.id||''}`:'';
+  if(existing&&existing.dataset.profileKey===profileKey)return true;
+  if(existing)existing.remove();
+  mounted=false;
+  if(!current||!main||document.querySelector('.workout-screen'))return false;
+  if(!document.getElementById('be-style')){const style=document.createElement('style');style.id='be-style';style.textContent=css;document.head.appendChild(style)}
+  const root=document.createElement('section');
+  root.id='mayfit-body-evolution';
+  root.dataset.profileKey=profileKey;
+  root.innerHTML=`<div class="be-head"><div class="be-title"><h2>Evolução corporal</h2><p>${current.role==='admin'?'Acompanhe peso, medidas e fotos dos alunos.':'Registre suas medidas, composição corporal e fotos de antes/depois.'}</p></div><button type="button">${current.role==='admin'?'Ver alunos':'Minha evolução'}</button></div>`;
+  root.querySelector('button').onclick=()=>current.role==='admin'?openAdmin():openStudent(current.id,current.name||current.full_name);
+  main.prepend(root);
+  mounted=true;
+  return true;
+}
+const bodyEvolutionObserver=new MutationObserver(()=>requestAnimationFrame(mount));
+bodyEvolutionObserver.observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('pageshow',mount);
+window.addEventListener('focus',mount);
+mount();
