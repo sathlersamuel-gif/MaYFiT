@@ -1,10 +1,8 @@
-const VERSION='mayfit-sw-v24-workout-name-direct-load';
+const VERSION='mayfit-sw-v36-auditoria-completa';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
-  event.waitUntil(
-    caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key))))
-  );
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))));
 });
 
 self.addEventListener('activate',event=>{
@@ -17,14 +15,8 @@ self.addEventListener('activate',event=>{
 
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
-
   event.respondWith((async()=>{
-    try{
-      return await fetch(event.request,{cache:'no-store'});
-    }catch(error){
-      const cached=await caches.match(event.request);
-      if(cached)return cached;
-      throw error;
-    }
+    try{return await fetch(event.request,{cache:'no-store'})}
+    catch(error){const cached=await caches.match(event.request);if(cached)return cached;throw error}
   })());
 });
