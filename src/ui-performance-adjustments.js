@@ -38,25 +38,6 @@ function adjustStudentEvolutionCard(){
   card.dataset.evolutionCardAdjusted='true';
 }
 
-function hideAdminWorkoutManager(){
-  if(currentUser()?.role!=='admin')return;
-  const headings=[...document.querySelectorAll('h1,h2,h3,strong,div')].filter(element=>/^\s*gerenciar\s+treino\s*$/i.test(element.textContent||''));
-  for(const heading of headings){
-    let block=heading.closest('section,article');
-    if(!block){
-      block=heading.parentElement;
-      for(let i=0;i<3&&block?.parentElement;i++){
-        if(/adicionar\s+exercícios/i.test(block.textContent||''))break;
-        block=block.parentElement;
-      }
-    }
-    if(block&&/adicionar\s+exercícios/i.test(block.textContent||'')){
-      block.style.display='none';
-      block.dataset.adminWorkoutManagerHidden='true';
-    }
-  }
-}
-
 async function cacheUrl(url){
   if(!url||!url.includes(IMAGE_HOST)||!('caches' in window))return;
   try{
@@ -80,7 +61,6 @@ function warmVisibleExercisePhotos(){
 
 function apply(){
   adjustStudentEvolutionCard();
-  hideAdminWorkoutManager();
   warmVisibleExercisePhotos();
 }
 
