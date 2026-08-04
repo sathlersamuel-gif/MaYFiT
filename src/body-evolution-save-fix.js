@@ -84,7 +84,7 @@ async function handleSave(form){
     if(photoFiles)uploadPhotosInBackground(form,user.id,data.id,message).catch(()=>setMessage(message,'Medidas salvas. Não foi possível enviar uma ou mais fotos.','success'));
     window.setTimeout(()=>{
       form.reset();
-      form.querySelectorAll('.be-photo').forEach(holder=>{const input=holder.querySelector('input');holder.innerHTML='<span>Adicionar foto</span>';if(input)holder.appendChild(input)});
+      form.querySelectorAll('.be-photo').forEach(holder=>{holder.querySelector('img')?.remove();const preview=holder.querySelector('.be-photo-preview');if(preview){preview.style.display='grid';preview.textContent='Adicionar foto'}holder.querySelectorAll('input[type="file"]').forEach(input=>{input.value='';input.removeAttribute('data-photo');if(input.dataset.photoInput==='camera')input.dataset.photo=input.dataset.photoKind})});
       if(button){button.disabled=false;button.textContent=original;button.style.background=''}
       document.dispatchEvent(new CustomEvent('mayfit:evolution-saved'));
     },500);
