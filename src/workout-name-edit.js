@@ -11,13 +11,6 @@ function writeStore(data){localStorage.setItem(STORE,JSON.stringify(data));windo
 function clean(value){return String(value||'').replace(/\s+/g,' ').trim()}
 function translate(value){const text=clean(value);return translations[text]||text}
 function currentName(){const data=readStore();return translate(data.workoutName||DEFAULT_NAME)||DEFAULT_NAME}
-function canEdit(){
-  try{
-    const current=JSON.parse(sessionStorage.getItem('mayfit_user')||'null');
-    const adminReturn=JSON.parse(sessionStorage.getItem('mayfit_admin_return')||'null');
-    return current?.role==='admin'||adminReturn?.role==='admin';
-  }catch{return false}
-}
 function saveName(value){
   const name=translate(value);
   if(!name)return false;
@@ -39,6 +32,7 @@ function ensureStyle(){
     .mayfit-rename-workout{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:38px!important;padding:8px 13px!important;border:1px solid #8df20b!important;border-radius:12px!important;background:#102016!important;color:#8df20b!important;font:900 13px system-ui,-apple-system,sans-serif!important;cursor:pointer!important}
     .hero .mayfit-rename-workout{position:absolute!important;right:22px!important;top:22px!important;z-index:3!important;background:rgba(5,12,8,.88)!important}
     .hero{position:relative!important}
+    .hero h1{cursor:pointer!important}
     @media(max-width:620px){.hero .mayfit-rename-workout{right:14px!important;top:14px!important;min-height:34px!important;padding:7px 10px!important;font-size:11px!important}}
   `;
   document.head.appendChild(style);
@@ -48,8 +42,14 @@ function setTitle(title){
   const name=currentName();
   if(clean(title.textContent)!==name)title.textContent=name;
 }
+function bindTitle(title){
+  if(!title||title.dataset.renameWorkoutBound==='1')return;
+  title.dataset.renameWorkoutBound='1';
+  title.setAttribute('title','Toque para renomear o treino');
+  title.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();askRename()});
+}
 function installButton(container,hero=false){
-  if(!container||!canEdit()||container.querySelector(':scope > .mayfit-rename-workout'))return;
+  if(!container||container.querySelector(':scope > .mayfit-rename-workout'))return;
   const button=document.createElement('button');
   button.type='button';
   button.className='mayfit-rename-workout';
@@ -63,7 +63,7 @@ function apply(){
   ensureStyle();
   const hero=document.querySelector('.hero');
   const heroTitle=hero?.querySelector('h1');
-  if(heroTitle){setTitle(heroTitle);installButton(hero,true)}
+  if(heroTitle){setTitle(heroTitle);bindTitle(heroTitle);installButton(hero,true)}
 
   document.querySelectorAll('.section-title,.admin-head,.page-head,.panel-head').forEach(container=>{
     const title=container.querySelector('h1,h2,strong');
@@ -71,13 +71,14 @@ function apply(){
     if(!title||!/treino|workout/i.test(text))return;
     if(/gerenciar|novo|criar|treino [a-d]|workout [a-d]/i.test(text)){
       if(/treino [a-d]|workout [a-d]/i.test(text))setTitle(title);
+      bindTitle(title);
       installButton(container,false);
     }
   });
 
   document.querySelectorAll('h1,h2,strong').forEach(title=>{
     const text=clean(title.textContent);
-    if(/^(Workout|Treino) [A-D]$/i.test(text))setTitle(title);
+    if(/^(Workout|Treino) [A-D]$/i.test(text)){setTitle(title);bindTitle(title)}
   });
 }
 
