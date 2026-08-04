@@ -1,9 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase.js';
 
-const URL='https://hcijxrakfrvcksuanrdy.supabase.co';
-const KEY='sb_publishable_A7SHtwE7jpKGcP6yaPmcGw_mTJeodrN';
-const secondary=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 const USER_KEY='mayfit_user';
 let mounted=false;
 let loading=false;
@@ -11,9 +7,9 @@ let observer;
 
 const css=`
 #mayfit-students{margin:0 0 18px;padding:16px;border:1px solid #2d5038;border-radius:22px;background:#0d1711;color:#fff;content-visibility:auto;contain-intrinsic-size:420px}
-#mayfit-students .ms-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-#mayfit-students h2{margin:0;font-size:22px}
-#mayfit-students .ms-actions{display:flex;gap:8px;flex-wrap:wrap}
+#mayfit-students .ms-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+#mayfit-students h2{margin:0;font-size:24px}
+#mayfit-students .ms-subtitle{margin:5px 0 0;color:#a9b6ad;font-size:13px}
 #mayfit-students .ms-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 13px}
 #mayfit-students .ms-stat{padding:12px 10px;border:1px solid #304638;border-radius:14px;background:linear-gradient(145deg,#111813,#090d0a);text-align:center}
 #mayfit-students .ms-stat strong{display:block;color:#9df20f;font-size:24px}.ms-stat span{font-size:11px;color:#a9b6ad}
@@ -29,7 +25,6 @@ const css=`
 #mayfit-students .ms-card.pending{border-color:#9b7625;background:#1c180d}
 #mayfit-students .ms-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 #mayfit-students .ms-name{font-weight:900;font-size:16px}
-#mayfit-students .ms-id{font-size:11px;color:#7f9185;margin-top:4px;word-break:break-all}
 #mayfit-students .ms-badge{font-size:11px;font-weight:900;padding:5px 8px;border-radius:999px;background:#233528;color:#b8c8bd;white-space:nowrap}
 #mayfit-students .ms-badge.active{background:#173b20;color:#91ea50}
 #mayfit-students .ms-badge.blocked{background:#3a2020;color:#ffadad}
@@ -38,11 +33,15 @@ const css=`
 #mayfit-students .ms-menu{position:relative}.ms-menu summary{list-style:none;width:38px;height:38px;display:grid;place-items:center;border:1px solid #34483a;border-radius:50%;background:#19211b;color:#fff;font-size:24px;line-height:1;cursor:pointer}.ms-menu summary::-webkit-details-marker{display:none}.ms-menu[open] summary{color:#9df20f;border-color:#66833c}.ms-menu-panel{display:grid;gap:7px;margin-top:9px;padding:9px;border:1px solid #304638;border-radius:12px;background:#0a100c}.ms-menu-panel button{width:100%;text-align:left}
 #mayfit-students .ms-empty{padding:18px;text-align:center;color:#98a69d}
 #mayfit-students .ms-msg{margin:8px 0;color:#a9b8af;font-size:13px}
-#mayfit-students .ms-pending-count{display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:6px;padding:0 5px;border-radius:999px;background:#ffd35a;color:#241b00;font-size:11px;font-weight:950}
-@media(max-width:620px){#mayfit-students{margin-top:4px;padding:13px;border-radius:18px}#mayfit-students .ms-head{align-items:flex-start;flex-direction:column}#mayfit-students .ms-actions{width:100%}#mayfit-students .ms-actions button{flex:1}#mayfit-students .ms-row{gap:8px}.ms-stat strong{font-size:20px!important}}
+@media(max-width:620px){#mayfit-students{margin-top:4px;padding:16px;border-radius:18px}#mayfit-students .ms-row{gap:8px}.ms-stat strong{font-size:20px!important}}
 `;
 
 function current(){try{return JSON.parse(sessionStorage.getItem(USER_KEY))}catch{return null}}
+function isAdminShell(){
+  if(current()?.role!=='admin')return false;
+  const labels=[...document.querySelectorAll('.app>nav button')].map(button=>(button.textContent||'').trim().toLowerCase());
+  return labels.some(label=>label.includes('ver aluno'))&&labels.some(label=>label==='sair');
+}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function normalizedStatus(value){return value==='blocked'?'blocked':'active'}
 function statusLabel(value){return normalizedStatus(value)==='blocked'?'Bloqueado':'Ativo'}
@@ -50,9 +49,7 @@ function statusLabel(value){return normalizedStatus(value)==='blocked'?'Bloquead
 async function loadStudents(root){
   if(loading)return;
   loading=true;
-  const refresh=root.querySelector('[data-refresh]');
   const msg=root.querySelector('.ms-msg');
-  refresh.disabled=true;
   msg.textContent='Carregando alunos...';
   try{
     const {data,error}=await supabase.from('profiles').select('id,full_name,role,status,created_at').order('created_at',{ascending:false});
@@ -65,7 +62,6 @@ async function loadStudents(root){
     root.querySelector('.ms-list').innerHTML='<div class="ms-empty">Falha ao consultar o banco de dados.</div>';
   }finally{
     loading=false;
-    refresh.disabled=false;
   }
 }
 
@@ -79,23 +75,8 @@ function render(root){
   list.innerHTML=data.map(x=>{
     const status=normalizedStatus(x.status);
     const toggle=`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear aluno':'Bloquear aluno'}</button>`;
-    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><div><span class="ms-badge ${status}">${statusLabel(status)}</span><details class="ms-menu"><summary aria-label="Opções do aluno">⋮</summary><div class="ms-menu-panel"><button class="ms-secondary" data-action="edit">Editar nome</button>${toggle}<button class="ms-danger" data-action="delete">Excluir aluno</button></div></details></div></div></article>`;
+    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div></div><div><span class="ms-badge ${status}">${statusLabel(status)}</span><details class="ms-menu"><summary aria-label="Opções de ${esc(x.full_name||'aluno')}">⋮</summary><div class="ms-menu-panel"><button class="ms-secondary" data-action="edit">Editar nome</button>${toggle}<button class="ms-danger" data-action="delete">Excluir aluno</button></div></details></div></div></article>`;
   }).join('');
-}
-
-async function createStudent(root){
-  const name=prompt('Nome completo do aluno:'); if(!name?.trim())return;
-  const email=prompt('E-mail do aluno:'); if(!email?.trim())return;
-  const password=prompt('Senha inicial com pelo menos 6 caracteres:');
-  if(!password||password.length<6){alert('A senha precisa ter pelo menos 6 caracteres.');return}
-  const {data,error}=await secondary.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim()}}});
-  if(error){alert('Não foi possível cadastrar: '+error.message);return}
-  if(data.user){
-    const {error:updateError}=await supabase.from('profiles').update({full_name:name.trim(),role:'student',status:'active'}).eq('id',data.user.id);
-    if(updateError){alert('O login foi criado, mas o perfil não pôde ser ativado: '+updateError.message);return}
-  }
-  alert('Aluno cadastrado com sucesso.');
-  await loadStudents(root);
 }
 
 async function deleteStudentAccount(id){
@@ -146,11 +127,15 @@ async function handleCard(root,button){
 }
 
 function mount(){
-  if(mounted||current()?.role!=='admin'||!supabase)return false;
+  if(!isAdminShell()||!supabase){
+    document.getElementById('mayfit-students')?.remove();
+    mounted=false;
+    return false;
+  }
+  if(mounted&&document.getElementById('mayfit-students'))return true;
   const main=document.querySelector('.app main');
   if(!main)return false;
   mounted=true;
-  observer?.disconnect();
   if(!document.getElementById('mayfit-students-style')){
     const style=document.createElement('style');
     style.id='mayfit-students-style';
@@ -159,18 +144,17 @@ function mount(){
   }
   const root=document.createElement('section');
   root.id='mayfit-students';
-  root.innerHTML='<div class="ms-head"><div><h2>Painel de alunos</h2><div class="ms-msg">Conectando ao banco...</div></div><div class="ms-actions"><button class="ms-primary" data-new>Novo aluno</button><button class="ms-secondary" data-refresh>Atualizar</button></div></div><div class="ms-overview"><article class="ms-stat"><strong data-total>0</strong><span>Alunos</span></article><article class="ms-stat"><strong data-active>0</strong><span>Ativos</span></article><article class="ms-stat"><strong data-blocked>0</strong><span>Bloqueados</span></article></div><input class="ms-search" placeholder="Buscar aluno"><div class="ms-list"></div>';
+  root.innerHTML='<div class="ms-head"><div><h2>Alunos</h2><p class="ms-subtitle">Gerencie o acesso de cada aluno.</p><div class="ms-msg">Conectando ao banco...</div></div></div><div class="ms-overview"><article class="ms-stat"><strong data-total>0</strong><span>Total</span></article><article class="ms-stat"><strong data-active>0</strong><span>Ativos</span></article><article class="ms-stat"><strong data-blocked>0</strong><span>Bloqueados</span></article></div><input class="ms-search" placeholder="Buscar aluno pelo nome"><div class="ms-list"></div>';
   main.prepend(root);
-  root.querySelector('[data-new]').onclick=()=>createStudent(root);
-  root.querySelector('[data-refresh]').onclick=()=>loadStudents(root);
   root.querySelector('.ms-search').oninput=()=>render(root);
   root.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button)handleCard(root,button)});
   loadStudents(root);
   return true;
 }
 
-if(!mount()){
-  observer=new MutationObserver(()=>mount());
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  window.setTimeout(()=>observer?.disconnect(),10000);
-}
+observer=new MutationObserver(()=>requestAnimationFrame(mount));
+observer.observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('pageshow',mount);
+window.addEventListener('focus',mount);
+window.setInterval(()=>{const root=document.getElementById('mayfit-students');if(root&&isAdminShell())loadStudents(root);else mount()},15000);
+mount();
