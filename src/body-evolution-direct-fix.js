@@ -15,7 +15,7 @@ function clean(value){
 }
 
 function fieldKey(control,index){
-  return control?.name||control?.dataset?.photo||`field_${index}`;
+  return control?.name||`field_${index}`;
 }
 
 function originalLabel(label){
@@ -61,7 +61,8 @@ function organizeModal(modal){
 
 function makeLabelEditable(label,index,saved){
   if(label.dataset.directEditable==='1')return;
-  const control=label.querySelector('input[name],textarea[name],select[name],input[data-photo]');
+  if(label.querySelector('input[data-photo]'))return;
+  const control=label.querySelector('input[name],textarea[name],select[name]');
   if(!control)return;
   const original=originalLabel(label);
   if(!original)return;
