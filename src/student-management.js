@@ -14,6 +14,9 @@ const css=`
 #mayfit-students .ms-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 #mayfit-students h2{margin:0;font-size:22px}
 #mayfit-students .ms-actions{display:flex;gap:8px;flex-wrap:wrap}
+#mayfit-students .ms-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 13px}
+#mayfit-students .ms-stat{padding:12px 10px;border:1px solid #304638;border-radius:14px;background:linear-gradient(145deg,#111813,#090d0a);text-align:center}
+#mayfit-students .ms-stat strong{display:block;color:#9df20f;font-size:24px}.ms-stat span{font-size:11px;color:#a9b6ad}
 #mayfit-students button{border:0;border-radius:12px;padding:10px 12px;font-weight:850;cursor:pointer}
 #mayfit-students button:disabled{opacity:.55;cursor:default}
 #mayfit-students .ms-primary{background:#78d532;color:#07110c}
@@ -32,16 +35,17 @@ const css=`
 #mayfit-students .ms-badge.blocked{background:#3a2020;color:#ffadad}
 #mayfit-students .ms-badge.pending{background:#4a3812;color:#ffd76a}
 #mayfit-students .ms-card-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+#mayfit-students .ms-menu{position:relative}.ms-menu summary{list-style:none;width:38px;height:38px;display:grid;place-items:center;border:1px solid #34483a;border-radius:50%;background:#19211b;color:#fff;font-size:24px;line-height:1;cursor:pointer}.ms-menu summary::-webkit-details-marker{display:none}.ms-menu[open] summary{color:#9df20f;border-color:#66833c}.ms-menu-panel{display:grid;gap:7px;margin-top:9px;padding:9px;border:1px solid #304638;border-radius:12px;background:#0a100c}.ms-menu-panel button{width:100%;text-align:left}
 #mayfit-students .ms-empty{padding:18px;text-align:center;color:#98a69d}
 #mayfit-students .ms-msg{margin:8px 0;color:#a9b8af;font-size:13px}
 #mayfit-students .ms-pending-count{display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:6px;padding:0 5px;border-radius:999px;background:#ffd35a;color:#241b00;font-size:11px;font-weight:950}
-@media(max-width:620px){#mayfit-students{margin-top:4px;padding:13px;border-radius:18px}#mayfit-students .ms-head{align-items:flex-start;flex-direction:column}#mayfit-students .ms-actions{width:100%}#mayfit-students .ms-actions button{flex:1}#mayfit-students .ms-row{gap:8px}}
+@media(max-width:620px){#mayfit-students{margin-top:4px;padding:13px;border-radius:18px}#mayfit-students .ms-head{align-items:flex-start;flex-direction:column}#mayfit-students .ms-actions{width:100%}#mayfit-students .ms-actions button{flex:1}#mayfit-students .ms-row{gap:8px}.ms-stat strong{font-size:20px!important}}
 `;
 
 function current(){try{return JSON.parse(sessionStorage.getItem(USER_KEY))}catch{return null}}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function normalizedStatus(value){return value==='active'||value==='blocked'?value:'pending'}
-function statusLabel(value){const s=normalizedStatus(value);return s==='active'?'Ativo':s==='blocked'?'Bloqueado':'Pendente'}
+function normalizedStatus(value){return value==='blocked'?'blocked':'active'}
+function statusLabel(value){return normalizedStatus(value)==='blocked'?'Bloqueado':'Ativo'}
 
 async function loadStudents(root){
   if(loading)return;
@@ -54,8 +58,7 @@ async function loadStudents(root){
     const {data,error}=await supabase.from('profiles').select('id,full_name,role,status,created_at').order('created_at',{ascending:false});
     if(error)throw error;
     root._students=(data||[]).filter(profile=>profile.role!=='admin');
-    const pending=root._students.filter(profile=>normalizedStatus(profile.status)==='pending').length;
-    msg.innerHTML=`${root._students.length} aluno(s) encontrado(s)${pending?` <span class="ms-pending-count">${pending}</span> aguardando aprovação`:''}`;
+    msg.textContent=`${root._students.length} aluno(s) cadastrado(s)`;
     render(root);
   }catch(error){
     msg.textContent='Não foi possível carregar os alunos: '+error.message;
@@ -70,12 +73,13 @@ function render(root){
   const q=(root.querySelector('.ms-search').value||'').trim().toLowerCase();
   const data=(root._students||[]).filter(x=>!q||`${x.full_name||''} ${x.id||''}`.toLowerCase().includes(q));
   const list=root.querySelector('.ms-list');
+  const all=root._students||[];const total=all.length;const blocked=all.filter(x=>normalizedStatus(x.status)==='blocked').length;
+  root.querySelector('[data-total]').textContent=String(total);root.querySelector('[data-active]').textContent=String(total-blocked);root.querySelector('[data-blocked]').textContent=String(blocked);
   if(!data.length){list.innerHTML='<div class="ms-empty">Nenhum aluno encontrado.</div>';return}
   list.innerHTML=data.map(x=>{
     const status=normalizedStatus(x.status);
-    const approve=status==='pending'?'<button class="ms-approve" data-action="approve">Aprovar aluno</button>':'';
-    const toggle=status==='pending'?'':`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear':'Bloquear'}</button>`;
-    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`;
+    const toggle=`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear aluno':'Bloquear aluno'}</button>`;
+    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div><div class="ms-id">Cadastro: ${esc(x.id)}</div></div><div><span class="ms-badge ${status}">${statusLabel(status)}</span><details class="ms-menu"><summary aria-label="Opções do aluno">⋮</summary><div class="ms-menu-panel"><button class="ms-secondary" data-action="edit">Editar nome</button>${toggle}<button class="ms-danger" data-action="delete">Excluir aluno</button></div></details></div></div></article>`;
   }).join('');
 }
 
@@ -113,10 +117,6 @@ async function handleCard(root,button){
   const action=button.dataset.action;
   button.disabled=true;
   try{
-    if(action==='approve'){
-      const {error}=await supabase.from('profiles').update({role:'student',status:'active'}).eq('id',id);
-      if(error)throw error;
-    }
     if(action==='edit'){
       const name=prompt('Nome completo:',student.full_name||''); if(!name?.trim())return;
       const {error}=await supabase.from('profiles').update({full_name:name.trim()}).eq('id',id);
@@ -159,7 +159,7 @@ function mount(){
   }
   const root=document.createElement('section');
   root.id='mayfit-students';
-  root.innerHTML='<div class="ms-head"><div><h2>Alunos cadastrados</h2><div class="ms-msg">Conectando ao banco...</div></div><div class="ms-actions"><button class="ms-primary" data-new>Novo aluno</button><button class="ms-secondary" data-refresh>Atualizar</button></div></div><input class="ms-search" placeholder="Pesquisar por nome"><div class="ms-list"></div>';
+  root.innerHTML='<div class="ms-head"><div><h2>Painel de alunos</h2><div class="ms-msg">Conectando ao banco...</div></div><div class="ms-actions"><button class="ms-primary" data-new>Novo aluno</button><button class="ms-secondary" data-refresh>Atualizar</button></div></div><div class="ms-overview"><article class="ms-stat"><strong data-total>0</strong><span>Alunos</span></article><article class="ms-stat"><strong data-active>0</strong><span>Ativos</span></article><article class="ms-stat"><strong data-blocked>0</strong><span>Bloqueados</span></article></div><input class="ms-search" placeholder="Buscar aluno"><div class="ms-list"></div>';
   main.prepend(root);
   root.querySelector('[data-new]').onclick=()=>createStudent(root);
   root.querySelector('[data-refresh]').onclick=()=>loadStudents(root);
