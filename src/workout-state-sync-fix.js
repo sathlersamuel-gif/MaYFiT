@@ -66,14 +66,8 @@ window.addEventListener('storage',event=>{if(event.key===STORE)markChanged()});
 document.addEventListener('click',event=>{
   const target=event.target.closest?.('button,a,[role="button"]');
   if(!target||!isStartWorkout(target)||sessionStorage.getItem('mayfit_workout_changed')!=='1')return;
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
   sessionStorage.removeItem('mayfit_workout_changed');
   sessionStorage.removeItem(DIRTY_KEY);
-  sessionStorage.setItem(SYNC_KEY,'1');
-  showSilentCover();
-  location.reload();
 },true);
 
 sessionStorage.removeItem(DIRTY_KEY);
