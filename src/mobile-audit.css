@@ -10,6 +10,19 @@ html,body,#root{
   background:#050706!important;
 }
 
+/* Mantém a identidade visual mesmo durante a troca entre administrador e aluno. */
+html,body,#root,.app,.app button,.app input,.app select,.app textarea{
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+}
+
+.app>nav button{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+
 body{
   min-height:100dvh;
   overscroll-behavior-y:none;
