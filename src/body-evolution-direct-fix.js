@@ -1,4 +1,5 @@
 import './student-area-entry.js?v=5';
+import './body-evolution-runtime.js?v=1';
 import './exercise-rename-translate.js?v=2';
 
 const STORAGE_KEY='mayfit_body_field_labels_v2';
