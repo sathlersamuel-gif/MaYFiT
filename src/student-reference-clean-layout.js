@@ -136,5 +136,69 @@ body.mayfit-tab-inicio .app>main::after{display:none!important;content:none!impo
   body.mayfit-tab-inicio .app>nav button{height:54px!important;min-height:54px!important;font-size:11px!important;gap:2px!important}
   body.mayfit-tab-inicio .app>nav svg{width:22px!important;height:22px!important}
 }
+
+/* Celulares com tela mais baixa: mantém toda a tela inicial visível sem rolagem. */
+@media(max-width:620px) and (max-height:820px){
+  body.mayfit-tab-inicio{overflow-y:hidden!important}
+  body.mayfit-tab-inicio .app{height:100dvh!important;min-height:100dvh!important;overflow:hidden!important}
+  body.mayfit-tab-inicio .app>header.mayfit-reference-header{min-height:56px!important;padding:calc(max(5px,env(safe-area-inset-top)) + 3px) 13px 7px!important}
+  body.mayfit-tab-inicio .mayfit-reference-logo{font-size:27px!important}
+  body.mayfit-tab-inicio .mayfit-header-actions button{width:30px!important;height:30px!important;min-width:30px!important;min-height:30px!important}
+  body.mayfit-tab-inicio .app>main.mayfit-reference-home{padding:0 10px 5px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner{height:118px!important;min-height:118px!important;margin-bottom:7px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner>div{left:16px!important;top:18px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner strong{font-size:13px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner h2{font-size:29px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner span{margin:7px 0 8px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner p{font-size:9px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid{gap:6px!important;margin-bottom:7px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid>.mayfit-feature-card{height:166px!important;min-height:166px!important;padding:9px 10px 8px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid .mayfit-feature-icon{width:43px!important;height:43px!important;margin-bottom:6px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid .mayfit-feature-icon svg{width:25px!important;height:25px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid h2,body.mayfit-tab-inicio #mayfit-feature-grid h3,body.mayfit-tab-inicio #mayfit-feature-grid strong{font-size:12px!important;margin-bottom:4px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid p{font-size:8.5px!important;line-height:1.22!important;margin-bottom:4px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid button{height:30px!important;min-height:30px!important;font-size:9px!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero{height:183px!important;min-height:183px!important;margin-bottom:7px!important;padding:12px 13px 9px!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero>span{font-size:9px!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero h1,body.mayfit-tab-inicio .mayfit-reference-hero .mayfit-workout-name{margin:5px 0!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero .mayfit-workout-name>span{font-size:10px!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero .mayfit-workout-name input{font-size:18px!important}
+  body.mayfit-tab-inicio .mayfit-hero-stats{margin-bottom:5px!important}
+  body.mayfit-tab-inicio .mayfit-hero-stat{height:28px!important;min-height:28px!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero button.primary{height:35px!important;min-height:35px!important;font-size:13px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary{gap:6px!important;margin-bottom:5px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary article{height:52px!important;min-height:52px!important;padding:6px 8px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary article svg{width:21px!important;height:21px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary strong{font-size:17px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary span{font-size:8px!important}
+  body.mayfit-tab-inicio .app>nav{min-height:54px!important;margin-bottom:max(3px,env(safe-area-inset-bottom))!important;padding:3px 8px max(3px,env(safe-area-inset-bottom))!important}
+  body.mayfit-tab-inicio .app>nav button{height:44px!important;min-height:44px!important;font-size:9px!important}
+  body.mayfit-tab-inicio .app>nav svg{width:19px!important;height:19px!important}
+}
+
+@media(max-width:620px) and (max-height:650px){
+  body.mayfit-tab-inicio .app>header.mayfit-reference-header{min-height:48px!important;padding-top:max(4px,env(safe-area-inset-top))!important;padding-bottom:4px!important}
+  body.mayfit-tab-inicio .mayfit-reference-logo{font-size:24px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner{height:82px!important;min-height:82px!important;margin-bottom:5px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner>div{top:10px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner h2{font-size:24px!important}
+  body.mayfit-tab-inicio #mayfit-motivation-banner span{display:none!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid{margin-bottom:5px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid>.mayfit-feature-card{height:128px!important;min-height:128px!important;padding:7px 8px 6px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid .mayfit-feature-icon{width:34px!important;height:34px!important;margin-bottom:4px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid .mayfit-feature-icon svg{width:20px!important;height:20px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid p{font-size:7.5px!important;margin-bottom:2px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid button{height:26px!important;min-height:26px!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero{height:142px!important;min-height:142px!important;margin-bottom:5px!important;padding:8px 11px 7px!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero .mayfit-workout-name input{font-size:15px!important}
+  body.mayfit-tab-inicio .mayfit-hero-stats{display:none!important}
+  body.mayfit-tab-inicio .mayfit-reference-hero button.primary{height:30px!important;min-height:30px!important;font-size:11px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary{margin-bottom:3px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary article{height:42px!important;min-height:42px!important;padding:4px 7px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary article svg{width:18px!important;height:18px!important}
+  body.mayfit-tab-inicio .mayfit-reference-summary strong{font-size:14px!important}
+  body.mayfit-tab-inicio .app>nav{min-height:46px!important;margin-bottom:max(2px,env(safe-area-inset-bottom))!important}
+  body.mayfit-tab-inicio .app>nav button{height:38px!important;min-height:38px!important}
+}
 `;
 document.head.appendChild(style);
