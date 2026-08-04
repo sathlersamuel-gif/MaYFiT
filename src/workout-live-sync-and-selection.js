@@ -206,12 +206,7 @@ document.addEventListener('click',event=>{
   }
   const target=event.target.closest?.('button,a,[role="button"]');
   if(!target||!isWorkoutButton(target)||sessionStorage.getItem(DIRTY_KEY)!=='1')return;
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
   sessionStorage.removeItem(DIRTY_KEY);
-  sessionStorage.setItem(OPEN_KEY,'1');
-  location.reload();
 },true);
 
 repairStoredNames();
