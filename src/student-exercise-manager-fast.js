@@ -12,6 +12,7 @@ function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}
 function writeStore(data){localStorage.setItem(STORE,JSON.stringify(data));window.dispatchEvent(new Event('mayfit-store-updated'))}
 function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 function imageUrl(item){return item?.image?IMAGE_BASE+item.image:''}
+function cleanName(value){return String(value||'').replace(/\s+/g,' ').trim()}
 
 function cachedCatalog(){
   if(catalog.length)return catalog;
@@ -64,6 +65,20 @@ function removeExercise(type,id){
   return true;
 }
 
+function renameExercise(type,id){
+  const store=readStore();
+  if(!store||!Array.isArray(store.exercises))return false;
+  const exercise=store.exercises.find(item=>String(item.id)===String(id)||String(item.type)===String(type));
+  if(!exercise)return false;
+  const answer=prompt('Digite o novo nome do exercício:',cleanName(exercise.name)||'Exercício');
+  if(answer===null)return false;
+  const name=cleanName(answer);
+  if(!name){alert('Digite um nome para o exercício.');return false}
+  const exercises=store.exercises.map(item=>String(item.id)===String(exercise.id)?{...item,name}:item);
+  writeStore({...store,exercises});
+  return true;
+}
+
 function openImagePreview(src,alt){
   document.getElementById('mse-image-preview')?.remove();
   const preview=document.createElement('div');
@@ -89,15 +104,17 @@ function render(modal,reset=false){
   const exercises=Array.isArray(store?.exercises)?store.exercises:[];
   const used=new Map(exercises.map(item=>[item.type,item]));
   const source=cachedCatalog();
-  const filtered=source.filter(item=>!query||String(item.name||'').toLowerCase().includes(query));
+  const filtered=source.filter(item=>!query||String(item.name||'').toLowerCase().includes(query)||String(used.get(item.id)?.name||'').toLowerCase().includes(query));
   const limit=Math.max(PAGE_SIZE,Number(modal.dataset.limit)||PAGE_SIZE);
   const visible=filtered.slice(0,limit);
   prewarmVisibleImages(visible);
   list.innerHTML=visible.map((item,index)=>{
     const existing=used.get(item.id);
+    const shownName=existing?.name||item.name;
     const src=imageUrl(item);
-    const thumb=src?`<img class="mse-thumb" src="${esc(src)}" alt="${esc(item.name)}" loading="${index<EAGER_IMAGES?'eager':'lazy'}" decoding="async" fetchpriority="${index<EAGER_IMAGES?'high':'auto'}" data-expand-image="true" style="cursor:zoom-in" onerror="this.style.visibility='hidden'">`:'<span class="mse-thumb" aria-hidden="true"></span>';
-    return `<article class="mse-item" data-type="${esc(item.id)}">${thumb}<span class="mse-info"><strong>${esc(item.name)}</strong><small>${existing?'Já está no seu treino':'Disponível para adicionar'}</small></span><button type="button" class="mse-action ${existing?'remove':''}" data-action="${existing?'remove':'add'}" data-id="${existing?.id??''}">${existing?'Remover':'Adicionar'}</button></article>`;
+    const thumb=src?`<img class="mse-thumb" src="${esc(src)}" alt="${esc(shownName)}" loading="${index<EAGER_IMAGES?'eager':'lazy'}" decoding="async" fetchpriority="${index<EAGER_IMAGES?'high':'auto'}" data-expand-image="true" style="cursor:zoom-in" onerror="this.style.visibility='hidden'">`:'<span class="mse-thumb" aria-hidden="true"></span>';
+    const rename=existing?`<button type="button" class="mse-rename" data-id="${esc(existing.id)}" style="padding:9px 11px;border:1px solid #6b8d74;border-radius:10px;background:#142219;color:#9bea62;font-weight:900">Renomear</button>`:'';
+    return `<article class="mse-item" data-type="${esc(item.id)}">${thumb}<span class="mse-info"><strong>${esc(shownName)}</strong><small>${existing?'Já está no seu treino':'Disponível para adicionar'}</small></span>${rename}<button type="button" class="mse-action ${existing?'remove':''}" data-action="${existing?'remove':'add'}" data-id="${existing?.id??''}">${existing?'Remover':'Adicionar'}</button></article>`;
   }).join('')||'<div style="padding:20px;text-align:center;color:#96a49a">Carregando exercícios...</div>';
   if(visible.length<filtered.length){
     const more=document.createElement('button');
@@ -115,7 +132,7 @@ function openFastManager(){
   prewarmVisibleImages(catalog);
   const modal=document.createElement('div');
   modal.id='mse-modal';modal.dataset.fastManager='1';modal.dataset.limit=String(PAGE_SIZE);
-  modal.innerHTML='<div class="mse-card"><div class="mse-top"><div><h2>Adicionar ou remover exercícios</h2><div style="color:#9cac9f;font-size:13px;margin-top:4px">Lista otimizada para abrir rapidamente.</div></div><button class="mse-back" type="button">← Voltar</button></div><input class="mse-search" placeholder="Pesquisar exercício"><div class="mse-list"></div><div class="mse-footer"></div></div>';
+  modal.innerHTML='<div class="mse-card"><div class="mse-top"><div><h2>Adicionar, remover ou renomear exercícios</h2><div style="color:#9cac9f;font-size:13px;margin-top:4px">Os exercícios já selecionados podem ser renomeados.</div></div><button class="mse-back" type="button">← Voltar</button></div><input class="mse-search" placeholder="Pesquisar exercício"><div class="mse-list"></div><div class="mse-footer"></div></div>';
   document.body.appendChild(modal);
   const close=()=>modal.remove();
   modal.querySelector('.mse-back').onclick=close;
@@ -128,6 +145,15 @@ function openFastManager(){
       event.preventDefault();
       event.stopPropagation();
       openImagePreview(image.currentSrc||image.src,image.alt);
+      return;
+    }
+    const renameButton=event.target.closest('.mse-rename');
+    if(renameButton){
+      event.preventDefault();
+      event.stopPropagation();
+      const item=renameButton.closest('.mse-item');
+      const type=item?.dataset.type;
+      if(type&&renameExercise(type,renameButton.dataset.id))render(modal);
       return;
     }
     const button=event.target.closest('.mse-action[data-action]');if(!button)return;
