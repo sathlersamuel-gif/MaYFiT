@@ -65,6 +65,14 @@ function installEvolutionLabel(){
   card.setAttribute('aria-label','Abrir evolução de cargas');
 }
 
+function keepAdminWorkoutManagerVisible(){
+  if(currentUser()?.role!=='admin')return;
+  const section=[...document.querySelectorAll('.app main>section')].find(item=>/gerenciar treino/i.test(item.querySelector('h1')?.textContent||''));
+  if(!section)return;
+  section.style.removeProperty('display');
+  delete section.dataset.adminWorkoutManagerHidden;
+}
+
 function openImage(src,name){document.querySelector('.mse-image-zoom')?.remove();const zoom=document.createElement('div');zoom.className='mse-image-zoom';zoom.innerHTML=`<button type="button">← Voltar</button><img src="${esc(src)}" alt="${esc(name)}">`;zoom.querySelector('button').onclick=()=>zoom.remove();zoom.onclick=e=>{if(e.target===zoom)zoom.remove()};document.body.appendChild(zoom)}
 
 function prewarmImages(items){
@@ -149,6 +157,6 @@ function mountStudentExercises(){
   const section=document.createElement('section');section.id='mayfit-student-exercises';section.innerHTML='<div class="mse-head"><div><h2>Meus exercícios</h2><p>Adicione ou remova exercícios do seu treino.</p></div><button type="button">Adicionar/remover exercícios</button></div>';section.querySelector('button').onclick=openManager;main.prepend(section);return true
 }
 
-function apply(){ensureStyle();installWorkoutName();installEvolutionLabel();mountStudentExercises()}
+function apply(){ensureStyle();installWorkoutName();installEvolutionLabel();keepAdminWorkoutManagerVisible();mountStudentExercises()}
 const observer=new MutationObserver(()=>requestAnimationFrame(apply));observer.observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('pageshow',apply);window.addEventListener('focus',apply);document.addEventListener('visibilitychange',()=>{if(!document.hidden)apply()});window.addEventListener('mayfit-store-updated',apply);setInterval(apply,1200);apply();
