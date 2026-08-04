@@ -2,6 +2,7 @@ import { supabase } from './lib/supabase.js';
 
 const USER_KEY = 'mayfit_user';
 const SIGNUP_COOLDOWN_KEY = 'mayfit_signup_cooldown_until';
+const ADMIN_EMAIL = 'sathlersamuel@gmail.com';
 const SUPPORT_WHATSAPP_URL = `https://wa.me/5569993057451?text=${encodeURIComponent('Olá, gostaria de fazer minha assinatura do MaYFiT.')}`;
 let busy = false;
 let signupBusy = false;
@@ -79,11 +80,14 @@ async function profileFor(user) {
     data.status = 'active';
   }
 
+  const email = String(user.email || '').trim().toLowerCase();
+  const role = data.role === 'admin' && email === ADMIN_EMAIL ? 'admin' : 'student';
+
   return {
     id: data.id,
     name: data.full_name || user.email?.split('@')[0] || 'Usuário',
     email: user.email,
-    role: data.role
+    role
   };
 }
 
@@ -287,14 +291,17 @@ function enhanceLogin() {
 
 async function restoreSession() {
   if (!supabase) return;
-  const hadLocalProfile = Boolean(sessionStorage.getItem(USER_KEY));
+  let localProfile = null;
+  try { localProfile = JSON.parse(sessionStorage.getItem(USER_KEY) || 'null'); } catch {}
   const { data } = await supabase.auth.getSession();
   if (!data.session?.user) return;
 
   try {
     const profile = await profileFor(data.session.user);
     sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
-    if (!hadLocalProfile) location.reload();
+    const changedAccess = !localProfile || localProfile.role !== profile.role ||
+      String(localProfile.email || '').toLowerCase() !== String(profile.email || '').toLowerCase();
+    if (changedAccess) location.reload();
   } catch (error) {
     await supabase.auth.signOut();
     sessionStorage.removeItem(USER_KEY);
