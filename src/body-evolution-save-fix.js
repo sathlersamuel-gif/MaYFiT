@@ -106,11 +106,12 @@ function installFastForm(form){
 
 async function addDeleteButtons(modal){
   const user=currentUser();
-  if(user?.role!=='student'||!user.id||modal.dataset.photoDeleteReady==='true')return;
+  if(user?.role!=='student'||!user.id||modal.dataset.photoDeleteReady)return;
   const entries=[...modal.querySelectorAll('.be-entry')];
   if(!entries.length)return;
+  modal.dataset.photoDeleteReady='loading';
   const {data}=await supabase.from('body_progress').select('id,photo_front,photo_side,photo_back').eq('user_id',user.id).order('measured_at',{ascending:false}).order('created_at',{ascending:false});
-  if(!data?.length)return;
+  if(!data?.length){delete modal.dataset.photoDeleteReady;return}
   modal.dataset.photoDeleteReady='true';
   entries.forEach((entry,index)=>{
     const record=data[index];if(!record)return;
@@ -118,10 +119,11 @@ async function addDeleteButtons(modal){
     const paths=[record.photo_front,record.photo_side,record.photo_back].filter(Boolean);
     images.forEach((img,imageIndex)=>{
       const path=paths[imageIndex];if(!path)return;
+      if(img.closest('[data-photo-delete-wrap]'))return;
       img.loading='lazy';img.decoding='async';
-      const wrap=document.createElement('div');wrap.style.cssText='position:relative;min-width:0';
+      const wrap=document.createElement('div');wrap.dataset.photoDeleteWrap='true';wrap.style.cssText='position:relative;min-width:0';
       img.parentNode.insertBefore(wrap,img);wrap.appendChild(img);
-      const remove=document.createElement('button');remove.type='button';remove.textContent='Excluir foto';remove.style.cssText='width:100%;margin-top:5px;padding:8px;background:#3a1b1b;color:#ffb6b6;border:1px solid #693232;border-radius:9px;font-weight:850';
+      const remove=document.createElement('button');remove.type='button';remove.dataset.deletePhoto='true';remove.textContent='Excluir foto';remove.style.cssText='width:100%;margin-top:5px;padding:8px;background:#3a1b1b;color:#ffb6b6;border:1px solid #693232;border-radius:9px;font-weight:850';
       remove.onclick=async()=>{
         if(!confirm('Excluir esta foto da evolução?'))return;
         remove.disabled=true;remove.textContent='Excluindo...';
