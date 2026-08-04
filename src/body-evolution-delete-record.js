@@ -7,7 +7,7 @@ function currentUser(){
 
 async function installDeleteEvaluationButtons(modal){
   const user=currentUser();
-  if(user?.role!=='student'||!user.id||modal.dataset.evaluationDeleteReady==='true')return;
+  if(user?.role!=='student'||!user.id)return;
   const entries=[...modal.querySelectorAll('.be-entry')];
   if(!entries.length)return;
 
@@ -19,7 +19,6 @@ async function installDeleteEvaluationButtons(modal){
     .order('created_at',{ascending:false});
 
   if(error||!data?.length)return;
-  modal.dataset.evaluationDeleteReady='true';
 
   entries.forEach((entry,index)=>{
     const record=data[index];
@@ -55,7 +54,12 @@ async function installDeleteEvaluationButtons(modal){
         if(!remaining){
           const history=modal.querySelector('.be-history');
           if(history)history.innerHTML='<div class="be-msg">Nenhuma avaliação registrada ainda.</div>';
+          return;
         }
+
+        // Reassocia os registros restantes aos cartões atuais sem recarregar a página.
+        modal.querySelectorAll('[data-delete-evaluation]').forEach(oldButton=>oldButton.remove());
+        requestAnimationFrame(()=>installDeleteEvaluationButtons(modal));
       }catch(error){
         alert('Não foi possível excluir a avaliação: '+(error.message||'erro desconhecido'));
         button.disabled=false;
