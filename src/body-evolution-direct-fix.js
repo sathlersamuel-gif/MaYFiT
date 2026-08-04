@@ -17,7 +17,7 @@ function clean(value){
 }
 
 function fieldKey(control,index){
-  return control?.name||control?.dataset?.photo||`field_${index}`;
+  return control?.name||`field_${index}`;
 }
 
 function originalLabel(label){
@@ -61,9 +61,19 @@ function organizeModal(modal){
   modal.dataset.scrollOrganized='1';
 }
 
+function restorePhotoLabel(label){
+  if(!label.querySelector('input[type="file"],input[data-photo]'))return false;
+  label.querySelectorAll('.be-label-editor').forEach(editor=>editor.remove());
+  label.removeAttribute('data-direct-editable');
+  const text=label.querySelector('span');
+  if(text&&!clean(text.textContent))text.textContent='Adicionar foto';
+  return true;
+}
+
 function makeLabelEditable(label,index,saved){
+  if(restorePhotoLabel(label)||label.classList.contains('be-photo'))return;
   if(label.dataset.directEditable==='1')return;
-  const control=label.querySelector('input[name],textarea[name],select[name],input[data-photo]');
+  const control=label.querySelector('input[name]:not([type="file"]),textarea[name],select[name]');
   if(!control)return;
   const original=originalLabel(label);
   if(!original)return;
