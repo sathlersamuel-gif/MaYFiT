@@ -200,5 +200,40 @@ body.mayfit-tab-inicio .app>main::after{display:none!important;content:none!impo
   body.mayfit-tab-inicio .app>nav{min-height:46px!important;margin-bottom:max(2px,env(safe-area-inset-bottom))!important}
   body.mayfit-tab-inicio .app>nav button{height:38px!important;min-height:38px!important}
 }
+
+/* Em celulares baixos, preserve todas as ações. A tela pode rolar, mas nunca corta botões. */
+@media(max-width:620px){
+  body.mayfit-tab-inicio{overflow-x:hidden!important;overflow-y:auto!important}
+  body.mayfit-tab-inicio .app{
+    min-height:100dvh!important;height:auto!important;overflow:visible!important;
+    padding-bottom:calc(78px + env(safe-area-inset-bottom))!important
+  }
+  body.mayfit-tab-inicio .app>main.mayfit-reference-home{padding-bottom:14px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid{align-items:stretch!important;grid-auto-rows:1fr!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid>.mayfit-feature-card{
+    height:auto!important;min-height:218px!important;padding:12px 12px 11px!important;overflow:visible!important
+  }
+  body.mayfit-tab-inicio #mayfit-feature-grid .mayfit-feature-icon{
+    width:52px!important;height:52px!important;min-width:52px!important;min-height:52px!important;margin-bottom:8px!important
+  }
+  body.mayfit-tab-inicio #mayfit-feature-grid .mayfit-feature-icon svg{width:29px!important;height:29px!important}
+  body.mayfit-tab-inicio #mayfit-feature-grid h2,
+  body.mayfit-tab-inicio #mayfit-feature-grid h3,
+  body.mayfit-tab-inicio #mayfit-feature-grid strong{
+    min-height:32px!important;font-size:14px!important;line-height:1.14!important;margin-bottom:6px!important
+  }
+  body.mayfit-tab-inicio #mayfit-feature-grid p{
+    min-height:42px!important;font-size:10.5px!important;line-height:1.3!important;margin-bottom:8px!important
+  }
+  body.mayfit-tab-inicio #mayfit-feature-grid button{
+    display:block!important;width:100%!important;height:38px!important;min-height:38px!important;
+    margin-top:auto!important;padding:5px 4px!important;font-size:10.5px!important;white-space:normal!important
+  }
+  body.mayfit-tab-inicio .app>nav{
+    position:fixed!important;left:50%!important;right:auto!important;bottom:0!important;transform:translateX(-50%)!important;
+    width:min(760px,100%)!important;max-width:760px!important;margin:0!important;
+    border-radius:16px 16px 0 0!important;z-index:9000!important
+  }
+}
 `;
 document.head.appendChild(style);
