@@ -160,13 +160,16 @@ function render(modal,reset=false){
   const exercises=Array.isArray(store?.exercises)?store.exercises:[];
   const used=new Map(exercises.map(item=>[item.type,item]));
   const source=cachedCatalog();
-  const filtered=source.filter(item=>{
+  const catalogTypes=new Set(source.map(item=>String(item.id)));
+  const orphaned=exercises.filter(item=>!catalogTypes.has(String(item.type))).map(item=>({id:String(item.type),name:item.name||item.type,image:''}));
+  const completeSource=[...source,...orphaned];
+  const filtered=completeSource.filter(item=>{
     const original=String(item.name||'').toLowerCase();
     const translated=translateName(item.name).toLowerCase();
     const saved=String(used.get(item.id)?.name||'').toLowerCase();
     return !query||original.includes(query)||translated.includes(query)||saved.includes(query);
-  });
-  const limit=Math.max(PAGE_SIZE,Number(modal.dataset.limit)||PAGE_SIZE);
+  }).sort((a,b)=>Number(used.has(b.id))-Number(used.has(a.id))||translateName(a.name).localeCompare(translateName(b.name),'pt-BR'));
+  const limit=Math.max(PAGE_SIZE,exercises.length,Number(modal.dataset.limit)||PAGE_SIZE);
   const visible=filtered.slice(0,limit);
   prewarmVisibleImages(visible);
   list.innerHTML=visible.map((item,index)=>{
