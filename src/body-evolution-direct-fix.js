@@ -2,6 +2,7 @@ import './exercise-rename-translate.js?v=2';
 import './exercise-manager-rename.js?v=1';
 import './body-photo-source-choice.js?v=1';
 import './admin-student-view-restore.js?v=1';
+import './body-evolution-visibility-restore.js?v=1';
 
 const STORAGE_KEY='mayfit_body_field_labels_v2';
 
