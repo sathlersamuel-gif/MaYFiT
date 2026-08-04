@@ -2,9 +2,45 @@ import { supabase } from './lib/supabase.js';
 
 const USER_KEY = 'mayfit_user';
 const SIGNUP_COOLDOWN_KEY = 'mayfit_signup_cooldown_until';
+const SUPPORT_WHATSAPP_URL = `https://wa.me/5569993057451?text=${encodeURIComponent('Olá, gostaria de fazer minha assinatura do MaYFiT.')}`;
 let busy = false;
 let signupBusy = false;
 let recoveryBusy = false;
+
+function blockedAccountError() {
+  const error = new Error('Sua conta está bloqueada.');
+  error.code = 'ACCOUNT_BLOCKED';
+  return error;
+}
+
+function showBlockedScreen() {
+  const page = document.querySelector('.login-page') || document.querySelector('#root');
+  if (!page) {
+    window.setTimeout(showBlockedScreen, 50);
+    return;
+  }
+
+  page.innerHTML = `
+    <style>
+      .subscription-blocked-card{width:min(92vw,420px);margin:auto;padding:32px 24px;border:1px solid rgba(132,255,0,.22);border-radius:24px;background:rgba(14,22,16,.96);box-shadow:0 22px 70px rgba(0,0,0,.4);text-align:center;color:#fff}
+      .subscription-blocked-icon{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 18px;border-radius:50%;background:rgba(132,255,0,.12);font-size:30px}
+      .subscription-blocked-card h1{margin:0 0 12px;font-size:clamp(25px,7vw,32px)}
+      .subscription-blocked-card p{margin:0 auto 24px;max-width:330px;color:#c5cec7;line-height:1.55}
+      .subscription-whatsapp{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px 18px;border-radius:14px;background:#25d366;color:#08230f!important;font-weight:800;text-decoration:none}
+      .subscription-whatsapp svg{width:24px;height:24px;fill:currentColor}
+      .subscription-back{margin-top:15px;border:0;background:transparent;color:#aeb8b0;text-decoration:underline;cursor:pointer}
+    </style>
+    <section class="subscription-blocked-card" aria-labelledby="subscription-blocked-title">
+      <div class="subscription-blocked-icon" aria-hidden="true">🔒</div>
+      <h1 id="subscription-blocked-title">Acesso bloqueado</h1>
+      <p>Gostou do nosso app? Entre em contato com nosso suporte e faça sua assinatura.</p>
+      <a class="subscription-whatsapp" href="${SUPPORT_WHATSAPP_URL}" target="_blank" rel="noopener noreferrer" aria-label="Falar com o suporte pelo WhatsApp">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M19.11 17.46c-.44-.22-2.6-1.28-3-1.43-.4-.15-.69-.22-.98.22-.29.44-1.13 1.43-1.38 1.72-.25.29-.51.33-.95.11-.44-.22-1.85-.68-3.52-2.18-1.3-1.16-2.18-2.59-2.44-3.03-.25-.44-.03-.68.19-.9.2-.2.44-.51.66-.77.22-.25.29-.44.44-.73.15-.29.07-.55-.04-.77-.11-.22-.98-2.37-1.35-3.25-.35-.85-.71-.73-.98-.74h-.84c-.29 0-.77.11-1.17.55-.4.44-1.54 1.5-1.54 3.66s1.57 4.24 1.79 4.53c.22.29 3.09 4.72 7.49 6.62 1.05.45 1.86.72 2.5.92 1.05.33 2 .29 2.76.18.84-.13 2.6-1.06 2.96-2.08.37-1.02.37-1.9.26-2.08-.11-.18-.4-.29-.84-.51M16.04 29.33h-.01a13.2 13.2 0 0 1-6.72-1.84l-.48-.29-5 1.31 1.33-4.87-.31-.5A13.19 13.19 0 0 1 2.82 16c0-7.28 5.93-13.21 13.22-13.21 3.53 0 6.85 1.38 9.35 3.87A13.13 13.13 0 0 1 29.25 16c0 7.29-5.93 13.22-13.21 13.22m11.24-24.5A15.79 15.79 0 0 0 16.04.18C7.31.18.21 7.28.21 16c0 2.78.73 5.49 2.12 7.88L.08 32l8.31-2.18a15.84 15.84 0 0 0 7.64 1.95h.01c8.72 0 15.82-7.1 15.82-15.82 0-4.23-1.63-8.2-4.58-11.12"/></svg>
+        Falar com o suporte
+      </a>
+      <button class="subscription-back" type="button" onclick="window.location.reload()">Entrar com outra conta</button>
+    </section>`;
+}
 
 function setNotice(form, message) {
   let notice = form.querySelector('.notice');
@@ -37,8 +73,11 @@ async function profileFor(user) {
     .single();
 
   if (error) throw error;
-  if (data.status === 'pending') throw new Error('Seu cadastro ainda está aguardando aprovação.');
-  if (data.status === 'blocked') throw new Error('Sua conta está bloqueada.');
+  if (data.status === 'blocked') throw blockedAccountError();
+  if (data.status === 'pending') {
+    await supabase.from('profiles').update({ status: 'active' }).eq('id', user.id);
+    data.status = 'active';
+  }
 
   return {
     id: data.id,
@@ -68,6 +107,10 @@ async function login(form) {
     location.reload();
   } catch (error) {
     await supabase.auth.signOut();
+    if (error?.code === 'ACCOUNT_BLOCKED') {
+      showBlockedScreen();
+      return;
+    }
     const message = /Invalid login credentials/i.test(error.message)
       ? 'E-mail ou senha incorretos.'
       : error.message;
@@ -166,14 +209,22 @@ async function signup(form) {
     if (error) throw error;
 
     if (data.user) {
-      await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update({ full_name: fullName.trim(), role: 'student', status: 'pending' })
+        .update({ full_name: fullName.trim(), role: 'student', status: 'active' })
         .eq('id', data.user.id);
+      if (profileError) throw profileError;
     }
 
     localStorage.setItem(SIGNUP_COOLDOWN_KEY, String(Date.now() + 15000));
-    alert('Cadastro enviado. Agora aguarde a aprovação do administrador.');
+    if (data.session && data.user) {
+      const profile = await profileFor(data.user);
+      sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
+      alert('Cadastro realizado com sucesso.');
+      location.reload();
+      return;
+    }
+    alert('Cadastro realizado com sucesso. Agora você já pode entrar.');
     const [emailInput] = form.querySelectorAll('input');
     emailInput.value = email.trim();
   } catch (error) {
@@ -235,16 +286,19 @@ function enhanceLogin() {
 }
 
 async function restoreSession() {
-  if (!supabase || sessionStorage.getItem(USER_KEY)) return;
+  if (!supabase) return;
+  const hadLocalProfile = Boolean(sessionStorage.getItem(USER_KEY));
   const { data } = await supabase.auth.getSession();
   if (!data.session?.user) return;
 
   try {
     const profile = await profileFor(data.session.user);
     sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
-    location.reload();
-  } catch {
+    if (!hadLocalProfile) location.reload();
+  } catch (error) {
     await supabase.auth.signOut();
+    sessionStorage.removeItem(USER_KEY);
+    if (error?.code === 'ACCOUNT_BLOCKED') showBlockedScreen();
   }
 }
 
