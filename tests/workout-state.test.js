@@ -127,3 +127,16 @@ test("mantém uma única fonte de treino e as otimizações futuras", async () =
   assert.match(migration, /create table if not exists public\.student_app_state/);
   assert.match(migration, /public\.is_admin\(\)/);
 });
+
+test("a rotina visual do aluno não remove componentes do administrador", async () => {
+  const source = await readFile("src/student-performance-fix.js", "utf8");
+  const restoreStart = source.indexOf("function restoreStudentHome()");
+  const panelRemoval = source.indexOf("panel.remove()", restoreStart);
+  const adminGuard = source.indexOf(
+    "if(currentUser()?.role!=='student')return;",
+    restoreStart,
+  );
+  assert.ok(restoreStart >= 0, "rotina de restauração encontrada");
+  assert.ok(adminGuard > restoreStart, "proteção do perfil encontrada");
+  assert.ok(adminGuard < panelRemoval, "proteção executa antes de remover o painel");
+});

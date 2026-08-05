@@ -49,6 +49,7 @@ function captureExistingPanel(){
 
 function restoreStudentHome(){
   restoreScheduled=false;
+  if(currentUser()?.role!=='student')return;
   const panel=document.getElementById('mayfit-body-evolution');
 
   if(!isStudentHome()){
@@ -74,6 +75,7 @@ function restoreStudentHome(){
 }
 
 function scheduleRestore(){
+  if(currentUser()?.role!=='student')return;
   if(restoreScheduled)return;
   restoreScheduled=true;
   requestAnimationFrame(()=>requestAnimationFrame(restoreStudentHome));
@@ -85,6 +87,7 @@ function scheduleWarmup(){
 }
 
 const observer=new MutationObserver(mutations=>{
+  if(currentUser()?.role!=='student')return;
   for(const mutation of mutations){
     for(const node of mutation.removedNodes){
       const panel=findEvolutionPanel(node);
