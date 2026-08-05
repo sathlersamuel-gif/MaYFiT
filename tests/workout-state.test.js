@@ -140,3 +140,31 @@ test("a rotina visual do aluno não remove componentes do administrador", async 
   assert.ok(adminGuard > restoreStart, "proteção do perfil encontrada");
   assert.ok(adminGuard < panelRemoval, "proteção executa antes de remover o painel");
 });
+
+test("mantém o ícone do MayFit configurado no site e no Android", async () => {
+  const manifest = JSON.parse(
+    await readFile("public/manifest.webmanifest", "utf8"),
+  );
+  assert.equal(manifest.name, "MaYFiT");
+  assert.deepEqual(
+    manifest.icons.map(({ src, sizes }) => ({ src, sizes })),
+    [
+      { src: "/icons/mayfit-icon-192.png", sizes: "192x192" },
+      { src: "/icons/mayfit-icon-512.png", sizes: "512x512" },
+    ],
+  );
+
+  const capacitor = JSON.parse(
+    await readFile("capacitor.config.json", "utf8"),
+  );
+  assert.equal(capacitor.appId, "com.mayfit.app");
+  assert.equal(capacitor.appName, "MaYFiT");
+  assert.equal(capacitor.webDir, "dist");
+
+  const androidManifest = await readFile(
+    "android/app/src/main/AndroidManifest.xml",
+    "utf8",
+  );
+  assert.match(androidManifest, /android:icon="@mipmap\/ic_launcher"/);
+  assert.match(androidManifest, /android:screenOrientation="portrait"/);
+});

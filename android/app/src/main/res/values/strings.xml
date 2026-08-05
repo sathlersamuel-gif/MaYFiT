@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MaYFiT</string>
+    <string name="title_activity_main">MaYFiT</string>
+    <string name="package_name">com.mayfit.app</string>
+    <string name="custom_url_scheme">com.mayfit.app</string>
+</resources>
