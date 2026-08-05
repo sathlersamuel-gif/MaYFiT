@@ -1,8 +1,14 @@
-const VERSION = "mayfit-v8";
+const VERSION = "mayfit-v9";
 const APP_CACHE = `${VERSION}-app`;
 const MEDIA_CACHE = `${VERSION}-media`;
 const LEGACY_PHOTO_CACHE = "mayfit-exercise-photos-v1";
-const CORE = ["/", "/index.html", "/manifest.webmanifest"];
+const CORE = [
+  "/",
+  "/index.html",
+  "/manifest.webmanifest",
+  "/icons/mayfit-icon-192.png",
+  "/icons/mayfit-icon-512.png",
+];
 const EXERCISE_HOST = "raw.githubusercontent.com";
 
 self.addEventListener("install", (event) => {
