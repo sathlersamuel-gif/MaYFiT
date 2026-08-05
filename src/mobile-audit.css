@@ -28,6 +28,27 @@ body{
   overscroll-behavior-y:none;
 }
 
+/* Libera a rolagem vertical dentro do WebView usado pelo APK Android. */
+html{
+  height:auto!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+}
+
+body{
+  height:auto!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+}
+
+#root,.app{
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+
 .app{
   min-height:100dvh!important;
   padding-bottom:calc(88px + var(--mayfit-safe-bottom))!important;
@@ -41,6 +62,9 @@ body{
   width:100%;
   margin:0 auto;
   padding-top:12px!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
 }
 
 /* Evita imagem/cartão do gerenciador colado no topo e mantém tudo centralizado */
