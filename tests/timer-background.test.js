@@ -1,0 +1,66 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+import {
+  timerDeadline,
+  timerSecondsRemaining,
+} from "../src/lib/timer-clock.js";
+
+test("calcula o cronômetro pelo horário real após suspensão da tela", () => {
+  const deadline = timerDeadline(45, 1_000);
+  assert.equal(deadline, 46_000);
+  assert.equal(timerSecondsRemaining(deadline, 2_000), 44);
+  assert.equal(timerSecondsRemaining(deadline, 45_500), 1);
+  assert.equal(timerSecondsRemaining(deadline, 46_000), 0);
+  assert.equal(timerSecondsRemaining(deadline, 90_000), 0);
+});
+
+test("mantém o alarme nativo configurado para tela apagada", async () => {
+  const [main, notifications, manifest, sound] = await Promise.all([
+    readFile("src/main.jsx", "utf8"),
+    readFile("src/lib/workout-timer-notifications.js", "utf8"),
+    readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
+    readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
+  ]);
+  const capacitor = JSON.parse(
+    await readFile("capacitor.config.json", "utf8"),
+  );
+
+  assert.match(main, /timerSecondsRemaining\(deadline\)/);
+  assert.match(main, /addTimerResumeListener/);
+  assert.match(main, /scheduleTimerNotification/);
+  assert.doesNotMatch(main, /setSeconds\(\(s\) => Math\.max\(0, s - 1\)\)/);
+
+  assert.match(notifications, /LocalNotifications\.schedule/);
+  assert.match(notifications, /allowWhileIdle: true/);
+  assert.match(notifications, /checkExactNotificationSetting/);
+  assert.match(notifications, /mayfit_timer\.wav/);
+  assert.match(manifest, /android\.permission\.USE_EXACT_ALARM/);
+  assert.equal(
+    capacitor.plugins.LocalNotifications.smallIcon,
+    "ic_stat_mayfit_timer",
+  );
+  assert.equal(
+    capacitor.plugins.LocalNotifications.sound,
+    "mayfit_timer.wav",
+  );
+  assert.equal(sound.subarray(0, 4).toString("ascii"), "RIFF");
+  assert.equal(sound.subarray(8, 12).toString("ascii"), "WAVE");
+});
+
+test("gera uma atualização Android de produção", async () => {
+  const [gradle, packageJson] = await Promise.all([
+    readFile("android/app/build.gradle", "utf8"),
+    readFile("package.json", "utf8").then(JSON.parse),
+  ]);
+  assert.match(gradle, /versionCode 2/);
+  assert.match(gradle, /versionName "1\.1\.0"/);
+  assert.match(packageJson.scripts["android:apk"], /assembleRelease/);
+  assert.doesNotMatch(packageJson.scripts["android:apk"], /assembleDebug/);
+  assert.equal(packageJson.dependencies["@capacitor/app"], "^8.1.1");
+  assert.equal(
+    packageJson.dependencies["@capacitor/local-notifications"],
+    "^8.2.1",
+  );
+});

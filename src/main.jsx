@@ -28,6 +28,17 @@ import {
   readWorkoutData,
   writeWorkoutData,
 } from "./lib/workout-state.js";
+import {
+  timerDeadline,
+  timerSecondsRemaining,
+} from "./lib/timer-clock.js";
+import {
+  addTimerResumeListener,
+  cancelTimerNotification,
+  hasNativeTimerNotifications,
+  prepareTimerNotifications,
+  scheduleTimerNotification,
+} from "./lib/workout-timer-notifications.js";
 
 const CUSTOM_NAMES = "mayfit_catalog_custom_names_v1";
 const BASE =
@@ -387,19 +398,127 @@ function Workout({ data, setData, onBack }) {
   const [seconds, setSeconds] = useState(data.exercises[0]?.rest || 60);
   const [running, setRunning] = useState(false);
   const [started, setStarted] = useState(false);
+  const [deadline, setDeadline] = useState(null);
   const [done, setDone] = useState({});
   const [timeText, setTimeText] = useState(
     format(data.exercises[0]?.rest || 60),
   );
   const zeroHandled = useRef(false);
+  const deadlineRef = useRef(0);
+  const nativeAlertScheduledRef = useRef(false);
+  const notificationWarningShownRef = useRef(false);
+  const transitionTimeoutRef = useRef(null);
   const pauseValue = () =>
     Math.max(0, Number(localStorage.getItem("mayfit_pause_seconds")) || 60);
+  const clearPendingTransition = () => {
+    if (!transitionTimeoutRef.current) return;
+    clearTimeout(transitionTimeoutRef.current);
+    transitionTimeoutRef.current = null;
+  };
+  const requestTimerAlerts = async () => {
+    const ready = await prepareTimerNotifications({ request: true });
+    if (
+      !ready &&
+      hasNativeTimerNotifications() &&
+      !notificationWarningShownRef.current
+    ) {
+      notificationWarningShownRef.current = true;
+      alert(
+        "Para o sino tocar com a tela apagada, permita as notificações e os alarmes do MaYFiT nas configurações do Android.",
+      );
+    }
+    return ready;
+  };
+  const startCountdown = (
+    value,
+    nextPhase = phase,
+    nextActiveId = activeId,
+  ) => {
+    clearPendingTransition();
+    const duration = Math.max(0, Number(value) || 0);
+    const nextDeadline = timerDeadline(duration);
+    deadlineRef.current = duration > 0 ? nextDeadline : 0;
+    nativeAlertScheduledRef.current = false;
+    setDeadline(duration > 0 ? nextDeadline : null);
+    setActiveId(nextActiveId);
+    setPhase(nextPhase);
+    setSeconds(duration);
+    setStarted(true);
+    setRunning(duration > 0);
+    if (duration <= 0) {
+      void cancelTimerNotification({ delivered: true });
+      return;
+    }
+    const exerciseName = entries[nextActiveId]?.name || "";
+    void scheduleTimerNotification({
+      deadline: nextDeadline,
+      phase: nextPhase,
+      exerciseName,
+    }).then((scheduled) => {
+      if (deadlineRef.current === nextDeadline) {
+        nativeAlertScheduledRef.current = scheduled;
+      } else if (scheduled) {
+        void cancelTimerNotification();
+      }
+    });
+  };
+  const pauseCountdown = () => {
+    clearPendingTransition();
+    const remaining = deadlineRef.current
+      ? timerSecondsRemaining(deadlineRef.current)
+      : seconds;
+    deadlineRef.current = 0;
+    nativeAlertScheduledRef.current = false;
+    setDeadline(null);
+    setSeconds(remaining);
+    setRunning(false);
+    void cancelTimerNotification();
+  };
+  const resetCountdown = (value) => {
+    clearPendingTransition();
+    deadlineRef.current = 0;
+    nativeAlertScheduledRef.current = false;
+    setDeadline(null);
+    setSeconds(Math.max(0, Number(value) || 0));
+    setRunning(false);
+    setStarted(false);
+    void cancelTimerNotification({ delivered: true });
+  };
   useEffect(() => setTimeText(format(seconds)), [seconds]);
   useEffect(() => {
-    if (!running || seconds <= 0) return;
-    const id = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    if (!running || !deadline) return;
+    const syncClock = () => setSeconds(timerSecondsRemaining(deadline));
+    syncClock();
+    const id = setInterval(syncClock, 250);
     return () => clearInterval(id);
-  }, [running, seconds]);
+  }, [running, deadline]);
+  useEffect(() => {
+    let disposed = false;
+    let listener = null;
+    addTimerResumeListener(() => {
+      if (deadlineRef.current) {
+        setSeconds(timerSecondsRemaining(deadlineRef.current));
+      }
+    })
+      .then((handle) => {
+        if (disposed) void handle.remove();
+        else listener = handle;
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      if (listener) void listener.remove();
+    };
+  }, []);
+  useEffect(
+    () => () => {
+      clearPendingTransition();
+      deadlineRef.current = 0;
+      nativeAlertScheduledRef.current = false;
+      void cancelTimerNotification({ delivered: true });
+    },
+    [],
+  );
   useEffect(() => {
     if (seconds > 0) {
       zeroHandled.current = false;
@@ -407,16 +526,25 @@ function Workout({ data, setData, onBack }) {
     }
     if (!started || !activeId || zeroHandled.current) return;
     zeroHandled.current = true;
+    const nativeAlertScheduled = nativeAlertScheduledRef.current;
+    deadlineRef.current = 0;
+    nativeAlertScheduledRef.current = false;
+    setDeadline(null);
     setRunning(false);
-    playTimerAlert();
-    if (navigator.vibrate) navigator.vibrate([500, 180, 500, 180, 700]);
+    if (!nativeAlertScheduled) {
+      playTimerAlert();
+      if (navigator.vibrate) navigator.vibrate([500, 180, 500, 180, 700]);
+    }
     const exercise = entries[activeId];
     if (phase === "pause") {
       setPhase("exercise");
-      setTimeout(() => {
-        setSeconds(Number(exercise?.rest) || 0);
-        setStarted(true);
-        setRunning(true);
+      transitionTimeoutRef.current = setTimeout(() => {
+        transitionTimeoutRef.current = null;
+        startCountdown(
+          Number(exercise?.rest) || 0,
+          "exercise",
+          activeId,
+        );
       }, 900);
       return;
     }
@@ -425,10 +553,9 @@ function Workout({ data, setData, onBack }) {
     if (left > 0) {
       setRemainingSets((old) => ({ ...old, [activeId]: left }));
       setPhase("pause");
-      setTimeout(() => {
-        setSeconds(pauseValue());
-        setStarted(true);
-        setRunning(true);
+      transitionTimeoutRef.current = setTimeout(() => {
+        transitionTimeoutRef.current = null;
+        startCountdown(pauseValue(), "pause", activeId);
       }, 900);
     } else {
       setDone((old) => ({ ...old, [activeId]: true }));
@@ -450,17 +577,15 @@ function Workout({ data, setData, onBack }) {
       }));
   };
   const useTime = (e) => {
+    resetCountdown(Number(entries[e.id].rest) || 0);
     setActiveId(e.id);
     setPhase("exercise");
     setRemainingSets((old) => ({
       ...old,
       [e.id]: Number(entries[e.id].sets) || 1,
     }));
-    setSeconds(Number(entries[e.id].rest) || 0);
-    setRunning(false);
-    setStarted(false);
   };
-  const conclude = (e) => {
+  const conclude = async (e) => {
     if (done[e.id]) {
       setDone((old) => ({ ...old, [e.id]: false }));
       setRemainingSets((old) => ({
@@ -470,24 +595,38 @@ function Workout({ data, setData, onBack }) {
       return;
     }
     unlockTimerAudio();
-    setActiveId(e.id);
-    setPhase("exercise");
+    await requestTimerAlerts();
     setRemainingSets((old) => ({
       ...old,
       [e.id]: old[e.id] || Number(entries[e.id].sets) || 1,
     }));
-    setSeconds(Number(entries[e.id].rest) || 0);
-    setStarted(true);
-    setRunning(true);
+    startCountdown(Number(entries[e.id].rest) || 0, "exercise", e.id);
   };
-  const toggleTimer = () => {
+  const toggleTimer = async () => {
     if (seconds <= 0 || !activeId) return;
     unlockTimerAudio();
-    setStarted(true);
-    setRunning((v) => !v);
+    if (running) {
+      pauseCountdown();
+      return;
+    }
+    await requestTimerAlerts();
+    startCountdown(seconds, phase, activeId);
   };
   const timerLabel = running ? "PAUSAR" : started ? "CONTINUAR" : "START";
+  const leaveWorkout = () => {
+    clearPendingTransition();
+    deadlineRef.current = 0;
+    nativeAlertScheduledRef.current = false;
+    setRunning(false);
+    void cancelTimerNotification({ delivered: true });
+    onBack();
+  };
   const finish = () => {
+    clearPendingTransition();
+    deadlineRef.current = 0;
+    nativeAlertScheduledRef.current = false;
+    setRunning(false);
+    void cancelTimerNotification({ delivered: true });
     const updated = data.exercises.map((e) => ({
       ...e,
       ...entries[e.id],
@@ -511,7 +650,7 @@ function Workout({ data, setData, onBack }) {
   return (
     <section className="workout-screen">
       <div className="workout-top">
-        <button className="icon back-button" onClick={onBack}>
+        <button className="icon back-button" onClick={leaveWorkout}>
           <ChevronLeft />
         </button>
         <div className="time-strip">
@@ -521,10 +660,8 @@ function Workout({ data, setData, onBack }) {
             onChange={(e) => setTimeText(e.target.value)}
             onBlur={() => {
               const value = parseTime(timeText);
-              setSeconds(value);
+              resetCountdown(value);
               setPhase("exercise");
-              setStarted(false);
-              setRunning(false);
               setTimeText(format(value));
             }}
           />
