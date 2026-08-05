@@ -1,35 +1,45 @@
-import './exercise-rename-translate.js?v=2';
+import "./exercise-rename-translate.js?v=2";
 
-const STORAGE_KEY='mayfit_body_field_labels_v2';
+const STORAGE_KEY = "mayfit_body_field_labels_v2";
 
-function readSaved(){
-  try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{}}catch{return {}}
+function readSaved() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || {};
+  } catch {
+    return {};
+  }
 }
 
-function writeSaved(data){
-  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}catch{}
+function writeSaved(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {}
 }
 
-function clean(value){
-  return String(value||'').replace(/\s+/g,' ').trim();
+function clean(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function fieldKey(control,index){
-  return control?.name||control?.dataset?.photo||`field_${index}`;
+function fieldKey(control, index) {
+  return control?.name || control?.dataset?.photo || `field_${index}`;
 }
 
-function originalLabel(label){
-  return clean([...label.childNodes]
-    .filter(node=>node.nodeType===Node.TEXT_NODE)
-    .map(node=>node.textContent)
-    .join(' '));
+function originalLabel(label) {
+  return clean(
+    [...label.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent)
+      .join(" "),
+  );
 }
 
-function installStyles(){
-  if(document.getElementById('mayfit-body-direct-fix-style'))return;
-  const style=document.createElement('style');
-  style.id='mayfit-body-direct-fix-style';
-  style.textContent=`
+function installStyles() {
+  if (document.getElementById("mayfit-body-direct-fix-style")) return;
+  const style = document.createElement("style");
+  style.id = "mayfit-body-direct-fix-style";
+  style.textContent = `
     .be-modal{overflow:hidden!important;padding:0!important}
     .be-modal .be-wrap{width:min(900px,100%)!important;height:100dvh!important;max-height:100dvh!important;margin:0 auto!important;padding:0 14px!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important}
     .be-modal .be-top{position:relative!important;inset:auto!important;transform:none!important;flex:0 0 auto!important;width:100%!important;min-height:0!important;margin:0!important;padding:max(18px,env(safe-area-inset-top)) 0 14px!important;box-sizing:border-box!important;background:#050806!important;border-bottom:1px solid #23382a!important;box-shadow:none!important;z-index:2!important}
@@ -47,58 +57,75 @@ function installStyles(){
   document.head.appendChild(style);
 }
 
-function organizeModal(modal){
-  if(modal.dataset.scrollOrganized==='1')return;
-  const wrap=modal.querySelector('.be-wrap');
-  const top=wrap?.querySelector(':scope > .be-top');
-  if(!wrap||!top)return;
-  const scroll=document.createElement('div');
-  scroll.className='be-scroll';
-  [...wrap.children].filter(child=>child!==top).forEach(child=>scroll.appendChild(child));
+function organizeModal(modal) {
+  if (modal.dataset.scrollOrganized === "1") return;
+  const wrap = modal.querySelector(".be-wrap");
+  const top = wrap?.querySelector(":scope > .be-top");
+  if (!wrap || !top) return;
+  const scroll = document.createElement("div");
+  scroll.className = "be-scroll";
+  [...wrap.children]
+    .filter((child) => child !== top)
+    .forEach((child) => scroll.appendChild(child));
   wrap.appendChild(scroll);
-  modal.dataset.scrollOrganized='1';
+  modal.dataset.scrollOrganized = "1";
 }
 
-function makeLabelEditable(label,index,saved){
-  if(label.dataset.directEditable==='1')return;
-  const control=label.querySelector('input[name],textarea[name],select[name],input[data-photo]');
-  if(!control)return;
-  const original=originalLabel(label);
-  if(!original)return;
-  const key=fieldKey(control,index);
-  const editor=document.createElement('button');
-  editor.type='button';
-  editor.className='be-label-editor';
-  editor.dataset.key=key;
-  editor.dataset.original=original;
-  editor.textContent=saved[key]||original;
-  [...label.childNodes].filter(node=>node.nodeType===Node.TEXT_NODE&&clean(node.textContent)).forEach(node=>node.remove());
-  label.insertBefore(editor,label.firstChild);
-  label.dataset.directEditable='1';
-  editor.addEventListener('click',event=>{
+function makeLabelEditable(label, index, saved) {
+  if (label.dataset.directEditable === "1") return;
+  const control = label.querySelector(
+    "input[name],textarea[name],select[name],input[data-photo]",
+  );
+  if (!control) return;
+  const original = originalLabel(label);
+  if (!original) return;
+  const key = fieldKey(control, index);
+  const editor = document.createElement("button");
+  editor.type = "button";
+  editor.className = "be-label-editor";
+  editor.dataset.key = key;
+  editor.dataset.original = original;
+  editor.textContent = saved[key] || original;
+  [...label.childNodes]
+    .filter(
+      (node) => node.nodeType === Node.TEXT_NODE && clean(node.textContent),
+    )
+    .forEach((node) => node.remove());
+  label.insertBefore(editor, label.firstChild);
+  label.dataset.directEditable = "1";
+  editor.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    const current=editor.textContent;
-    const next=window.prompt('Digite o novo nome deste campo:',current);
-    if(next===null)return;
-    const value=clean(next)||original;
-    editor.textContent=value;
-    const updated=readSaved();
-    updated[key]=value;
+    const current = editor.textContent;
+    const next = window.prompt("Digite o novo nome deste campo:", current);
+    if (next === null) return;
+    const value = clean(next) || original;
+    editor.textContent = value;
+    const updated = readSaved();
+    updated[key] = value;
     writeSaved(updated);
   });
 }
 
-function apply(){
+function apply() {
+  if (typeof document === "undefined") return;
   installStyles();
-  const saved=readSaved();
-  document.querySelectorAll('.be-modal').forEach(modal=>{
+  const saved = readSaved();
+  document.querySelectorAll(".be-modal").forEach((modal) => {
     organizeModal(modal);
-    modal.querySelectorAll('form label').forEach((label,index)=>makeLabelEditable(label,index,saved));
+    modal
+      .querySelectorAll("form label")
+      .forEach((label, index) => makeLabelEditable(label, index, saved));
   });
 }
 
-const observer=new MutationObserver(()=>requestAnimationFrame(apply));
-observer.observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('pageshow',apply);
+const observer = new MutationObserver(() => {
+  if (
+    typeof document !== "undefined" &&
+    typeof requestAnimationFrame !== "undefined"
+  )
+    requestAnimationFrame(apply);
+});
+observer.observe(document.documentElement, { childList: true, subtree: true });
+window.addEventListener("pageshow", apply);
 apply();

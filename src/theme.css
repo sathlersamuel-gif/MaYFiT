@@ -6,6 +6,7 @@ body{margin:0;background:#020403;color:#fff}
 .workout-screen{width:100%;max-width:820px;margin:0 auto;padding:8px 8px 108px;background:#020403;color:#fff;overflow-x:hidden}
 
 .workout-screen .workout-top{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;margin:0;padding:6px 0 0;background:#020403}
+.workout-screen .workout-name-strip{margin:8px 0;padding:10px 14px;border:1px solid #35513f;border-radius:14px;background:#09110d;color:#9df20f;font-size:18px;font-weight:950;overflow-wrap:anywhere}
 .workout-screen .back-button{width:64px;height:82px;border:1px solid #35513f;border-radius:24px;background:#09110d;color:#fff}
 .workout-screen .time-strip{min-width:0;height:82px;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(130px,.72fr);align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(180deg,#0d100e,#050706);border:1px solid #3b4540;border-radius:24px;color:#fff}
 .workout-screen .time-strip span{font-size:24px;font-weight:950;white-space:nowrap}
