@@ -1,4 +1,4 @@
-name: Gerar APK Android
+name: Gerar APK Android Release
 
 on:
   pull_request:
@@ -39,17 +39,17 @@ jobs:
       - name: Atualizar o aplicativo Android
         run: npm run android:sync
 
-      - name: Gerar APK instalável
+      - name: Gerar APK release
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
-      - name: Preparar arquivo para download
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk MaYFiT-Android.apk
+      - name: Preparar APK para assinatura
+        run: cp android/app/build/outputs/apk/release/app-release-unsigned.apk MaYFiT-Android-Unsigned.apk
 
-      - name: Disponibilizar APK
+      - name: Disponibilizar APK sem assinatura
         uses: actions/upload-artifact@v4
         with:
-          name: MaYFiT-Android-APK
-          path: MaYFiT-Android.apk
+          name: MaYFiT-Android-Release-Unsigned
+          path: MaYFiT-Android-Unsigned.apk
           if-no-files-found: error
           retention-days: 30

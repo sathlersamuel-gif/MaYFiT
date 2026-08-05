@@ -167,4 +167,12 @@ test("mantém o ícone do MayFit configurado no site e no Android", async () => 
   );
   assert.match(androidManifest, /android:icon="@mipmap\/ic_launcher"/);
   assert.match(androidManifest, /android:screenOrientation="portrait"/);
+
+  const workflow = await readFile(
+    ".github/workflows/build-android-apk.yml",
+    "utf8",
+  );
+  assert.match(workflow, /\.\/gradlew assembleRelease --no-daemon/);
+  assert.match(workflow, /app-release-unsigned\.apk/);
+  assert.doesNotMatch(workflow, /assembleDebug/);
 });
