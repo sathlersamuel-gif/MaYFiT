@@ -635,8 +635,9 @@ function saved() {
   const seen = new Set();
   return source.filter((item) => {
     const type = clean(item?.type);
-    if (!type || seen.has(type)) return false;
-    seen.add(type);
+    const key = type.toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
@@ -682,7 +683,9 @@ function enhanceStudentManager() {
   const modal = document.getElementById("mse-modal");
   if (!modal) return;
   const exercises = saved();
-  const byType = new Map(exercises.map((item) => [String(item.type), item]));
+  const byType = new Map(
+    exercises.map((item) => [clean(item.type).toLowerCase(), item]),
+  );
   modal.querySelectorAll(".mse-item").forEach((row) => {
     const type = String(row.dataset.type || "");
     if (!type) return;
@@ -700,7 +703,7 @@ function enhanceStudentManager() {
       row.appendChild(rename);
     }
     rename.dataset.type = type;
-    const existing = byType.get(type);
+    const existing = byType.get(clean(type).toLowerCase());
     const action = row.querySelector(".mse-action[data-action]");
     const status = row.querySelector(".mse-info small");
     if (action) {
@@ -718,7 +721,8 @@ function enhanceStudentManager() {
   const selected = modal.querySelector('[data-tab="selected"]');
   if (selected) selected.textContent = `Selecionados (${total})`;
   const footer = modal.querySelector(".mse-footer");
-  if (footer) footer.textContent = `${total} exercício(s) no seu treino`;
+  if (footer && !modal.querySelector(".mse-tabs"))
+    footer.textContent = `${total} exercício(s) no seu treino`;
 }
 
 function enhanceAdminManager() {

@@ -1,4 +1,4 @@
-const VERSION = "mayfit-v4";
+const VERSION = "mayfit-v5";
 const APP_CACHE = `${VERSION}-app`;
 const MEDIA_CACHE = `${VERSION}-media`;
 const CORE = ["/", "/index.html", "/manifest.webmanifest"];

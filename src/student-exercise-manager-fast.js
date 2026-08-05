@@ -41,6 +41,21 @@ function esc(value) {
 function imageUrl(item) {
   return item?.image ? IMAGE_BASE + item.image : "";
 }
+function exerciseKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+function canonicalExercises(store = readStore()) {
+  const source = Array.isArray(store?.exercises) ? store.exercises : [];
+  const seen = new Set();
+  return source.filter((item) => {
+    const key = exerciseKey(item?.type);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 function cachedCatalog() {
   if (catalog.length) return catalog;
@@ -96,18 +111,17 @@ async function refreshCatalog(modal) {
 function addExercise(type) {
   const store = readStore();
   if (!store || !Array.isArray(store.exercises)) return false;
-  if (store.exercises.some((item) => item.type === type)) return true;
-  const item = catalog.find((exercise) => exercise.id === type);
+  const exercises = canonicalExercises(store);
+  const key = exerciseKey(type);
+  if (exercises.some((item) => exerciseKey(item.type) === key)) return true;
+  const item = catalog.find((exercise) => exerciseKey(exercise.id) === key);
   if (!item) return false;
   const nextId =
-    Math.max(
-      0,
-      ...store.exercises.map((exercise) => Number(exercise.id) || 0),
-    ) + 1;
+    Math.max(0, ...exercises.map((exercise) => Number(exercise.id) || 0)) + 1;
   writeStore({
     ...store,
     exercises: [
-      ...store.exercises,
+      ...exercises,
       {
         id: nextId,
         type: item.id,
@@ -127,15 +141,17 @@ function addExercise(type) {
 function removeExercise(type, id) {
   const store = readStore();
   if (!store || !Array.isArray(store.exercises)) return false;
-  const exercise = store.exercises.find(
-    (item) => String(item.id) === String(id) || item.type === type,
+  const exercises = canonicalExercises(store);
+  const key = exerciseKey(type);
+  const exercise = exercises.find(
+    (item) => String(item.id) === String(id) || exerciseKey(item.type) === key,
   );
   if (!exercise) return true;
   if (!confirm(`Remover ${exercise.name || "este exercício"} do seu treino?`))
     return false;
   writeStore({
     ...store,
-    exercises: store.exercises.filter(
+    exercises: exercises.filter(
       (item) => String(item.id) !== String(exercise.id),
     ),
   });
@@ -167,36 +183,64 @@ function render(modal, reset = false) {
   if (reset) modal.dataset.limit = String(PAGE_SIZE);
   const query = (search?.value || "").trim().toLowerCase();
   const store = readStore();
-  const exercises = Array.isArray(store?.exercises) ? store.exercises : [];
-  const used = new Map(exercises.map((item) => [item.type, item]));
+  const exercises = canonicalExercises(store);
+  const used = new Map(exercises.map((item) => [exerciseKey(item.type), item]));
   const source = cachedCatalog();
-  const filtered = source.filter(
-    (item) =>
-      !query ||
-      String(item.name || "")
+  const byType = new Map(source.map((item) => [exerciseKey(item.id), item]));
+  const filtered = source.filter((item) => {
+    if (!query) return true;
+    const existing = used.get(exerciseKey(item.id));
+    return [item.name, existing?.name].some((name) =>
+      String(name || "")
         .toLowerCase()
         .includes(query),
-  );
+    );
+  });
   const limit = Math.max(PAGE_SIZE, Number(modal.dataset.limit) || PAGE_SIZE);
-  const visible = filtered.slice(0, limit);
+  const visibleByType = new Map(
+    filtered.slice(0, limit).map((item) => [exerciseKey(item.id), item]),
+  );
+  exercises.forEach((exercise) => {
+    const key = exerciseKey(exercise.type);
+    const catalogItem = byType.get(key);
+    const item = catalogItem || {
+      id: exercise.type,
+      name: exercise.name || "Exercício",
+      image: "",
+    };
+    const matches =
+      !query ||
+      [item.name, exercise.name].some((name) =>
+        String(name || "")
+          .toLowerCase()
+          .includes(query),
+      );
+    if (matches && !visibleByType.has(key)) visibleByType.set(key, item);
+  });
+  const visible = [...visibleByType.values()];
   prewarmVisibleImages(visible);
   list.innerHTML =
     visible
       .map((item, index) => {
-        const existing = used.get(item.id);
+        const existing = used.get(exerciseKey(item.id));
+        const rowName = String(existing?.name || item.name || "Exercício");
         const src = imageUrl(item);
         const thumb = src
-          ? `<img class="mse-thumb" src="${esc(src)}" alt="${esc(item.name)}" loading="${index < EAGER_IMAGES ? "eager" : "lazy"}" decoding="async" fetchpriority="${index < EAGER_IMAGES ? "high" : "auto"}" data-expand-image="true" style="cursor:zoom-in" onerror="this.style.visibility='hidden'">`
+          ? `<img class="mse-thumb" src="${esc(src)}" alt="${esc(rowName)}" loading="${index < EAGER_IMAGES ? "eager" : "lazy"}" decoding="async" fetchpriority="${index < EAGER_IMAGES ? "high" : "auto"}" data-expand-image="true" style="cursor:zoom-in" onerror="this.style.visibility='hidden'">`
           : '<span class="mse-thumb" aria-hidden="true"></span>';
-        return `<article class="mse-item" data-type="${esc(item.id)}">${thumb}<span class="mse-info"><strong>${esc(item.name)}</strong><small>${existing ? "Já está no seu treino" : "Disponível para adicionar"}</small></span><button type="button" class="mse-action ${existing ? "remove" : ""}" data-action="${existing ? "remove" : "add"}" data-id="${existing?.id ?? ""}">${existing ? "Remover" : "Adicionar"}</button></article>`;
+        return `<article class="mse-item" data-type="${esc(item.id)}">${thumb}<span class="mse-info"><strong>${esc(rowName)}</strong><small>${existing ? "Já está no seu treino" : "Disponível para adicionar"}</small></span><button type="button" class="mse-action ${existing ? "remove" : ""}" data-action="${existing ? "remove" : "add"}" data-id="${existing?.id ?? ""}">${existing ? "Remover" : "Adicionar"}</button></article>`;
       })
       .join("") ||
     '<div style="padding:20px;text-align:center;color:#96a49a">Carregando exercícios...</div>';
-  if (visible.length < filtered.length) {
+  const remaining = filtered.filter(
+    (item) => !visibleByType.has(exerciseKey(item.id)),
+  ).length;
+  if (remaining > 0) {
     const more = document.createElement("button");
     more.type = "button";
-    more.className = "mse-action";
-    more.textContent = `Mostrar mais (${filtered.length - visible.length})`;
+    more.className = "mse-action mse-load-more";
+    more.dataset.loadMore = "true";
+    more.textContent = `Mostrar mais (${remaining})`;
     more.style.cssText = "width:100%;margin-top:4px";
     more.onclick = () => {
       modal.dataset.limit = String(limit + PAGE_SIZE);
@@ -204,7 +248,7 @@ function render(modal, reset = false) {
     };
     list.appendChild(more);
   }
-  footer.textContent = `${exercises.length} exercício(s) no treino • ${filtered.length} encontrado(s)`;
+  footer.textContent = `${exercises.length} exercício(s) no seu treino • ${visible.length} exibido(s)`;
 }
 
 function openFastManager() {

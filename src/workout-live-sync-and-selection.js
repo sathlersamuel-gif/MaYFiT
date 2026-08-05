@@ -114,6 +114,7 @@ function ensureStyles() {
   #mse-modal .mse-tab{height:42px;padding:0 10px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:#aab8ae!important;font-size:14px!important;font-weight:900!important}
   #mse-modal .mse-tab.active{background:#78d532!important;color:#07110c!important;box-shadow:0 3px 12px rgba(120,213,50,.24)!important}
   #mse-modal .mse-item.mse-hidden-by-tab{display:none!important}
+  #mse-modal .mse-load-more[hidden]{display:none!important}
   #mse-modal .mse-tab-empty{padding:26px 16px;text-align:center;color:#9cac9f;font-size:14px}
   #mse-modal .mse-action.mse-saving{opacity:.72;pointer-events:none}
   @media(max-width:620px){#mse-modal .mse-tabs{margin:10px 12px 0}.mse-card .mse-search{margin-top:10px!important}}
@@ -121,22 +122,42 @@ function ensureStyles() {
   document.head.appendChild(style);
 }
 
+function exerciseTypeKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function selectedExercises() {
+  const store = readStore();
+  const source = Array.isArray(store?.exercises) ? store.exercises : [];
+  const seen = new Set();
+  return source.filter((item) => {
+    const key = exerciseTypeKey(item?.type);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function selectedTypes() {
-  return new Set(
-    (readStore()?.exercises || []).map((item) => String(item.type)),
-  );
+  return new Set(selectedExercises().map((item) => exerciseTypeKey(item.type)));
 }
 
 function applyTab(modal) {
+  if (typeof document === "undefined" || !modal?.isConnected) return;
   const list = modal.querySelector(".mse-list");
   if (!list) return;
   const selected = selectedTypes();
   let visible = 0;
   list.querySelectorAll(".mse-item").forEach((item) => {
-    const show = activeTab === "all" || selected.has(String(item.dataset.type));
+    const show =
+      activeTab === "all" || selected.has(exerciseTypeKey(item.dataset.type));
     item.classList.toggle("mse-hidden-by-tab", !show);
     if (show) visible++;
   });
+  const loadMore = list.querySelector(".mse-load-more,[data-load-more]");
+  if (loadMore) loadMore.hidden = activeTab === "selected";
   let empty = list.querySelector(".mse-tab-empty");
   if (activeTab === "selected" && visible === 0) {
     if (!empty) {
@@ -156,9 +177,11 @@ function applyTab(modal) {
     .forEach((button) =>
       button.classList.toggle("active", button.dataset.tab === activeTab),
     );
+  refreshFooter(modal);
 }
 
 function installTabs(modal) {
+  if (typeof document === "undefined" || !modal?.isConnected) return;
   modal.querySelector(".mse-selected-panel")?.remove();
   const search = modal.querySelector(".mse-search");
   if (!search) return;
@@ -180,11 +203,12 @@ function installTabs(modal) {
 }
 
 function refreshFooter(modal) {
-  const store = readStore();
-  const total = Array.isArray(store?.exercises) ? store.exercises.length : 0;
+  const total = selectedExercises().length;
   const footer = modal.querySelector(".mse-footer");
   if (!footer) return;
-  const shown = modal.querySelectorAll(".mse-item").length;
+  const shown = [...modal.querySelectorAll(".mse-item")].filter(
+    (item) => !item.classList.contains("mse-hidden-by-tab"),
+  ).length;
   footer.textContent = `${total} exercício(s) no seu treino • ${shown} exibido(s)`;
 }
 
@@ -212,10 +236,11 @@ function silentToggleExercise(button, item) {
   if (!type) return;
   const store = readStore();
   if (!store || !Array.isArray(store.exercises)) return;
+  const exercises = selectedExercises();
   button.classList.add("mse-saving");
-  const existing = store.exercises.find(
+  const existing = exercises.find(
     (exercise) =>
-      String(exercise.type) === type ||
+      exerciseTypeKey(exercise.type) === exerciseTypeKey(type) ||
       String(exercise.id) === String(button.dataset.id || ""),
   );
   let nextExercises;
@@ -225,7 +250,7 @@ function silentToggleExercise(button, item) {
       button.classList.remove("mse-saving");
       return;
     }
-    nextExercises = store.exercises.filter(
+    nextExercises = exercises.filter(
       (exercise) => String(exercise.id) !== String(existing.id),
     );
   } else {
@@ -233,10 +258,7 @@ function silentToggleExercise(button, item) {
       normalizeName(item.querySelector(".mse-info strong")?.textContent) ||
       type;
     const nextId =
-      Math.max(
-        0,
-        ...store.exercises.map((exercise) => Number(exercise.id) || 0),
-      ) + 1;
+      Math.max(0, ...exercises.map((exercise) => Number(exercise.id) || 0)) + 1;
     nextExercise = {
       id: nextId,
       type,
@@ -248,7 +270,7 @@ function silentToggleExercise(button, item) {
       rest: 60,
       tip: "Execute o movimento com controle e postura correta.",
     };
-    nextExercises = [...store.exercises, nextExercise];
+    nextExercises = [...exercises, nextExercise];
   }
   writeStore({ ...store, exercises: nextExercises });
   updateRowInPlace(item, nextExercise);
@@ -269,6 +291,7 @@ function refreshManagerInPlace() {
   const modal = document.getElementById("mse-modal");
   if (!modal) return;
   requestAnimationFrame(() => {
+    if (typeof document === "undefined" || !modal.isConnected) return;
     installTabs(modal);
     applyTab(modal);
     refreshFooter(modal);
@@ -288,7 +311,9 @@ function markWorkoutDirty() {
 document.addEventListener(
   "click",
   (event) => {
-    const action = event.target.closest?.("#mse-modal .mse-action");
+    const action = event.target.closest?.(
+      "#mse-modal .mse-action[data-action]",
+    );
     if (action) {
       event.preventDefault();
       event.stopPropagation();
