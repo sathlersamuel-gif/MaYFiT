@@ -24,7 +24,7 @@ jobs:
           cache: npm
 
       - name: Configurar Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -33,7 +33,7 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Testar o MayFit
+      - name: Testar o MaYFiT
         run: npm test
 
       - name: Atualizar o aplicativo Android
@@ -43,13 +43,44 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Preparar APK para assinatura
-        run: cp android/app/build/outputs/apk/release/app-release-unsigned.apk MaYFiT-Android-Unsigned.apk
+      - name: Assinar e validar APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          UNSIGNED="android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED="MaYFiT-Android-1.2.0-aligned.apk"
+          SIGNED="MaYFiT-Android-1.2.0-Rolagem-Corrigida.apk"
+          KEYSTORE="$RUNNER_TEMP/mayfit-release.jks"
 
-      - name: Disponibilizar APK sem assinatura
+          keytool -genkeypair -noprompt \
+            -keystore "$KEYSTORE" \
+            -storepass "MayFit2026SecureKey" \
+            -keypass "MayFit2026SecureKey" \
+            -alias mayfit \
+            -keyalg RSA \
+            -keysize 4096 \
+            -validity 10000 \
+            -dname "CN=MaYFiT, OU=Aplicativo, O=Samuel, L=Rolim de Moura, ST=Rondonia, C=BR"
+
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$KEYSTORE" \
+            --ks-key-alias mayfit \
+            --ks-pass pass:MayFit2026SecureKey \
+            --key-pass pass:MayFit2026SecureKey \
+            --out "$SIGNED" \
+            "$ALIGNED"
+
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$SIGNED"
+          "$BUILD_TOOLS/zipalign" -c -v 4 "$SIGNED"
+          file "$SIGNED"
+          sha256sum "$SIGNED"
+
+      - name: Disponibilizar APK assinado
         uses: actions/upload-artifact@v4
         with:
-          name: MaYFiT-Android-Release-Unsigned
-          path: MaYFiT-Android-Unsigned.apk
+          name: MaYFiT-Android-1.2.0-Assinado
+          path: MaYFiT-Android-1.2.0-Rolagem-Corrigida.apk
           if-no-files-found: error
           retention-days: 30
