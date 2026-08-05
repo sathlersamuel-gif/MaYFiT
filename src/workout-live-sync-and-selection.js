@@ -1,4 +1,9 @@
-const STORE = "mayfit_v8";
+import {
+  readWorkoutData,
+  workoutStorageKey,
+  writeWorkoutData,
+} from "./lib/workout-state.js";
+
 let activeTab = "all";
 let refreshQueued = false;
 
@@ -43,15 +48,10 @@ const exactTranslations = {
 };
 
 function readStore() {
-  try {
-    return JSON.parse(localStorage.getItem(STORE) || "null");
-  } catch {
-    return null;
-  }
+  return readWorkoutData();
 }
 function writeStore(store) {
-  localStorage.setItem(STORE, JSON.stringify(store));
-  window.dispatchEvent(new Event("mayfit-store-updated"));
+  writeWorkoutData(store);
 }
 function normalizeName(value) {
   return String(value || "")
@@ -344,7 +344,7 @@ const observer = new MutationObserver(() => {
 observer.observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener("mayfit-store-updated", markWorkoutDirty);
 window.addEventListener("storage", (event) => {
-  if (event.key === STORE) markWorkoutDirty();
+  if (event.key === workoutStorageKey()) markWorkoutDirty();
 });
 window.addEventListener("pageshow", refreshManagerInPlace);
 refreshManagerInPlace();

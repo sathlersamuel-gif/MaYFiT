@@ -1,6 +1,9 @@
 import { displayName } from "./exercise-rename-translate.js";
+import {
+  readWorkoutData,
+  writeWorkoutData,
+} from "./lib/workout-state.js";
 
-const STORE = "mayfit_v8";
 const CATALOG_KEY = "mayfit_exercise_catalog_v1";
 const DB =
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json";
@@ -20,15 +23,10 @@ function currentUser() {
   }
 }
 function readStore() {
-  try {
-    return JSON.parse(localStorage.getItem(STORE) || "null");
-  } catch {
-    return null;
-  }
+  return readWorkoutData();
 }
 function writeStore(data) {
-  localStorage.setItem(STORE, JSON.stringify(data));
-  window.dispatchEvent(new Event("mayfit-store-updated"));
+  writeWorkoutData(data);
 }
 function esc(value) {
   return String(value ?? "").replace(

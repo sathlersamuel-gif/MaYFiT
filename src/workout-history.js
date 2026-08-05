@@ -1,14 +1,9 @@
 import './workout-name-edit.js?v=5';
 import './admin-exercise-thumbnails.js?v=4';
+import {readWorkoutData,readWorkoutHistory,writeWorkoutHistory} from './lib/workout-state.js';
 
-const HISTORY_PREFIX='mayfit_workout_history_';
-
-function currentUserId(){
-  try{return JSON.parse(sessionStorage.getItem('mayfit_user')||'{}')?.id||'guest'}catch{return'guest'}
-}
-function historyKey(){return HISTORY_PREFIX+currentUserId()}
-function readHistory(){try{return JSON.parse(localStorage.getItem(historyKey())||'[]')}catch{return[]}}
-function writeHistory(items){localStorage.setItem(historyKey(),JSON.stringify(items))}
+function readHistory(){return readWorkoutHistory()}
+function writeHistory(items){return writeWorkoutHistory(items)}
 function numberFrom(row,labelText,fallbackIndex){
   const labels=[...row.querySelectorAll('label')];
   const label=labels.find(item=>item.textContent.toLowerCase().includes(labelText));
@@ -28,7 +23,8 @@ function captureWorkout(){
     rest:numberFrom(row,'tempo',4)
   }));
   const items=readHistory();
-  items.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),name:'Treino',exercises});
+  const workoutName=readWorkoutData()?.workoutName||'Treino';
+  items.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),name:workoutName,exercises});
   writeHistory(items);
 }
 function esc(value){return String(value??'').replace(/[&<>'\"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt',"'":'&#39;','\"':'&quot;'}[char]))}
@@ -104,3 +100,6 @@ function install(){
   bindEvolutionCard();
 }
 install();
+window.addEventListener('mayfit-workout-hydrated',()=>{
+  if(document.querySelector('.mayfit-history-overlay'))renderHistory();
+});

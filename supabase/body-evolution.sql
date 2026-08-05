@@ -15,9 +15,9 @@ alter table public.body_progress enable row level security;
 drop policy if exists "student reads own body progress" on public.body_progress;
 create policy "student reads own body progress" on public.body_progress for select using (auth.uid() = user_id or exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'));
 drop policy if exists "student inserts own body progress" on public.body_progress;
-create policy "student inserts own body progress" on public.body_progress for insert with check (auth.uid() = user_id);
+create policy "student inserts own body progress" on public.body_progress for insert with check (auth.uid() = user_id or public.is_admin());
 drop policy if exists "student updates own body progress" on public.body_progress;
-create policy "student updates own body progress" on public.body_progress for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "student updates own body progress" on public.body_progress for update using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
 drop policy if exists "student deletes own body progress" on public.body_progress;
 create policy "student deletes own body progress" on public.body_progress for delete using (auth.uid() = user_id or exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'));
 
@@ -26,9 +26,9 @@ insert into storage.buckets (id,name,public) values ('body-progress','body-progr
 drop policy if exists "body progress photo read" on storage.objects;
 create policy "body progress photo read" on storage.objects for select using (bucket_id='body-progress' and (auth.uid()::text=(storage.foldername(name))[1] or exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin')));
 drop policy if exists "body progress photo upload" on storage.objects;
-create policy "body progress photo upload" on storage.objects for insert with check (bucket_id='body-progress' and auth.uid()::text=(storage.foldername(name))[1]);
+create policy "body progress photo upload" on storage.objects for insert with check (bucket_id='body-progress' and (auth.uid()::text=(storage.foldername(name))[1] or public.is_admin()));
 drop policy if exists "body progress photo update" on storage.objects;
-create policy "body progress photo update" on storage.objects for update using (bucket_id='body-progress' and auth.uid()::text=(storage.foldername(name))[1]);
+create policy "body progress photo update" on storage.objects for update using (bucket_id='body-progress' and (auth.uid()::text=(storage.foldername(name))[1] or public.is_admin())) with check (bucket_id='body-progress' and (auth.uid()::text=(storage.foldername(name))[1] or public.is_admin()));
 drop policy if exists "body progress photo delete" on storage.objects;
 create policy "body progress photo delete" on storage.objects for delete using (bucket_id='body-progress' and (auth.uid()::text=(storage.foldername(name))[1] or exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin')));
 

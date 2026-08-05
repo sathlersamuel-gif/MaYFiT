@@ -257,6 +257,7 @@ function installLogoutSync() {
       supabase?.auth.signOut();
       sessionStorage.removeItem(USER_KEY);
       sessionStorage.removeItem('mayfit_admin_return');
+      sessionStorage.removeItem('mayfit_selected_student_id');
     },
     true
   );

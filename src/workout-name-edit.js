@@ -1,4 +1,5 @@
-const STORE='mayfit_v8';
+import {readWorkoutData,writeWorkoutData} from './lib/workout-state.js';
+
 const DEFAULT_NAME='Treino A';
 
 const translations={
@@ -20,7 +21,7 @@ const translations={
 };
 
 function readData(){
-  try{return JSON.parse(localStorage.getItem(STORE)||'{}')||{}}catch{return{}}
+  return readWorkoutData()||{}
 }
 
 function clean(value){
@@ -41,8 +42,7 @@ function saveName(value){
   const name=translate(value);
   if(!name)return false;
   const data=readData();
-  localStorage.setItem(STORE,JSON.stringify({...data,workoutName:name}));
-  window.dispatchEvent(new Event('mayfit-store-updated'));
+  writeWorkoutData({...data,workoutName:name});
   return true;
 }
 

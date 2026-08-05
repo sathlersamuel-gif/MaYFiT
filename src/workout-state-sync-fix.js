@@ -1,4 +1,5 @@
-const STORE = "mayfit_v8";
+import { workoutStorageKey } from "./lib/workout-state.js";
+
 const LEGACY_KEYS = [
   "mayfit_workout_data_dirty",
   "mayfit_open_workout_after_sync",
@@ -14,6 +15,6 @@ function clearLegacyReloadState() {
 clearLegacyReloadState();
 window.addEventListener("pageshow", clearLegacyReloadState);
 window.addEventListener("storage", (event) => {
-  if (event.key === STORE) clearLegacyReloadState();
+  if (event.key === workoutStorageKey()) clearLegacyReloadState();
 });
 window.addEventListener("mayfit-store-updated", clearLegacyReloadState);

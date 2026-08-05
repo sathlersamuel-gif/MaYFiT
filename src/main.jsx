@@ -22,8 +22,13 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 import "./exercise-quality.css";
 import { displayName } from "./exercise-rename-translate.js";
+import {
+  currentWorkoutOwnerId,
+  hydrateWorkoutState,
+  readWorkoutData,
+  writeWorkoutData,
+} from "./lib/workout-state.js";
 
-const STORE = "mayfit_v8";
 const CUSTOM_NAMES = "mayfit_catalog_custom_names_v1";
 const BASE =
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/";
@@ -193,6 +198,8 @@ const canonicalExercises = (list) => {
 };
 const normalizeData = (raw) => {
   const fallback = cloneSeed();
+  fallback.exercises = [];
+  fallback.sessions = [];
   const source = raw && typeof raw === "object" ? raw : fallback;
   return {
     ...source,
@@ -204,14 +211,13 @@ const normalizeData = (raw) => {
 };
 const load = () => {
   try {
-    const stored = localStorage.getItem(STORE);
-    return normalizeData(stored ? JSON.parse(stored) : null);
+    return normalizeData(readWorkoutData());
   } catch {
     return normalizeData(null);
   }
 };
 const save = (d) =>
-  localStorage.setItem(STORE, JSON.stringify(normalizeData(d)));
+  writeWorkoutData(normalizeData(d), { notify: false, sync: true });
 const rememberExerciseName = (type, name) => {
   const cleanName = String(name || "").trim();
   if (!type || !cleanName) return;
@@ -968,7 +974,23 @@ function App() {
   });
   const [tab, setTab] = useState("inicio");
   const [workout, setWorkout] = useState(false);
-  useEffect(() => save(data), [data]);
+  const [storeReady, setStoreReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setStoreReady(false);
+    setData(load());
+    hydrateWorkoutState(currentWorkoutOwnerId()).then((cloudData) => {
+      if (!active) return;
+      if (cloudData) setData(normalizeData(cloudData));
+      setStoreReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
+  useEffect(() => {
+    if (storeReady) save(data);
+  }, [data, storeReady]);
   useEffect(() => {
     const synchronize = () => setData(load());
     window.addEventListener("mayfit-store-updated", synchronize);

@@ -1,7 +1,10 @@
 import { supabase } from "./lib/supabase.js";
 
 const USER_KEY = "mayfit_user";
+const SIGNED_URL_CACHE_KEY = "mayfit_body_signed_urls_v2";
+const SIGNED_URL_TTL = 50 * 60 * 1000;
 let mounted = false;
+const signedUrlCache = new Map();
 const fields = [
   ["weight_kg", "Peso", "kg"],
   ["height_cm", "Altura", "cm"],
@@ -50,11 +53,72 @@ function esc(v) {
 function n(v) {
   return v === "" || v == null ? null : Number(v);
 }
-function signedUrl(path) {
-  return supabase.storage
-    .from("body-progress")
-    .createSignedUrl(path, 3600)
-    .then((x) => x.data?.signedUrl || "");
+function restoreSignedUrlCache() {
+  if (signedUrlCache.size) return;
+  try {
+    const saved = JSON.parse(
+      sessionStorage.getItem(SIGNED_URL_CACHE_KEY) || "{}",
+    );
+    Object.entries(saved).forEach(([path, entry]) => {
+      if (entry?.url && Number(entry.expiresAt) > Date.now())
+        signedUrlCache.set(path, entry);
+    });
+  } catch {}
+}
+function persistSignedUrlCache() {
+  try {
+    const entries = [...signedUrlCache.entries()]
+      .filter(([, entry]) => Number(entry.expiresAt) > Date.now())
+      .slice(-500);
+    sessionStorage.setItem(
+      SIGNED_URL_CACHE_KEY,
+      JSON.stringify(Object.fromEntries(entries)),
+    );
+  } catch {}
+}
+async function signedUrls(paths) {
+  restoreSignedUrlCache();
+  const unique = [...new Set(paths.filter(Boolean))];
+  const urls = new Map();
+  const missing = [];
+  unique.forEach((path) => {
+    const cached = signedUrlCache.get(path);
+    if (cached?.url && cached.expiresAt > Date.now()) urls.set(path, cached.url);
+    else missing.push(path);
+  });
+  const chunks = [];
+  for (let index = 0; index < missing.length; index += 50)
+    chunks.push(missing.slice(index, index + 50));
+  const loadChunk = async (chunk) => {
+    const { data, error } = await supabase.storage
+      .from("body-progress")
+      .createSignedUrls(chunk, 3600);
+    if (error || !Array.isArray(data)) {
+      await Promise.all(
+        chunk.map(async (path) => {
+          const { data: single } = await supabase.storage
+            .from("body-progress")
+            .createSignedUrl(path, 3600);
+          if (single?.signedUrl) urls.set(path, single.signedUrl);
+        }),
+      );
+      return;
+    }
+    data.forEach((entry, index) => {
+      const path = entry.path || chunk[index];
+      if (path && entry.signedUrl) urls.set(path, entry.signedUrl);
+    });
+  };
+  for (let index = 0; index < chunks.length; index += 3)
+    await Promise.all(chunks.slice(index, index + 3).map(loadChunk));
+  urls.forEach((url, path) =>
+    signedUrlCache.set(path, {
+      url,
+      expiresAt: Date.now() + SIGNED_URL_TTL,
+    }),
+  );
+  if (missing.length) persistSignedUrlCache();
+  return urls;
 }
 async function uploadPhoto(file, uid, kind) {
   if (!file) return null;
@@ -118,6 +182,8 @@ async function removePhoto(record, column, path, wrap, button) {
         .eq("user_id", record.user_id);
       throw storageError;
     }
+    signedUrlCache.delete(path);
+    persistSignedUrlCache();
     wrap.remove();
   } catch (error) {
     alert(
@@ -150,6 +216,8 @@ async function removeEvaluation(record, entry, button) {
     ].filter(Boolean);
     if (paths.length)
       await supabase.storage.from("body-progress").remove(paths);
+    paths.forEach((path) => signedUrlCache.delete(path));
+    if (paths.length) persistSignedUrlCache();
     const history = entry.closest(".be-history");
     entry.remove();
     if (history && !history.querySelector(".be-entry"))
@@ -173,8 +241,14 @@ async function renderHistory(root, uid) {
         '<div class="be-msg">Nenhuma avaliação registrada ainda.</div>';
       return;
     }
-    box.innerHTML = "";
-    for (const e of entries) {
+    const allPhotoPaths = entries.flatMap((entry) => [
+      entry.photo_front,
+      entry.photo_side,
+      entry.photo_back,
+    ]).filter(Boolean);
+    const photoUrls = await signedUrls(allPhotoPaths);
+    const fragment = document.createDocumentFragment();
+    entries.forEach((e, entryIndex) => {
       const entry = document.createElement("article");
       entry.className = "be-entry";
       entry.dataset.evaluationId = e.id;
@@ -187,15 +261,16 @@ async function renderHistory(root, uid) {
       ]) {
         const path = e[column];
         if (!path) continue;
-        const url = await signedUrl(path);
+        const url = photoUrls.get(path) || "";
         if (url) {
           const wrap = document.createElement("div");
           wrap.className = "be-saved-photo";
           const img = document.createElement("img");
           img.src = url;
           img.alt = `Abrir foto de ${label.toLowerCase()}`;
-          img.loading = "lazy";
+          img.loading = entryIndex === 0 ? "eager" : "lazy";
           img.decoding = "async";
+          img.fetchPriority = entryIndex === 0 ? "high" : "auto";
           img.onclick = () => openPhotoViewer(url, root);
           const remove = document.createElement("button");
           remove.type = "button";
@@ -214,8 +289,9 @@ async function renderHistory(root, uid) {
       removeRecord.textContent = "Excluir avaliação completa";
       removeRecord.onclick = () => removeEvaluation(e, entry, removeRecord);
       entry.appendChild(removeRecord);
-      box.appendChild(entry);
-    }
+      fragment.appendChild(entry);
+    });
+    box.replaceChildren(fragment);
   } catch (error) {
     box.innerHTML = `<div class="be-msg">Não foi possível carregar: ${esc(error.message)}</div>`;
   }

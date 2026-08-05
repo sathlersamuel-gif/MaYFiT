@@ -78,7 +78,8 @@ function render(root){
     const status=normalizedStatus(x.status);
     const approve=status==='pending'?'<button class="ms-approve" data-action="approve">Aprovar aluno</button>':'';
     const toggle=status==='pending'?'':`<button class="ms-secondary" data-action="toggle">${status==='blocked'?'Desbloquear':'Bloquear'}</button>`;
-    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`;
+    const open=status==='active'?'<button class="ms-primary" data-action="open">Abrir área do aluno</button>':'';
+    return `<article class="ms-card ${status}" data-id="${esc(x.id)}"><div class="ms-row"><div><div class="ms-name">${esc(x.full_name||'Aluno sem nome')}</div></div><span class="ms-badge ${status}">${statusLabel(status)}</span></div><div class="ms-card-actions">${open}${approve}<button class="ms-secondary" data-action="edit">Editar</button>${toggle}<button class="ms-danger" data-action="delete">Excluir</button></div></article>`;
   }).join('');
 }
 
@@ -116,6 +117,15 @@ async function handleCard(root,button){
   const action=button.dataset.action;
   button.disabled=true;
   try{
+    if(action==='open'){
+      const admin=current();
+      if(!admin||admin.role!=='admin')throw new Error('A sessão do administrador não está disponível.');
+      sessionStorage.setItem('mayfit_admin_return',JSON.stringify(admin));
+      sessionStorage.setItem('mayfit_selected_student_id',student.id);
+      sessionStorage.setItem(USER_KEY,JSON.stringify({id:student.id,name:student.full_name||'Aluno',full_name:student.full_name||'Aluno',email:'',role:'student',adminPreview:true}));
+      location.reload();
+      return;
+    }
     if(action==='approve'){
       const {error}=await supabase.from('profiles').update({role:'student',status:'active'}).eq('id',id);
       if(error)throw error;

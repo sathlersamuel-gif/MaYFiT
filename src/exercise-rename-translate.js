@@ -1,4 +1,8 @@
-const STORE = "mayfit_v8";
+import {
+  readWorkoutData,
+  writeWorkoutData,
+} from "./lib/workout-state.js";
+
 const CUSTOM_KEY = "mayfit_catalog_custom_names_v1";
 
 const translations = {
@@ -609,15 +613,10 @@ export function translated(value) {
   return result.charAt(0).toUpperCase() + result.slice(1);
 }
 function readStore() {
-  try {
-    return JSON.parse(localStorage.getItem(STORE) || "null");
-  } catch {
-    return null;
-  }
+  return readWorkoutData();
 }
 function writeStore(data) {
-  localStorage.setItem(STORE, JSON.stringify(data));
-  window.dispatchEvent(new Event("mayfit-store-updated"));
+  writeWorkoutData(data);
 }
 function readCustom() {
   try {
