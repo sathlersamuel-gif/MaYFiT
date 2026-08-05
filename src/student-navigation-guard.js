@@ -56,6 +56,7 @@ observer.observe(document.documentElement,{childList:true,subtree:true});
 
 window.addEventListener('pageshow',refreshStudentUi);
 window.addEventListener('focus',refreshStudentUi);
+window.addEventListener('mayfit-store-updated',refreshStudentUi);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshStudentUi()});
 document.addEventListener('click',event=>{
   const button=event.target.closest('button');
@@ -66,5 +67,4 @@ document.addEventListener('click',event=>{
   }
 },true);
 
-setInterval(refreshStudentUi,700);
 refreshStudentUi();

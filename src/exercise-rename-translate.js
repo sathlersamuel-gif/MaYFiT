@@ -679,6 +679,10 @@ function ensureStyle() {
   document.head.appendChild(style);
 }
 
+function setText(element, value) {
+  if (element && element.textContent !== value) element.textContent = value;
+}
+
 function enhanceStudentManager() {
   const modal = document.getElementById("mse-modal");
   if (!modal) return;
@@ -693,7 +697,7 @@ function enhanceStudentManager() {
     if (!title) return;
     const original = row.dataset.originalName || clean(title.textContent);
     row.dataset.originalName = original;
-    title.textContent = displayName(type, original);
+    setText(title, displayName(type, original));
     let rename = row.querySelector(".mse-rename");
     if (!rename) {
       rename = document.createElement("button");
@@ -710,19 +714,19 @@ function enhanceStudentManager() {
       action.dataset.action = existing ? "remove" : "add";
       action.dataset.id = existing ? String(existing.id) : "";
       action.classList.toggle("remove", Boolean(existing));
-      action.textContent = existing ? "Remover" : "Adicionar";
+      setText(action, existing ? "Remover" : "Adicionar");
     }
-    if (status)
-      status.textContent = existing
-        ? "Já está no seu treino"
-        : "Disponível para adicionar";
+    setText(
+      status,
+      existing ? "Já está no seu treino" : "Disponível para adicionar",
+    );
   });
   const total = exercises.length;
   const selected = modal.querySelector('[data-tab="selected"]');
-  if (selected) selected.textContent = `Selecionados (${total})`;
+  setText(selected, `Selecionados (${total})`);
   const footer = modal.querySelector(".mse-footer");
   if (footer && !modal.querySelector(".mse-tabs"))
-    footer.textContent = `${total} exercício(s) no seu treino`;
+    setText(footer, `${total} exercício(s) no seu treino`);
 }
 
 function enhanceAdminManager() {
@@ -735,7 +739,7 @@ function enhanceAdminManager() {
     const type = inputValue && inputValue !== "on" ? inputValue : original;
     row.dataset.type = type;
     row.dataset.originalName = original;
-    title.textContent = displayName(type, original);
+    setText(title, displayName(type, original));
     let rename = row.querySelector(".mayfit-picker-rename");
     if (!rename) {
       rename = document.createElement("button");
@@ -777,9 +781,12 @@ function translateVisible() {
         (exercise) =>
           clean(exercise.name) === current || clean(exercise.type) === current,
       );
-      title.textContent = item
-        ? clean(custom[String(item.type)]) || translated(item.name || item.type)
-        : translated(current);
+      setText(
+        title,
+        item
+          ? clean(custom[String(item.type)]) || translated(item.name || item.type)
+          : translated(current),
+      );
     });
 }
 

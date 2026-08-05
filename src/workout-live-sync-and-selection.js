@@ -1,5 +1,6 @@
 const STORE = "mayfit_v8";
 let activeTab = "all";
+let refreshQueued = false;
 
 const exactTranslations = {
   "Barbell Bench Press - Medium Grip": "Supino reto com barra",
@@ -57,6 +58,9 @@ function normalizeName(value) {
     .replaceAll("_", " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+function setText(element, value) {
+  if (element && element.textContent !== value) element.textContent = value;
 }
 function isCorrupted(value) {
   const text = String(value || "");
@@ -167,11 +171,10 @@ function applyTab(modal) {
       list.appendChild(empty);
     }
   } else empty?.remove();
-  modal
-    .querySelector('[data-tab="selected"]')
-    ?.replaceChildren(
-      document.createTextNode(`Selecionados (${selected.size})`),
-    );
+  setText(
+    modal.querySelector('[data-tab="selected"]'),
+    `Selecionados (${selected.size})`,
+  );
   modal
     .querySelectorAll(".mse-tab")
     .forEach((button) =>
@@ -209,7 +212,10 @@ function refreshFooter(modal) {
   const shown = [...modal.querySelectorAll(".mse-item")].filter(
     (item) => !item.classList.contains("mse-hidden-by-tab"),
   ).length;
-  footer.textContent = `${total} exercício(s) no seu treino • ${shown} exibido(s)`;
+  setText(
+    footer,
+    `${total} exercício(s) no seu treino • ${shown} exibido(s)`,
+  );
 }
 
 function updateRowInPlace(item, exercise) {
@@ -220,14 +226,14 @@ function updateRowInPlace(item, exercise) {
     button.dataset.action = "remove";
     button.dataset.id = String(exercise.id);
     button.classList.add("remove");
-    button.textContent = "Remover";
-    if (info) info.textContent = "Já está no seu treino";
+    setText(button, "Remover");
+    setText(info, "Já está no seu treino");
   } else {
     button.dataset.action = "add";
     button.dataset.id = "";
     button.classList.remove("remove");
-    button.textContent = "Adicionar";
-    if (info) info.textContent = "Disponível para adicionar";
+    setText(button, "Adicionar");
+    setText(info, "Disponível para adicionar");
   }
 }
 
@@ -289,12 +295,12 @@ function refreshManagerInPlace() {
   )
     return;
   const modal = document.getElementById("mse-modal");
-  if (!modal) return;
+  if (!modal || refreshQueued) return;
+  refreshQueued = true;
   requestAnimationFrame(() => {
+    refreshQueued = false;
     if (typeof document === "undefined" || !modal.isConnected) return;
     installTabs(modal);
-    applyTab(modal);
-    refreshFooter(modal);
   });
 }
 

@@ -2,6 +2,7 @@ const USER_KEY = "mayfit_user";
 const PHOTO_CACHE = "mayfit-exercise-photos-v1";
 const IMAGE_HOST = "raw.githubusercontent.com";
 let warmTimer = null;
+const warmedUrls = new Set();
 
 function currentUser() {
   try {
@@ -83,6 +84,8 @@ function hideAdminWorkoutManager() {
 
 async function cacheUrl(url) {
   if (!url || !url.includes(IMAGE_HOST) || !("caches" in window)) return;
+  if (warmedUrls.has(url)) return;
+  warmedUrls.add(url);
   try {
     const cache = await caches.open(PHOTO_CACHE);
     const existing = await cache.match(url);
@@ -92,21 +95,29 @@ async function cacheUrl(url) {
       cache: "force-cache",
     });
     await cache.put(url, response.clone());
-  } catch {}
+  } catch {
+    warmedUrls.delete(url);
+  }
 }
 
 function warmVisibleExercisePhotos() {
   clearTimeout(warmTimer);
   warmTimer = setTimeout(() => {
-    const urls = [
-      ...document.querySelectorAll(
-        "#mse-modal img.mse-thumb,.exercise-picker img.mayfit-picker-thumb",
-      ),
-    ]
-      .map((image) => image.currentSrc || image.src)
-      .filter(Boolean);
-    [...new Set(urls)].slice(0, 80).forEach(cacheUrl);
-  }, 120);
+    const run = () => {
+      const urls = [
+        ...document.querySelectorAll(
+          "#mse-modal img.mse-thumb,.exercise-picker img.mayfit-picker-thumb",
+        ),
+      ]
+        .filter((image) => image.getBoundingClientRect().bottom >= 0)
+        .map((image) => image.currentSrc || image.src)
+        .filter(Boolean);
+      [...new Set(urls)].slice(0, 10).forEach(cacheUrl);
+    };
+    if ("requestIdleCallback" in window)
+      requestIdleCallback(run, { timeout: 1600 });
+    else setTimeout(run, 300);
+  }, 450);
 }
 
 function apply() {

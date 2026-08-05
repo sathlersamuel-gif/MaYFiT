@@ -364,5 +364,4 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden) apply();
 });
 window.addEventListener("mayfit-store-updated", apply);
-setInterval(apply, 1200);
 apply();

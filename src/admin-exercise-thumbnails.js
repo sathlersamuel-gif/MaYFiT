@@ -1,4 +1,4 @@
-import './student-area-entry.js?v=3';
+import './student-area-entry.js?v=4';
 
 const MAYFIT_EXERCISE_DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 const MAYFIT_IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
@@ -32,16 +32,25 @@ async function loadExerciseMap(){
   if(mayfitLoading)return null;
   mayfitLoading=true;
   try{
-    const response=await fetch(MAYFIT_EXERCISE_DB,{cache:'force-cache'});
-    if(!response.ok)throw new Error('Falha ao carregar catálogo');
-    const list=await response.json();
-    mayfitExerciseMap=new Map((Array.isArray(list)?list:[]).map(item=>[
-      String(item.name||'').trim().toLowerCase(),
-      {id:item.id,image:Array.isArray(item.images)?item.images[0]:''}
-    ]));
+    let list=[];
+    try{list=JSON.parse(localStorage.getItem('mayfit_exercise_catalog_v1')||'[]')}catch{}
+    if(!Array.isArray(list)||!list.length){
+      const response=await fetch(MAYFIT_EXERCISE_DB,{cache:'force-cache'});
+      if(!response.ok)throw new Error('Falha ao carregar catálogo');
+      list=await response.json();
+    }
+    const normalized=(Array.isArray(list)?list:[]).map(item=>({
+      id:String(item.id||''),
+      name:String(item.sourceName||item.name||'').trim().toLowerCase(),
+      image:Array.isArray(item.images)?item.images[0]:item.image||''
+    }));
+    mayfitExerciseMap={
+      byId:new Map(normalized.map(item=>[item.id,item])),
+      byName:new Map(normalized.map(item=>[item.name,item]))
+    };
     return mayfitExerciseMap;
   }catch{
-    mayfitExerciseMap=new Map();
+    mayfitExerciseMap={byId:new Map(),byName:new Map()};
     return mayfitExerciseMap;
   }finally{mayfitLoading=false}
 }
@@ -54,7 +63,8 @@ async function applyAdminExerciseThumbnails(){
   for(const item of items){
     if(item.querySelector('.mayfit-picker-thumb'))continue;
     const name=item.querySelector('strong')?.textContent?.trim()||'';
-    const data=map.get(name.toLowerCase());
+    const id=item.querySelector('input[type="checkbox"]')?.value||'';
+    const data=map.byId.get(id)||map.byName.get(name.toLowerCase());
     const image=data?.image?MAYFIT_IMAGE_BASE+data.image:'';
     const thumb=document.createElement(image?'img':'span');
     thumb.className='mayfit-picker-thumb';
@@ -64,7 +74,13 @@ async function applyAdminExerciseThumbnails(){
       thumb.loading='lazy';
       thumb.decoding='async';
       thumb.onclick=event=>{event.preventDefault();event.stopPropagation();openZoom(image,name)};
-      thumb.onerror=()=>{thumb.style.visibility='hidden'};
+      thumb.onerror=()=>{
+        const attempt=Number(thumb.dataset.imageAttempt||0)+1;
+        thumb.dataset.imageAttempt=String(attempt);
+        if(attempt<=2){setTimeout(()=>{thumb.src=`${image}${image.includes('?')?'&':'?'}mayfit_retry=${attempt}`},attempt*350);return}
+        thumb.style.visibility='visible';
+        thumb.removeAttribute('src');
+      };
     }else thumb.setAttribute('aria-hidden','true');
     const text=item.querySelector('span');
     item.insertBefore(thumb,text||null);

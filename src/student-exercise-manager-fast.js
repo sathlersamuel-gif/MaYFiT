@@ -7,9 +7,10 @@ const DB =
 const IMAGE_BASE =
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/";
 const PAGE_SIZE = 70;
-const EAGER_IMAGES = 18;
+const EAGER_IMAGES = 8;
 let catalog = [];
 let fetching = false;
+const warmedImages = new Set();
 
 function currentUser() {
   try {
@@ -71,13 +72,42 @@ function cachedCatalog() {
 }
 
 function prewarmVisibleImages(items) {
-  items.slice(0, EAGER_IMAGES).forEach((item) => {
-    const src = imageUrl(item);
-    if (!src) return;
-    const image = new Image();
-    image.decoding = "async";
-    image.fetchPriority = "high";
-    image.src = src;
+  const run = () =>
+    items.slice(0, EAGER_IMAGES).forEach((item) => {
+      const src = imageUrl(item);
+      if (!src || warmedImages.has(src)) return;
+      warmedImages.add(src);
+      const image = new Image();
+      image.decoding = "async";
+      image.src = src;
+    });
+  if ("requestIdleCallback" in window)
+    requestIdleCallback(run, { timeout: 1200 });
+  else setTimeout(run, 180);
+}
+
+function installImageRecovery(root) {
+  root.querySelectorAll('img.mse-thumb:not([data-image-recovery])').forEach((image) => {
+    image.dataset.imageRecovery = "true";
+    const original = image.getAttribute("src") || "";
+    image.addEventListener("load", () => {
+      image.style.visibility = "visible";
+      image.classList.remove("mse-thumb-unavailable");
+    });
+    image.addEventListener("error", () => {
+      const attempt = Number(image.dataset.imageAttempt || 0) + 1;
+      image.dataset.imageAttempt = String(attempt);
+      if (attempt <= 2 && original) {
+        setTimeout(() => {
+          const separator = original.includes("?") ? "&" : "?";
+          image.src = `${original}${separator}mayfit_retry=${attempt}`;
+        }, attempt * 350);
+        return;
+      }
+      image.style.visibility = "visible";
+      image.classList.add("mse-thumb-unavailable");
+      image.removeAttribute("src");
+    });
   });
 }
 
@@ -226,7 +256,7 @@ function render(modal, reset = false) {
         const rowName = String(existing?.name || item.name || "Exercício");
         const src = imageUrl(item);
         const thumb = src
-          ? `<img class="mse-thumb" src="${esc(src)}" alt="${esc(rowName)}" loading="${index < EAGER_IMAGES ? "eager" : "lazy"}" decoding="async" fetchpriority="${index < EAGER_IMAGES ? "high" : "auto"}" data-expand-image="true" style="cursor:zoom-in" onerror="this.style.visibility='hidden'">`
+          ? `<img class="mse-thumb" src="${esc(src)}" alt="${esc(rowName)}" loading="${index < EAGER_IMAGES ? "eager" : "lazy"}" decoding="async" fetchpriority="${index < EAGER_IMAGES ? "high" : "auto"}" data-expand-image="true" style="cursor:zoom-in">`
           : '<span class="mse-thumb" aria-hidden="true"></span>';
         return `<article class="mse-item" data-type="${esc(item.id)}">${thumb}<span class="mse-info"><strong>${esc(rowName)}</strong><small>${existing ? "Já está no seu treino" : "Disponível para adicionar"}</small></span><button type="button" class="mse-action ${existing ? "remove" : ""}" data-action="${existing ? "remove" : "add"}" data-id="${existing?.id ?? ""}">${existing ? "Remover" : "Adicionar"}</button></article>`;
       })
@@ -248,6 +278,7 @@ function render(modal, reset = false) {
     };
     list.appendChild(more);
   }
+  installImageRecovery(list);
   footer.textContent = `${exercises.length} exercício(s) no seu treino • ${visible.length} exibido(s)`;
 }
 

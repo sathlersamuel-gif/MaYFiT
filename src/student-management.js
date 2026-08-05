@@ -3,7 +3,7 @@ import { supabase } from './lib/supabase.js';
 
 const URL='https://hcijxrakfrvcksuanrdy.supabase.co';
 const KEY='sb_publishable_A7SHtwE7jpKGcP6yaPmcGw_mTJeodrN';
-const secondary=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+let secondary=null;
 const USER_KEY='mayfit_user';
 let mounted=false;
 let loading=false;
@@ -41,6 +41,10 @@ function current(){try{return JSON.parse(sessionStorage.getItem(USER_KEY))}catch
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function normalizedStatus(value){return value==='active'||value==='blocked'?value:'pending'}
 function statusLabel(value){const s=normalizedStatus(value);return s==='active'?'Ativo':s==='blocked'?'Bloqueado':'Pendente'}
+function secondaryClient(){
+  if(!secondary)secondary=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'mayfit-admin-secondary-auth'}});
+  return secondary;
+}
 
 async function loadStudents(root){
   if(loading)return;
@@ -83,7 +87,7 @@ async function createStudent(root){
   const email=prompt('E-mail do aluno:'); if(!email?.trim())return;
   const password=prompt('Senha inicial com pelo menos 6 caracteres:');
   if(!password||password.length<6){alert('A senha precisa ter pelo menos 6 caracteres.');return}
-  const {data,error}=await secondary.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim()}}});
+  const {data,error}=await secondaryClient().auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim()}}});
   if(error){alert('Não foi possível cadastrar: '+error.message);return}
   if(data.user){
     const {error:updateError}=await supabase.from('profiles').update({full_name:name.trim(),role:'student',status:'active'}).eq('id',data.user.id);

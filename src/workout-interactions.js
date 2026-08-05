@@ -2,6 +2,7 @@
 (function(){
   let selectedButton=null,bypassComplete=false,blankInput=null,editingRow=null;
   let pauseRunning=false,pauseTimer=null,pauseDeadline=0,lastPhase='';
+  let workoutSyncQueued=false,blankGuardFrame=null;
   const inputSelector='.workout-screen .load-cell input,.workout-screen .series-cell input,.workout-screen .rest-label input';
   const nativeValueSetter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
 
@@ -56,7 +57,13 @@
   function enterEditMode(button){const row=button.closest('.sheet-row');if(!row)return;if(editingRow&&editingRow!==row)editingRow.classList.remove('mayfit-editing');editingRow=row;row.classList.add('mayfit-editing');row.querySelectorAll('input').forEach(input=>input.disabled=false)}
   function selectExercise(button){const row=button.closest('.sheet-row');if(!row)return;if(editingRow){editingRow.classList.remove('mayfit-editing');editingRow=null}selectedButton=button;row.classList.add('mayfit-selected');button.classList.add('mayfit-selected');row.querySelector('.time-button')?.click()}
   function unselectExercise(button){const row=button.closest('.sheet-row');row?.classList.remove('mayfit-selected');button.classList.remove('mayfit-selected');if(selectedButton===button)selectedButton=[...document.querySelectorAll('.workout-screen .complete-button.mayfit-selected')].at(-1)||null}
-  function makeInputBlank(input){if(!input||input.disabled)return;blankInput=input;input.dataset.mayfitBlank='1';setNativeValue(input,'');requestAnimationFrame(()=>{if(input.dataset.mayfitBlank==='1')setNativeValue(input,'',false)})}
+  function keepBlankWhileFocused(){
+    blankGuardFrame=null;
+    if(!blankInput||!blankInput.isConnected||document.activeElement!==blankInput||blankInput.dataset.mayfitBlank!=='1')return;
+    if(blankInput.value!=='')setNativeValue(blankInput,'',false);
+    blankGuardFrame=requestAnimationFrame(keepBlankWhileFocused)
+  }
+  function makeInputBlank(input){if(!input||input.disabled)return;blankInput=input;input.dataset.mayfitBlank='1';setNativeValue(input,'');if(!blankGuardFrame)blankGuardFrame=requestAnimationFrame(keepBlankWhileFocused)}
 
   function getPauseParts(){const box=document.getElementById('mayfit-pause-control'),stepper=box?.querySelector('.pause-stepper'),input=stepper?.querySelector('input');if(box&&stepper&&!stepper.querySelector('.mayfit-pause-display')){const display=document.createElement('span');display.className='mayfit-pause-display';display.setAttribute('aria-live','polite');display.textContent='0';stepper.insertBefore(display,stepper.querySelector('button[data-step="5"]'))}return{box,input,display:stepper?.querySelector('.mayfit-pause-display'),buttons:box?.querySelectorAll('button')}}
   function configuredPause(){return Math.max(0,parseInt(localStorage.getItem('mayfit_pause_seconds')||'0',10)||0)}
@@ -127,6 +134,27 @@
     startSelected()
   },true);
 
-  setInterval(()=>{prepareInputs();restoreInputs();getPauseParts();syncPausePhase();if(blankInput&&blankInput.isConnected&&document.activeElement===blankInput&&blankInput.dataset.mayfitBlank==='1'&&blankInput.value!=='')setNativeValue(blankInput,'',false)},100);
-  prepareInputs();restoreInputs();getPauseParts();
+  function refreshWorkoutEnhancements(){
+    workoutSyncQueued=false;
+    if(!document.querySelector('.workout-screen')){
+      if(pauseRunning)stopPauseCounter();
+      lastPhase='';
+      return;
+    }
+    prepareInputs();
+    restoreInputs();
+    getPauseParts();
+    syncPausePhase();
+  }
+  function scheduleWorkoutRefresh(){
+    if(workoutSyncQueued)return;
+    workoutSyncQueued=true;
+    requestAnimationFrame(refreshWorkoutEnhancements)
+  }
+  const workoutObserver=new MutationObserver(scheduleWorkoutRefresh);
+  workoutObserver.observe(document.getElementById('root')||document.documentElement,{childList:true,subtree:true,characterData:true});
+  window.addEventListener('pageshow',scheduleWorkoutRefresh);
+  window.addEventListener('focus',scheduleWorkoutRefresh);
+  window.addEventListener('mayfit-store-updated',scheduleWorkoutRefresh);
+  scheduleWorkoutRefresh();
 })();
