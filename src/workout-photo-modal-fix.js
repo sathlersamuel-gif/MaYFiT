@@ -4,6 +4,11 @@ import './workout-state-sync-fix.js';
 const style=document.createElement('style');
 style.id='mayfit-workout-photo-modal-style';
 style.textContent=`
+html,body,#root,.app{min-height:100%;}
+body:has(.workout-screen){overflow:hidden!important;}
+.workout-screen{position:relative!important;width:100%!important;height:100dvh!important;max-height:100dvh!important;overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important;touch-action:pan-y!important;transform:none!important;}
+.workout-screen .sheet,.workout-screen .sheet-row,.workout-screen .exercise-col,.workout-screen .exercise-photo{touch-action:pan-y!important;transform:none!important;}
+.workout-screen button,.workout-screen input{touch-action:manipulation!important;}
 html.mayfit-workout-zoom-open,html.mayfit-workout-zoom-open body{overflow:hidden!important;overscroll-behavior:none!important}
 .mayfit-workout-image-zoom{position:fixed!important;inset:0!important;z-index:400000!important;display:block!important;width:100vw!important;height:100dvh!important;padding:max(14px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom))!important;background:rgba(0,0,0,.96)!important;overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;box-sizing:border-box!important;overscroll-behavior-y:contain!important;touch-action:pan-y!important}
 .mayfit-workout-image-card{position:relative!important;display:grid!important;grid-template-rows:auto minmax(520px,1fr)!important;width:min(920px,100%)!important;min-height:min(760px,calc(100dvh - 28px))!important;height:auto!important;margin:0 auto!important;padding:54px 8px 8px!important;border:1px solid #49664f!important;border-radius:18px!important;background:#07100a!important;overflow:visible!important;box-sizing:border-box!important}
