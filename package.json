@@ -9,11 +9,13 @@
     "preview": "vite preview",
     "test": "node --test",
     "android:sync": "npm run build && cap sync android",
-    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/local-notifications": "^8.2.1",
     "@supabase/supabase-js": "^2.57.4",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

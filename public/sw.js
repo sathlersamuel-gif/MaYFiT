@@ -1,4 +1,4 @@
-const VERSION = "mayfit-v9";
+const VERSION = "mayfit-v10";
 const APP_CACHE = `${VERSION}-app`;
 const MEDIA_CACHE = `${VERSION}-media`;
 const LEGACY_PHOTO_CACHE = "mayfit-exercise-photos-v1";

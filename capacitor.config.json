@@ -7,5 +7,12 @@
   },
   "android": {
     "backgroundColor": "#000000"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_mayfit_timer",
+      "iconColor": "#9DF20F",
+      "sound": "mayfit_timer.wav"
+    }
   }
 }
