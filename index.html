@@ -77,8 +77,16 @@
       function optimizeImages(root=document){root.querySelectorAll('img:not([data-mayfit-optimized])').forEach(img=>{img.dataset.mayfitOptimized='1';img.loading='lazy';img.decoding='async'})}
       function refreshDynamicUi(){if(document.hidden)return;installPauseControl();installAdminReturnButton();optimizeImages();if(document.querySelector('.workout-screen'))separatePauseCountdown()}
       document.addEventListener('click',preserveAdminSession,true);
-      applyTheme(localStorage.getItem('mayfit_theme')||'dark');
-      window.addEventListener('load',()=>{refreshDynamicUi();const observer=new MutationObserver(mutations=>{for(const mutation of mutations){if(mutation.addedNodes.length){requestAnimationFrame(refreshDynamicUi);break}}});observer.observe(document.getElementById('root'),{childList:true,subtree:true})});window.addEventListener('pageshow',refreshDynamicUi);window.addEventListener('focus',refreshDynamicUi)
+      window.addEventListener('load', () => {
+        refreshDynamicUi();
+      });
+      window.addEventListener('pageshow', refreshDynamicUi);
+      window.addEventListener('focus', refreshDynamicUi);
+      window.addEventListener('mayfit-store-updated', refreshDynamicUi);
+      window.addEventListener('mayfit-workout-hydrated', refreshDynamicUi);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshDynamicUi();
+      });
     </script>
   </body>
 </html>

@@ -149,17 +149,33 @@ function openImage(src, name) {
 }
 
 function prewarmImages(items) {
-  const urls = items.map(imageFor).filter(Boolean).slice(0, 100);
-  const run = () =>
-    urls.forEach((url) => {
+  const urls = items.map(imageFor).filter(Boolean);
+  if (!urls.length) return;
+  let index = 0;
+  const batchSize = 5;
+  const processBatch = () => {
+    const end = Math.min(index + batchSize, urls.length);
+    for (let i = index; i < end; i++) {
       const img = new Image();
       img.decoding = "async";
-      img.src = url;
-    });
-  if ("requestIdleCallback" in window)
-    requestIdleCallback(run, { timeout: 2500 });
-  else setTimeout(run, 200);
+      img.src = urls[i];
+    }
+    index = end;
+    if (index < urls.length) {
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(processBatch, { timeout: 1000 });
+      } else {
+        setTimeout(processBatch, 150);
+      }
+    }
+  };
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(processBatch, { timeout: 2000 });
+  } else {
+    setTimeout(processBatch, 300);
+  }
 }
+
 
 function renderList(modal) {
   const query = (modal.querySelector(".mse-search").value || "")
@@ -348,18 +364,26 @@ function apply() {
   installEvolutionLabel();
   mountStudentExercises();
 }
-const observer = new MutationObserver(() => {
-  if (
-    typeof document !== "undefined" &&
-    typeof requestAnimationFrame !== "undefined"
-  )
-    requestAnimationFrame(apply);
-});
-observer.observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener("pageshow", apply);
 window.addEventListener("focus", apply);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) apply();
 });
 window.addEventListener("mayfit-store-updated", apply);
+window.addEventListener("load", () => {
+  apply();
+  // Pré-carrega suavemente as imagens do catálogo em segundo plano após inicialização do app
+  setTimeout(() => {
+    try {
+      const cached = localStorage.getItem(CATALOG_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length) {
+          prewarmImages(parsed);
+        }
+      }
+    } catch {}
+  }, 1500);
+});
 apply();
+

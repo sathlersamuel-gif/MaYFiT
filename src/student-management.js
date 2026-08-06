@@ -186,8 +186,8 @@ function mount(){
   return true;
 }
 
-observer=new MutationObserver(()=>requestAnimationFrame(mount));
-observer.observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('pageshow',mount);
 window.addEventListener('focus',mount);
+window.addEventListener('load',mount);
 mount();
+
