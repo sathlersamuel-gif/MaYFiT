@@ -60,7 +60,8 @@ test("Android mantém TTS nativo e usa voz embutida confiável no treino", async
   assert.match(runtimeStability, /fim-treino\.base64\.txt/);
   assert.match(runtimeStability, /installEmbeddedWorkoutVoice/);
   assert.match(runtimeStability, /__mayfitAndroidEmbeddedWorkoutVoice/);
-  assert.match(runtimeStability, /embeddedSpeak/);
+  assert.match(runtimeStability, /synthesis\.speak/);
+  assert.match(runtimeStability, /Object\.defineProperty\(window, "speechSynthesis"/);
   assert.match(runtimeStability, /await audio\.play\(\)/);
   assert.match(runtimeStability, /INICIANDO TREINO/);
   assert.match(runtimeStability, /DESCANSO/);
