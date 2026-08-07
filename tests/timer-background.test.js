@@ -16,34 +16,35 @@ test("calcula o cronômetro pelo horário real após suspensão da tela", () => 
   assert.equal(timerSecondsRemaining(deadline, 90_000), 0);
 });
 
-test("mantém os alarmes nativos e os arquivos de voz do Android", async () => {
+test("usa um único controlador de voz no Android", async () => {
   const [
     main,
     notifications,
-    androidRuntimeFix,
+    androidVoice,
     studentEntry,
     manifest,
     exerciseSound,
     restSound,
     descansoBase64,
     iniciandoBase64,
+    fimBase64,
   ] = await Promise.all([
     readFile("src/main.jsx", "utf8"),
     readFile("src/lib/workout-timer-notifications.js", "utf8"),
-    readFile("src/android-timer-runtime-fix.js", "utf8"),
+    readFile("src/android-workout-voice.js", "utf8"),
     readFile("src/student-area-entry.js", "utf8"),
     readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
     readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
     readFile("android/app/src/main/res/raw/mayfit_rest.wav"),
     readFile("public/audio/descanso.base64.txt", "utf8"),
     readFile("public/audio/iniciando-treino.base64.txt", "utf8"),
+    readFile("public/audio/fim-treino.base64.txt", "utf8"),
   ]);
   const capacitor = JSON.parse(
     await readFile("capacitor.config.json", "utf8"),
   );
 
   assert.match(main, /timerSecondsRemaining\(deadline\)/);
-  assert.match(main, /addTimerResumeListener/);
   assert.match(main, /scheduleTimerNotification/);
   assert.doesNotMatch(main, /setSeconds\(\(s\) => Math\.max\(0, s - 1\)\)/);
 
@@ -56,24 +57,40 @@ test("mantém os alarmes nativos e os arquivos de voz do Android", async () => {
   assert.match(notifications, /mayfit_rest\.wav/);
   assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
 
-  assert.match(studentEntry, /android-timer-runtime-fix\.js\?v=1/);
-  assert.match(androidRuntimeFix, /descanso\.base64\.txt/);
-  assert.match(androidRuntimeFix, /iniciando-treino\.base64\.txt/);
-  assert.match(androidRuntimeFix, /new Audio\(`data:audio\/mpeg;base64,\$\{base64\}`\)/);
-  assert.match(androidRuntimeFix, /playEmbeddedVoice/);
-  assert.doesNotMatch(androidRuntimeFix, /SpeechSynthesisUtterance/);
-  assert.match(androidRuntimeFix, /cancelTimerNotification/);
-  assert.match(androidRuntimeFix, /scheduleNativeAlertForBackground/);
-  assert.match(androidRuntimeFix, /scheduleTimerNotification/);
-  assert.match(androidRuntimeFix, /document\.hidden/);
-  assert.match(androidRuntimeFix, /legacyTimerTone \? 0 : value/);
+  assert.match(studentEntry, /android-workout-voice\.js\?v=1/);
+  assert.doesNotMatch(studentEntry, /android-timer-runtime-fix/);
+  await assert.rejects(
+    () => readFile("src/android-timer-runtime-fix.js", "utf8"),
+    (error) => error?.code === "ENOENT",
+  );
+
+  assert.match(androidVoice, /iniciando-treino\.base64\.txt/);
+  assert.match(androidVoice, /descanso\.base64\.txt/);
+  assert.match(androidVoice, /fim-treino\.base64\.txt/);
+  assert.match(androidVoice, /playVoice\("start"\)/);
+  assert.match(androidVoice, /playVoice\("rest"\)/);
+  assert.match(androidVoice, /playVoice\("finish"\)/);
+  assert.match(androidVoice, /INICIAR TREINO/);
+  assert.match(androidVoice, /lastPhase === "TEMPO" && phase === "PAUSA"/);
+  assert.match(androidVoice, /lastPhase === "PAUSA" &&/);
+  assert.match(androidVoice, /allWorkoutRowsDone/);
+  assert.match(androidVoice, /MutationObserver/);
+  assert.doesNotMatch(androidVoice, /setInterval/);
+  assert.doesNotMatch(androidVoice, /SpeechSynthesisUtterance/);
+  assert.match(androidVoice, /cancelTimerNotification/);
+  assert.match(androidVoice, /scheduleNativeAlertForBackground/);
+  assert.match(androidVoice, /scheduleTimerNotification/);
+  assert.match(androidVoice, /visibilitychange/);
 
   const descanso = Buffer.from(descansoBase64.trim(), "base64");
   const iniciando = Buffer.from(iniciandoBase64.trim(), "base64");
-  assert.equal(descanso.subarray(0, 3).toString("ascii"), "ID3");
-  assert.equal(iniciando.subarray(0, 3).toString("ascii"), "ID3");
-  assert.equal(descanso.length, 3896);
-  assert.equal(iniciando.length, 5300);
+  const fim = Buffer.from(fimBase64.trim(), "base64");
+  for (const voice of [descanso, iniciando, fim]) {
+    assert.equal(voice.subarray(0, 3).toString("ascii"), "ID3");
+    assert.ok(voice.length > 1000);
+  }
+  assert.notDeepEqual(descanso, iniciando);
+  assert.notDeepEqual(iniciando, fim);
 
   assert.match(manifest, /android\.permission\.USE_EXACT_ALARM/);
   assert.equal(
