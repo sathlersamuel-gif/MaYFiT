@@ -74,17 +74,28 @@ test("mantém os alarmes nativos sem abrir configurações do Android", async ()
   assert.notDeepEqual(exerciseSound, restSound);
 });
 
-test("gera a atualização Android 1.2.1 e um APK instalável", async () => {
-  const [gradle, packageJson, workflow] = await Promise.all([
+test("gera o Android 1.3.0 autoatualizável e um APK instalável", async () => {
+  const [gradle, packageJson, workflow, manifest] = await Promise.all([
     readFile("android/app/build.gradle", "utf8"),
     readFile("package.json", "utf8").then(JSON.parse),
     readFile(".github/workflows/build-android-apk.yml", "utf8"),
+    readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
   ]);
-  assert.match(gradle, /versionCode 4/);
-  assert.match(gradle, /versionName "1\.2\.1"/);
+  const capacitor = JSON.parse(
+    await readFile("capacitor.config.json", "utf8"),
+  );
+
+  assert.match(gradle, /versionCode 5/);
+  assert.match(gradle, /versionName "1\.3\.0"/);
   assert.match(packageJson.scripts["android:apk"], /assembleRelease/);
   assert.match(workflow, /assembleDebug/);
-  assert.match(workflow, /MaYFiT-Android-Instalavel-1\.2\.1/);
+  assert.match(workflow, /MaYFiT-Android-Instalavel-1\.3\.0-AutoUpdate/);
+
+  assert.equal(capacitor.server.url, "https://ma-y-fi-t.vercel.app");
+  assert.equal(capacitor.server.cleartext, false);
+  assert.deepEqual(capacitor.server.allowNavigation, ["ma-y-fi-t.vercel.app"]);
+  assert.match(manifest, /android\.permission\.INTERNET/);
+
   assert.equal(packageJson.dependencies["@capacitor/app"], "^8.1.1");
   assert.equal(
     packageJson.dependencies["@capacitor/local-notifications"],
