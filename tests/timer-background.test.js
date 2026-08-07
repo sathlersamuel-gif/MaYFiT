@@ -16,11 +16,11 @@ test("calcula o cronômetro pelo horário real após suspensão da tela", () => 
   assert.equal(timerSecondsRemaining(deadline, 90_000), 0);
 });
 
-test("usa um único motor de sons configurável no Android", async () => {
+test("mantém Android e iPhone com o mesmo motor e START como único gatilho inicial", async () => {
   const [
     main,
     notifications,
-    androidSounds,
+    mobileSounds,
     studentEntry,
     manifest,
     exerciseSound,
@@ -31,7 +31,7 @@ test("usa um único motor de sons configurável no Android", async () => {
   ] = await Promise.all([
     readFile("src/main.jsx", "utf8"),
     readFile("src/lib/workout-timer-notifications.js", "utf8"),
-    readFile("src/android-workout-sounds.js", "utf8"),
+    readFile("src/mobile-workout-sounds.js", "utf8"),
     readFile("src/student-area-entry.js", "utf8"),
     readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
     readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
@@ -57,48 +57,66 @@ test("usa um único motor de sons configurável no Android", async () => {
   assert.match(notifications, /mayfit_rest\.wav/);
   assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
 
-  assert.match(studentEntry, /android-workout-sounds\.js\?v=1/);
+  assert.match(studentEntry, /mobile-workout-sounds\.js\?v=1/);
+  assert.doesNotMatch(studentEntry, /ios-timer-sounds/);
+  assert.doesNotMatch(studentEntry, /android-workout-sounds/);
   assert.doesNotMatch(studentEntry, /android-workout-voice/);
   assert.doesNotMatch(studentEntry, /android-timer-runtime-fix/);
-  await assert.rejects(
-    () => readFile("src/android-workout-voice.js", "utf8"),
-    (error) => error?.code === "ENOENT",
-  );
-  await assert.rejects(
-    () => readFile("src/android-timer-runtime-fix.js", "utf8"),
-    (error) => error?.code === "ENOENT",
-  );
 
-  assert.match(androidSounds, /iniciando-treino\.base64\.txt/);
-  assert.match(androidSounds, /descanso\.base64\.txt/);
-  assert.match(androidSounds, /fim-treino\.base64\.txt/);
-  assert.match(androidSounds, /SpeechSynthesisUtterance/);
-  assert.match(androidSounds, /preferredPortugueseVoice/);
-  assert.match(androidSounds, /playEmbeddedVoice/);
-  assert.match(androidSounds, /decodeAudioData/);
-  assert.match(androidSounds, /playCue\("start"\)/);
-  assert.match(androidSounds, /playCue\("rest"\)/);
-  assert.match(androidSounds, /playCue\("finish"\)/);
-  assert.match(androidSounds, /INICIAR TREINO/);
-  assert.match(androidSounds, /label === "START"/);
-  assert.match(androidSounds, /allWorkoutRowsDone/);
-  assert.match(androidSounds, /lastPhase === "TEMPO" && phase === "PAUSA"/);
-  assert.match(androidSounds, /lastPhase === "PAUSA" &&/);
-  assert.match(androidSounds, /Bip esportivo/);
-  assert.match(androidSounds, /Sinos/);
-  assert.match(androidSounds, /Apito/);
-  assert.match(androidSounds, /Alerta digital/);
-  assert.match(androidSounds, /Voz natural \(assistente\)/);
-  assert.match(androidSounds, /mayfit_workout_sound_settings_v1/);
-  assert.match(androidSounds, /Sons do treino/);
-  assert.match(androidSounds, /data-sound-preset/);
-  assert.match(androidSounds, /data-sound-select/);
-  assert.match(androidSounds, /MutationObserver/);
-  assert.doesNotMatch(androidSounds, /setInterval/);
-  assert.match(androidSounds, /cancelTimerNotification/);
-  assert.match(androidSounds, /scheduleNativeAlertForBackground/);
-  assert.match(androidSounds, /scheduleTimerNotification/);
-  assert.match(androidSounds, /legacyTimerTone \? 0 : value/);
+  for (const removed of [
+    "src/ios-timer-sounds.js",
+    "src/android-workout-sounds.js",
+    "src/android-workout-voice.js",
+    "src/android-timer-runtime-fix.js",
+  ]) {
+    await assert.rejects(
+      () => readFile(removed, "utf8"),
+      (error) => error?.code === "ENOENT",
+    );
+  }
+
+  assert.match(mobileSounds, /ANDROID_USER_AGENT/);
+  assert.match(mobileSounds, /IOS_USER_AGENT/);
+  assert.match(mobileSounds, /isSupportedMobileDevice/);
+  assert.match(mobileSounds, /iniciando-treino\.base64\.txt/);
+  assert.match(mobileSounds, /descanso\.base64\.txt/);
+  assert.match(mobileSounds, /fim-treino\.base64\.txt/);
+  assert.match(mobileSounds, /SpeechSynthesisUtterance/);
+  assert.match(mobileSounds, /preferredPortugueseVoice/);
+  assert.match(mobileSounds, /playEmbeddedVoice/);
+  assert.match(mobileSounds, /decodeAudioData/);
+
+  assert.match(mobileSounds, /classList\?\.contains\("timer-control"\)/);
+  assert.match(mobileSounds, /normalizeText\(button\.textContent\) === "START"/);
+  assert.match(mobileSounds, /confirmTimerActuallyStarted/);
+  assert.match(mobileSounds, /button\.classList\.contains\("running"\)/);
+  assert.doesNotMatch(mobileSounds, /closest\("\.hero"\)/);
+  assert.doesNotMatch(mobileSounds, /complete-button/);
+  assert.equal((mobileSounds.match(/playCue\("start"\)/g) || []).length, 1);
+
+  assert.match(mobileSounds, /lastPhase === "TEMPO" && phase === "PAUSA"/);
+  assert.match(mobileSounds, /playCue\("rest"\)/);
+  assert.match(mobileSounds, /allWorkoutRowsDone/);
+  assert.match(mobileSounds, /playCue\("finish"\)/);
+  assert.doesNotMatch(mobileSounds, /lastPhase === "PAUSA" && phase === "TEMPO"/);
+
+  assert.match(mobileSounds, /Bip esportivo/);
+  assert.match(mobileSounds, /Sinos/);
+  assert.match(mobileSounds, /Apito/);
+  assert.match(mobileSounds, /Alerta digital/);
+  assert.match(mobileSounds, /Voz natural \(assistente\)/);
+  assert.match(mobileSounds, /mayfit_workout_sound_settings_v1/);
+  assert.match(mobileSounds, /Sons do treino/);
+  assert.match(mobileSounds, /data-sound-preset/);
+  assert.match(mobileSounds, /data-sound-select/);
+  assert.match(mobileSounds, /MutationObserver/);
+  assert.doesNotMatch(mobileSounds, /setInterval/);
+  assert.match(mobileSounds, /legacyTimerTone \? 0 : value/);
+
+  assert.match(mobileSounds, /if \(!isAndroidDevice\(\)\) return;/);
+  assert.match(mobileSounds, /cancelTimerNotification/);
+  assert.match(mobileSounds, /scheduleNativeAlertForBackground/);
+  assert.match(mobileSounds, /scheduleTimerNotification/);
 
   const descanso = Buffer.from(descansoBase64.trim(), "base64");
   const iniciando = Buffer.from(iniciandoBase64.trim(), "base64");
