@@ -68,8 +68,10 @@ function installHeaderStability() {
     childList: true,
   });
   window.addEventListener("pageshow", syncHeaderActions);
-  window.addEventListener("focus", syncHeaderActions);
-  syncHeaderActions();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) syncHeaderActions();
+  });
+  requestAnimationFrame(syncHeaderActions);
 }
 
 function installSeriesVoiceFallback() {
