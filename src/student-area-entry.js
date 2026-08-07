@@ -8,3 +8,4 @@ import './student-tab-isolation.js?v=1';
 import './student-workout-list-back-button.js?v=1';
 import './student-reference-dashboard.js?v=2';
 import './student-reference-clean-layout.js?v=1';
+import './ios-timer-sounds.js?v=1';
