@@ -54,9 +54,15 @@ test("mantém os alarmes nativos sem abrir configurações do Android", async ()
 
   assert.match(studentEntry, /android-timer-runtime-fix\.js\?v=1/);
   assert.match(androidRuntimeFix, /BLOCKED_WARNING/);
-  assert.match(androidRuntimeFix, /EXERCISE_TONES/);
-  assert.match(androidRuntimeFix, /REST_TONES/);
-  assert.match(androidRuntimeFix, /currentTimerPhase\(\) === "PAUSA"/);
+  assert.match(androidRuntimeFix, /SpeechSynthesisUtterance/);
+  assert.match(androidRuntimeFix, /"Iniciando treino"/);
+  assert.match(androidRuntimeFix, /"Descanso"/);
+  assert.match(androidRuntimeFix, /speechSynthesis\.cancel\(\)/);
+  assert.match(androidRuntimeFix, /cancelTimerNotification/);
+  assert.match(androidRuntimeFix, /scheduleNativeAlertForBackground/);
+  assert.match(androidRuntimeFix, /scheduleTimerNotification/);
+  assert.match(androidRuntimeFix, /document\.hidden/);
+  assert.match(androidRuntimeFix, /legacyTimerTone \? 0 : value/);
 
   assert.match(manifest, /android\.permission\.USE_EXACT_ALARM/);
   assert.equal(
