@@ -29,6 +29,16 @@ function friendlyAuthError(error) {
   return message;
 }
 
+async function activateOwnPendingProfile(profile) {
+  if (!profile || profile.status !== 'pending') return profile;
+  const { error } = await supabase
+    .from('profiles')
+    .update({ status: 'active' })
+    .eq('id', profile.id);
+  if (error) throw error;
+  return { ...profile, status: 'active' };
+}
+
 async function profileFor(user) {
   const { data, error } = await supabase
     .from('profiles')
@@ -37,14 +47,14 @@ async function profileFor(user) {
     .single();
 
   if (error) throw error;
-  if (data.status === 'pending') throw new Error('Seu cadastro ainda está aguardando aprovação.');
   if (data.status === 'blocked') throw new Error('Sua conta está bloqueada.');
 
+  const profile = await activateOwnPendingProfile(data);
   return {
-    id: data.id,
-    name: data.full_name || user.email?.split('@')[0] || 'Usuário',
+    id: profile.id,
+    name: profile.full_name || user.email?.split('@')[0] || 'Usuário',
     email: user.email,
-    role: data.role
+    role: profile.role
   };
 }
 
@@ -158,24 +168,40 @@ async function signup(form) {
   }
 
   try {
+    const cleanEmail = email.trim();
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: cleanEmail,
       password,
       options: { data: { full_name: fullName.trim() } }
     });
     if (error) throw error;
+    if (!data.user) throw new Error('Não foi possível criar o usuário.');
 
-    if (data.user) {
-      await supabase
-        .from('profiles')
-        .update({ full_name: fullName.trim(), role: 'student', status: 'pending' })
-        .eq('id', data.user.id);
+    let user = data.user;
+    let session = data.session;
+
+    if (!session) {
+      const signedIn = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password
+      });
+      if (signedIn.error) throw signedIn.error;
+      user = signedIn.data.user;
+      session = signedIn.data.session;
     }
 
+    if (!session || !user) throw new Error('O cadastro foi criado, mas não foi possível iniciar a sessão automaticamente.');
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ full_name: fullName.trim(), role: 'student', status: 'active' })
+      .eq('id', user.id);
+    if (updateError) throw updateError;
+
+    const profile = await profileFor(user);
+    sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
     localStorage.setItem(SIGNUP_COOLDOWN_KEY, String(Date.now() + 15000));
-    alert('Cadastro enviado. Agora aguarde a aprovação do administrador.');
-    const [emailInput] = form.querySelectorAll('input');
-    emailInput.value = email.trim();
+    location.reload();
   } catch (error) {
     alert(friendlyAuthError(error));
   } finally {
