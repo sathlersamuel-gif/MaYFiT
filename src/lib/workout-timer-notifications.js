@@ -1,3 +1,4 @@
+import "./mobile-keyboard-recovery.js";
 import "./mobile-speech-stability.js";
 import { App as NativeApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
