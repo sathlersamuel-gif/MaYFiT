@@ -125,7 +125,7 @@ test("mantem Android e iPhone com motor unico e configuracoes reais", async () =
   assert.notDeepEqual(exerciseSound, restSound);
 });
 
-test("gera o Android 1.3.0 autoatualizavel e um APK instalavel", async () => {
+test("gera o Android 1.3.1 autoatualizavel com voz nativa e APK instalavel", async () => {
   const [gradle, packageJson, workflow, manifest] = await Promise.all([
     readFile("android/app/build.gradle", "utf8"),
     readFile("package.json", "utf8").then(JSON.parse),
@@ -134,16 +134,17 @@ test("gera o Android 1.3.0 autoatualizavel e um APK instalavel", async () => {
   ]);
   const capacitor = JSON.parse(await readFile("capacitor.config.json", "utf8"));
 
-  assert.match(gradle, /versionCode 5/);
-  assert.match(gradle, /versionName "1\.3\.0"/);
+  assert.match(gradle, /versionCode 6/);
+  assert.match(gradle, /versionName "1\.3\.1"/);
   assert.match(packageJson.scripts["android:apk"], /assembleRelease/);
   assert.match(workflow, /assembleDebug/);
-  assert.match(workflow, /MaYFiT-Android-Instalavel-1\.3\.0-AutoUpdate/);
+  assert.match(workflow, /MaYFiT-Android-Instalavel-1\.3\.1-NativeVoice/);
 
   assert.equal(capacitor.server.url, "https://ma-y-fi-t.vercel.app");
   assert.equal(capacitor.server.cleartext, false);
   assert.deepEqual(capacitor.server.allowNavigation, ["ma-y-fi-t.vercel.app"]);
   assert.match(manifest, /android\.permission\.INTERNET/);
+  assert.match(manifest, /android\.intent\.action\.TTS_SERVICE/);
 
   assert.equal(packageJson.dependencies["@capacitor/app"], "^8.1.1");
   assert.equal(packageJson.dependencies["@capacitor/local-notifications"], "^8.2.1");
