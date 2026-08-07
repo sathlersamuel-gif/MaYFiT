@@ -46,8 +46,8 @@ test("mantém os alarmes nativos sem abrir configurações do Android", async ()
   assert.match(notifications, /LocalNotifications\.schedule/);
   assert.match(notifications, /checkExactNotificationSetting/);
   assert.doesNotMatch(notifications, /changeExactNotificationSetting/);
-  assert.match(notifications, /mayfit-workout-exercise-v2/);
-  assert.match(notifications, /mayfit-workout-rest-v2/);
+  assert.match(notifications, /mayfit-workout-exercise-v3/);
+  assert.match(notifications, /mayfit-workout-rest-v3/);
   assert.match(notifications, /mayfit_timer\.wav/);
   assert.match(notifications, /mayfit_rest\.wav/);
   assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
