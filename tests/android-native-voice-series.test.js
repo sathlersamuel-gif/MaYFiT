@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("Android mantém TTS nativo e usa voz embutida confiável no treino", async () => {
+test("Android registra TTS antes do Capacitor e nunca deixa nova serie muda", async () => {
   const [
     bridge,
     seriesCue,
@@ -36,6 +36,7 @@ test("Android mantém TTS nativo e usa voz embutida confiável no treino", async
   assert.match(bridge, /ttsStart/);
   assert.match(bridge, /ttsDone/);
   assert.match(bridge, /ttsError/);
+  assert.match(bridge, /mayfit-native-tts-error/);
 
   assert.match(plugin, /@CapacitorPlugin\(name = "NativeTts"\)/);
   assert.match(plugin, /new TextToSpeech/);
@@ -53,19 +54,13 @@ test("Android mantém TTS nativo e usa voz embutida confiável no treino", async
   assert.match(seriesCue, /selected === "beep"/);
   assert.match(seriesCue, /selected === "bells"/);
   assert.match(seriesCue, /selected === "whistle"/);
+  assert.match(seriesCue, /540, 810, 1080/);
   assert.match(seriesCue, /holdAudio/);
 
-  assert.match(runtimeStability, /iniciando-treino\.base64\.txt/);
-  assert.match(runtimeStability, /descanso\.base64\.txt/);
-  assert.match(runtimeStability, /fim-treino\.base64\.txt/);
-  assert.match(runtimeStability, /installEmbeddedWorkoutVoice/);
-  assert.match(runtimeStability, /__mayfitAndroidEmbeddedWorkoutVoice/);
-  assert.match(runtimeStability, /synthesis\.speak/);
-  assert.match(runtimeStability, /Object\.defineProperty\(window, "speechSynthesis"/);
-  assert.match(runtimeStability, /await audio\.play\(\)/);
-  assert.match(runtimeStability, /INICIANDO TREINO/);
-  assert.match(runtimeStability, /DESCANSO/);
-  assert.match(runtimeStability, /FIM DE TREINO/);
+  assert.match(runtimeStability, /lastPhase === "PAUSA" && phase === "TEMPO"/);
+  assert.match(runtimeStability, /__mayfitAndroidNativeSpeechBridge/);
+  assert.match(runtimeStability, /playFallback/);
+  assert.match(runtimeStability, /mayfit-native-tts-error/);
   assert.match(runtimeStability, /\.app>header>\.icon/);
   assert.match(runtimeStability, /margin-left:auto/);
 
