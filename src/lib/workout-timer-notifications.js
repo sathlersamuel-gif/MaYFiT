@@ -3,8 +3,10 @@ import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 
 const TIMER_NOTIFICATION_ID = 81005;
-const EXERCISE_CHANNEL_ID = "mayfit-workout-exercise-v2";
-const REST_CHANNEL_ID = "mayfit-workout-rest-v2";
+// IDs novos: o Android memoriza as configuracoes do canal antigo, inclusive som/silencio.
+// Criar canais novos garante que a versao AutoUpdate use os sons definidos abaixo.
+const EXERCISE_CHANNEL_ID = "mayfit-workout-exercise-v3";
+const REST_CHANNEL_ID = "mayfit-workout-rest-v3";
 const EXERCISE_SOUND = "mayfit_timer.wav";
 const REST_SOUND = "mayfit_rest.wav";
 let channelsReady = false;
@@ -19,9 +21,9 @@ async function createTimerChannels() {
   await Promise.all([
     LocalNotifications.createChannel({
       id: EXERCISE_CHANNEL_ID,
-      name: "Fim do exercício",
+      name: "Inicio do descanso",
       description:
-        "Som usado quando o tempo do exercício termina e a pausa começa.",
+        "Som usado quando o exercicio termina e o tempo de descanso comeca.",
       sound: EXERCISE_SOUND,
       importance: 5,
       visibility: 1,
@@ -31,9 +33,9 @@ async function createTimerChannels() {
     }),
     LocalNotifications.createChannel({
       id: REST_CHANNEL_ID,
-      name: "Fim do descanso",
+      name: "Inicio do exercicio",
       description:
-        "Som diferente usado quando a pausa termina e o exercício recomeça.",
+        "Som diferente usado quando o descanso termina e o exercicio recomeca.",
       sound: REST_SOUND,
       importance: 5,
       visibility: 1,
@@ -65,7 +67,7 @@ export async function prepareTimerNotifications({ request = false } = {}) {
     }
     if (permission.display !== "granted") return false;
 
-    // Apenas consulta o recurso. Nunca abre a tela de configurações do Android.
+    // Apenas consulta o recurso. Nunca abre a tela de configuracoes do Android.
     exactAlarmEnabled = await readExactAlarmSetting();
     await createTimerChannels();
     return true;
@@ -97,6 +99,8 @@ export async function scheduleTimerNotification({
   const at = new Date(Number(deadline));
   if (!Number.isFinite(at.getTime()) || at.getTime() <= Date.now()) return false;
 
+  // phase === exercise: ao zerar, inicia o descanso -> som 1.
+  // phase === pause: ao zerar, volta ao exercicio -> som 2.
   const restFinished = phase === "pause";
   const channelId = restFinished ? REST_CHANNEL_ID : EXERCISE_CHANNEL_ID;
   const sound = restFinished ? REST_SOUND : EXERCISE_SOUND;
@@ -108,14 +112,14 @@ export async function scheduleTimerNotification({
         {
           id: TIMER_NOTIFICATION_ID,
           title: restFinished
-            ? "MaYFiT — descanso finalizado"
-            : "MaYFiT — tempo finalizado",
+            ? "MaYFiT — hora do exercicio"
+            : "MaYFiT — hora do descanso",
           body: restFinished
-            ? "O descanso terminou. Hora de voltar ao exercício."
-            : `Contagem finalizada${exerciseName ? `: ${exerciseName}` : "."}`,
+            ? "O descanso terminou. Hora de voltar ao exercicio."
+            : `Exercicio finalizado${exerciseName ? `: ${exerciseName}.` : "."} Inicie o descanso.`,
           schedule: {
             at,
-            // Sem permissão de alarme exato, usa o agendamento normal sem
+            // Sem permissao de alarme exato, usa o agendamento normal sem
             // direcionar o aluno para outra tela.
             allowWhileIdle: exactAlarmEnabled,
           },
