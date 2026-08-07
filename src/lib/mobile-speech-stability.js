@@ -1,5 +1,7 @@
 const ANDROID_USER_AGENT = /Android/i;
 const IOS_USER_AGENT = /iPad|iPhone|iPod/i;
+const SETTINGS_KEY = "mayfit_workout_sound_settings_v2";
+const LEGACY_SETTINGS_KEY = "mayfit_workout_sound_settings_v1";
 
 function isIOSDevice() {
   return (
@@ -16,6 +18,24 @@ function isSupportedMobileDevice() {
   return isIOSDevice() || isAndroidDevice();
 }
 
+function normalizedText(value) {
+  return String(value || "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+function storedSoundSettings() {
+  for (const key of [SETTINGS_KEY, LEGACY_SETTINGS_KEY]) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || "null");
+      if (saved && typeof saved === "object") return saved;
+    } catch {}
+  }
+  return {};
+}
+
 function installMobileSpeechStability() {
   if (!isSupportedMobileDevice()) return;
   const synthesis = window.speechSynthesis;
@@ -23,12 +43,16 @@ function installMobileSpeechStability() {
 
   const originalSpeak = synthesis.speak.bind(synthesis);
   const originalCancel = synthesis.cancel.bind(synthesis);
+  const speechQueue = [];
   const activeUtterances = new Set();
+  let currentUtterance = null;
   let deferredCancelTimer = null;
   let speechAudioContext = null;
   let keepAliveOscillator = null;
   let keepAliveGain = null;
   let releaseTimer = null;
+  let lastPhase = "";
+  let phaseSyncQueued = false;
 
   const ensureSpeechAudio = async () => {
     try {
@@ -76,7 +100,7 @@ function installMobileSpeechStability() {
       keepAliveOscillator = null;
       keepAliveGain = null;
       releaseTimer = null;
-    }, 700);
+    }, 900);
   };
 
   const clearDeferredCancel = () => {
@@ -85,43 +109,63 @@ function installMobileSpeechStability() {
     deferredCancelTimer = null;
   };
 
-  // O motor de voz chama cancel() imediatamente antes de speak().
-  // Em alguns WebViews/Safari isso pode cancelar a nova fala também.
-  // Adiamos o cancelamento; se speak() vier logo depois, ele é descartado.
+  const processSpeechQueue = () => {
+    if (currentUtterance || !speechQueue.length) return;
+    const utterance = speechQueue.shift();
+    if (!utterance) return;
+
+    currentUtterance = utterance;
+    activeUtterances.add(utterance);
+    void holdSpeechAudio();
+
+    let finished = false;
+    let watchdog = null;
+    const finishCurrent = () => {
+      if (finished) return;
+      finished = true;
+      if (watchdog) clearTimeout(watchdog);
+      activeUtterances.delete(utterance);
+      if (currentUtterance === utterance) currentUtterance = null;
+      if (speechQueue.length) {
+        setTimeout(processSpeechQueue, 90);
+      } else {
+        releaseSpeechAudioSoon();
+      }
+    };
+
+    try {
+      utterance.addEventListener?.("end", finishCurrent, { once: true });
+      utterance.addEventListener?.("error", finishCurrent, { once: true });
+      watchdog = setTimeout(finishCurrent, 6000);
+      synthesis.resume?.();
+      originalSpeak(utterance);
+    } catch (error) {
+      finishCurrent();
+      throw error;
+    }
+  };
+
+  // O motor chama cancel() logo antes de speak(). Em iOS e alguns WebViews
+  // Android isso pode eliminar a fala seguinte. Adiamos o cancelamento e,
+  // quando speak() chega em seguida, preservamos a fila em vez de interromper.
   const stableCancel = () => {
     clearDeferredCancel();
     deferredCancelTimer = setTimeout(() => {
       deferredCancelTimer = null;
+      speechQueue.length = 0;
+      currentUtterance = null;
+      activeUtterances.clear();
       try {
         originalCancel();
       } catch {}
-    }, 180);
+      releaseSpeechAudioSoon();
+    }, 220);
   };
 
   const stableSpeak = (utterance) => {
     clearDeferredCancel();
-    void holdSpeechAudio();
-    activeUtterances.add(utterance);
-
-    let cleaned = false;
-    let watchdog = null;
-    const cleanup = () => {
-      if (cleaned) return;
-      cleaned = true;
-      if (watchdog) clearTimeout(watchdog);
-      activeUtterances.delete(utterance);
-      releaseSpeechAudioSoon();
-    };
-
-    try {
-      utterance.addEventListener?.("end", cleanup, { once: true });
-      utterance.addEventListener?.("error", cleanup, { once: true });
-      watchdog = setTimeout(cleanup, 5000);
-      originalSpeak(utterance);
-    } catch (error) {
-      cleanup();
-      throw error;
-    }
+    speechQueue.push(utterance);
+    processSpeechQueue();
   };
 
   try {
@@ -149,18 +193,95 @@ function installMobileSpeechStability() {
     });
   } catch {}
 
+  const portugueseVoices = () => {
+    try {
+      return (synthesis.getVoices?.() || []).filter((voice) =>
+        /^pt(?:-|_)/i.test(String(voice.lang || "")),
+      );
+    } catch {
+      return [];
+    }
+  };
+
+  const preferredVoice = () => {
+    const voices = portugueseVoices();
+    if (!voices.length) return null;
+    const wanted = storedSoundSettings().voiceName;
+    if (wanted && wanted !== "auto") {
+      const selected = voices.find((voice) => voice.name === wanted);
+      if (selected) return selected;
+    }
+    return (
+      voices.find((voice) => /^pt-BR$/i.test(String(voice.lang || ""))) ||
+      voices[0]
+    );
+  };
+
+  const speakAutomaticSeriesStart = () => {
+    const settings = storedSoundSettings();
+    if ((settings.start || "voice") !== "voice") return;
+    try {
+      const utterance = new SpeechSynthesisUtterance("Iniciando treino");
+      utterance.lang = "pt-BR";
+      utterance.rate = 0.98;
+      utterance.pitch = 1.02;
+      utterance.volume = 1;
+      const voice = preferredVoice();
+      if (voice) utterance.voice = voice;
+      synthesis.speak(utterance);
+    } catch {}
+  };
+
+  const currentPhase = () =>
+    normalizedText(
+      document.querySelector(".workout-screen .time-strip span")?.textContent,
+    );
+
+  const syncSeriesPhase = () => {
+    phaseSyncQueued = false;
+    if (document.hidden) return;
+    const phase = currentPhase();
+    if (!phase) {
+      lastPhase = "";
+      return;
+    }
+    if (lastPhase === "PAUSA" && phase === "TEMPO") {
+      speakAutomaticSeriesStart();
+    }
+    lastPhase = phase;
+  };
+
+  const queueSeriesPhaseSync = () => {
+    if (phaseSyncQueued) return;
+    phaseSyncQueued = true;
+    requestAnimationFrame(syncSeriesPhase);
+  };
+
+  const observer = new MutationObserver(queueSeriesPhaseSync);
+  observer.observe(document.documentElement, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+  });
+
   const unlock = () => void ensureSpeechAudio();
   document.addEventListener("pointerdown", unlock, { capture: true, passive: true });
   document.addEventListener("touchstart", unlock, { capture: true, passive: true });
+  document.addEventListener("visibilitychange", queueSeriesPhaseSync);
+  window.addEventListener("pageshow", queueSeriesPhaseSync);
 
   window.addEventListener("pagehide", () => {
     clearDeferredCancel();
+    speechQueue.length = 0;
+    currentUtterance = null;
     try {
       originalCancel();
     } catch {}
     activeUtterances.clear();
     releaseSpeechAudioSoon();
   });
+
+  queueSeriesPhaseSync();
 }
 
 installMobileSpeechStability();
