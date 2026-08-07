@@ -4,18 +4,14 @@ const SETTINGS_KEY = "mayfit_workout_sound_settings_v2";
 const LEGACY_SETTINGS_KEY = "mayfit_workout_sound_settings_v1";
 const ANDROID_USER_AGENT = /Android/i;
 const VOICE_SOURCES = {
-  start: "/audio/iniciando-treino.base64.txt?v=4",
-  rest: "/audio/descanso.base64.txt?v=4",
-  finish: "/audio/fim-treino.base64.txt?v=3",
+  start: "/audio/iniciando-treino.base64.txt?v=5",
+  rest: "/audio/descanso.base64.txt?v=5",
+  finish: "/audio/fim-treino.base64.txt?v=4",
 };
 
 function isNativeAndroid() {
   try {
-    return (
-      ANDROID_USER_AGENT.test(navigator.userAgent) &&
-      Capacitor.isNativePlatform() &&
-      Capacitor.getPlatform() === "android"
-    );
+    return ANDROID_USER_AGENT.test(navigator.userAgent);
   } catch {
     return false;
   }
@@ -282,10 +278,15 @@ function installEmbeddedWorkoutVoice() {
         };
         audio.onerror = () =>
           emitUtterance(utterance, "error", { error: "embedded-audio-error" });
-        await audio.play();
+        const playAttempt = audio.play();
         emitUtterance(utterance, "start");
+        await playAttempt;
       } catch (error) {
-        emitUtterance(utterance, "error", { error });
+        try {
+          originalSpeak?.(utterance);
+        } catch {
+          emitUtterance(utterance, "error", { error });
+        }
       }
     })();
   };
