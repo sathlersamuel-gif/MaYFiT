@@ -59,7 +59,9 @@ async function loadRecords(modal, uid, force = false) {
     .order("measured_at", { ascending: false })
     .then(({ data, error }) => {
       if (error) throw error;
-      const records = new Map((data || []).map((record) => [String(record.id), record]));
+      const records = new Map(
+        (data || []).map((record) => [String(record.id), record]),
+      );
       modalCache.set(modal, { uid, records });
       return records;
     })
@@ -85,13 +87,14 @@ function renderFullReport(entry, record) {
   entry.dataset.fullReportReady = "true";
 }
 
-async function enhanceStudentModal(modal) {
-  if (modal.querySelector(".be-admin-select")) return;
+async function enhanceModal(modal) {
   const uid = modal.dataset.evolutionUser;
   if (!uid) return;
 
   const entries = [...modal.querySelectorAll(".be-entry[data-evaluation-id]")];
-  const pending = entries.filter((entry) => entry.dataset.fullReportReady !== "true");
+  const pending = entries.filter(
+    (entry) => entry.dataset.fullReportReady !== "true",
+  );
   if (!pending.length) return;
 
   try {
@@ -106,7 +109,10 @@ async function enhanceStudentModal(modal) {
       if (record) renderFullReport(entry, record);
     });
   } catch (error) {
-    console.error("MaYFiT: não foi possível exibir o relatório corporal completo.", error);
+    console.error(
+      "MaYFiT: não foi possível exibir o relatório corporal completo.",
+      error,
+    );
   }
 }
 
@@ -114,7 +120,7 @@ function run() {
   scheduled = false;
   document
     .querySelectorAll(".be-modal[data-evolution-user]")
-    .forEach((modal) => enhanceStudentModal(modal));
+    .forEach((modal) => enhanceModal(modal));
 }
 
 function scheduleRun() {
@@ -124,7 +130,12 @@ function scheduleRun() {
 }
 
 const observer = new MutationObserver(scheduleRun);
-observer.observe(document.documentElement, { childList: true, subtree: true });
+observer.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  attributeFilter: ["data-evolution-user"],
+});
 
 document.addEventListener("mayfit:evolution-saved", scheduleRun);
 scheduleRun();
