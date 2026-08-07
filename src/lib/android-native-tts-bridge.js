@@ -47,6 +47,20 @@ function emitUtterance(utterance, type, detail = {}) {
   } catch {}
 }
 
+function notifyNativeTtsFailure(id, text, error) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent("mayfit-native-tts-error", {
+        detail: {
+          id: String(id || ""),
+          text: String(text || ""),
+          error: String(error?.message || error || "native-tts-error"),
+        },
+      }),
+    );
+  } catch {}
+}
+
 function installAndroidNativeSpeechBridge() {
   if (!canUseNativeTts()) return;
   if (window.__mayfitAndroidNativeSpeechBridge) return;
@@ -84,14 +98,16 @@ function installAndroidNativeSpeechBridge() {
   synthesis.speak = (utterance) => {
     if (!utterance) return;
     const id = `mayfit-tts-${Date.now()}-${++sequence}`;
+    const text = String(utterance.text || "");
     active.set(id, utterance);
     void NativeTts.speak({
       id,
-      text: String(utterance.text || ""),
+      text,
       lang: String(utterance.lang || "pt-BR"),
     }).catch((error) => {
       active.delete(id);
       emitUtterance(utterance, "error", { error });
+      notifyNativeTtsFailure(id, text, error);
     });
   };
 
@@ -112,6 +128,7 @@ function installAndroidNativeSpeechBridge() {
     if (!utterance) return;
     active.delete(key);
     emitUtterance(utterance, "error", { error: errorCode });
+    notifyNativeTtsFailure(key, utterance.text, errorCode);
   });
 
   try {
