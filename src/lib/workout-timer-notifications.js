@@ -1,3 +1,4 @@
+import "./ios-speech-stability.js";
 import { App as NativeApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
