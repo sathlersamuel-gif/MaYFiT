@@ -17,6 +17,17 @@ function setNotice(form, message) {
   notice.textContent = message;
 }
 
+function setControlledInputValue(input, value) {
+  if (!input) return;
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value'
+  )?.set;
+  if (setter) setter.call(input, value);
+  else input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 function friendlyAuthError(error) {
   const message = String(error?.message || 'Não foi possível concluir o cadastro.');
   if (/email rate limit exceeded/i.test(message)) {
@@ -219,11 +230,30 @@ function enhanceLogin() {
   form.dataset.supabaseReady = 'true';
 
   const inputs = form.querySelectorAll('input');
-  if (inputs[0]) {
-    inputs[0].value = '';
-    inputs[0].placeholder = 'seuemail@exemplo.com';
+  const emailInput = inputs[0];
+  const passwordInput = inputs[1];
+
+  if (emailInput) {
+    emailInput.name = 'email';
+    emailInput.type = 'email';
+    emailInput.autocomplete = 'username';
+    emailInput.inputMode = 'email';
+    emailInput.placeholder = '';
   }
-  if (inputs[1]) inputs[1].value = '';
+  if (passwordInput) {
+    passwordInput.name = 'password';
+    passwordInput.autocomplete = 'current-password';
+  }
+
+  const testEmails = new Set(['aluno@mayfit.com', 'admin@mayfit.com']);
+  const hasTestCredentials =
+    testEmails.has(String(emailInput?.value || '').trim().toLowerCase()) &&
+    passwordInput?.value === '123456';
+
+  if (hasTestCredentials) {
+    setControlledInputValue(emailInput, '');
+    setControlledInputValue(passwordInput, '');
+  }
 
   const demo = form.querySelector('.demo-switch');
   if (demo) {
@@ -245,7 +275,7 @@ function enhanceLogin() {
     event.stopPropagation();
     requestPasswordReset(form);
   };
-  const passwordLabel = inputs[1]?.closest('label');
+  const passwordLabel = passwordInput?.closest('label');
   if (passwordLabel) passwordLabel.insertAdjacentElement('afterend', forgotButton);
   else form.insertBefore(forgotButton, form.querySelector('button.primary'));
 
