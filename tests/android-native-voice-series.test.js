@@ -2,19 +2,29 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("Android usa TTS nativo e todas as novas series recebem o aviso escolhido", async () => {
-  const [bridge, seriesCue, notifications, mainActivity, plugin, manifest, gradle] =
-    await Promise.all([
-      readFile("src/lib/android-native-tts-bridge.js", "utf8"),
-      readFile("src/lib/mobile-series-start-cue.js", "utf8"),
-      readFile("src/lib/workout-timer-notifications.js", "utf8"),
-      readFile("android/app/src/main/java/com/mayfit/app/MainActivity.java", "utf8"),
-      readFile("android/app/src/main/java/com/mayfit/app/NativeTtsPlugin.java", "utf8"),
-      readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
-      readFile("android/app/build.gradle", "utf8"),
-    ]);
+test("Android registra TTS antes do Capacitor e nunca deixa nova serie muda", async () => {
+  const [
+    bridge,
+    seriesCue,
+    runtimeStability,
+    notifications,
+    mainActivity,
+    plugin,
+    manifest,
+    gradle,
+  ] = await Promise.all([
+    readFile("src/lib/android-native-tts-bridge.js", "utf8"),
+    readFile("src/lib/mobile-series-start-cue.js", "utf8"),
+    readFile("src/lib/android-runtime-stability.js", "utf8"),
+    readFile("src/lib/workout-timer-notifications.js", "utf8"),
+    readFile("android/app/src/main/java/com/mayfit/app/MainActivity.java", "utf8"),
+    readFile("android/app/src/main/java/com/mayfit/app/NativeTtsPlugin.java", "utf8"),
+    readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
+    readFile("android/app/build.gradle", "utf8"),
+  ]);
 
   assert.match(notifications, /import "\.\/android-native-tts-bridge\.js"/);
+  assert.match(notifications, /import "\.\/android-runtime-stability\.js"/);
   assert.match(notifications, /import "\.\/mobile-series-start-cue\.js"/);
 
   assert.match(bridge, /Capacitor\.isNativePlatform\(\)/);
@@ -26,12 +36,17 @@ test("Android usa TTS nativo e todas as novas series recebem o aviso escolhido",
   assert.match(bridge, /ttsStart/);
   assert.match(bridge, /ttsDone/);
   assert.match(bridge, /ttsError/);
+  assert.match(bridge, /mayfit-native-tts-error/);
 
   assert.match(plugin, /@CapacitorPlugin\(name = "NativeTts"\)/);
   assert.match(plugin, /new TextToSpeech/);
   assert.match(plugin, /new Locale\("pt", "BR"\)/);
   assert.match(plugin, /TextToSpeech\.QUEUE_ADD/);
-  assert.match(mainActivity, /registerPlugin\(NativeTtsPlugin\.class\)/);
+  const registerAt = mainActivity.indexOf("registerPlugin(NativeTtsPlugin.class)");
+  const superAt = mainActivity.indexOf("super.onCreate(savedInstanceState)");
+  assert.ok(registerAt >= 0, "plugin nativo registrado");
+  assert.ok(superAt >= 0, "BridgeActivity inicializada");
+  assert.ok(registerAt < superAt, "TTS registrado antes de super.onCreate");
   assert.match(manifest, /android\.intent\.action\.TTS_SERVICE/);
 
   assert.match(seriesCue, /lastPhase === "PAUSA" && phase === "TEMPO"/);
@@ -42,6 +57,13 @@ test("Android usa TTS nativo e todas as novas series recebem o aviso escolhido",
   assert.match(seriesCue, /540, 810, 1080/);
   assert.match(seriesCue, /holdAudio/);
 
-  assert.match(gradle, /versionCode 6/);
-  assert.match(gradle, /versionName "1\.3\.1"/);
+  assert.match(runtimeStability, /lastPhase === "PAUSA" && phase === "TEMPO"/);
+  assert.match(runtimeStability, /__mayfitAndroidNativeSpeechBridge/);
+  assert.match(runtimeStability, /playFallback/);
+  assert.match(runtimeStability, /mayfit-native-tts-error/);
+  assert.match(runtimeStability, /\.app>header>\.icon/);
+  assert.match(runtimeStability, /margin-left:auto/);
+
+  assert.match(gradle, /versionCode 7/);
+  assert.match(gradle, /versionName "1\.3\.2"/);
 });
