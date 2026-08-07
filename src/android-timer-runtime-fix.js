@@ -1,13 +1,16 @@
+import {
+  cancelTimerNotification,
+  scheduleTimerNotification,
+} from "./lib/workout-timer-notifications.js";
+
 const ANDROID_USER_AGENT = /Android/i;
 const BLOCKED_WARNING =
   "Para o sino tocar com a tela apagada, permita as notificações e os alarmes do MaYFiT nas configurações do Android.";
-const EXERCISE_TONES = [980, 760, 980, 760, 980, 760];
-const REST_TONES = [520, 660, 780, 920, 1040, 1180];
 
-let foregroundAudioContext = null;
 let lastForegroundSeconds = null;
 let lastForegroundPhase = null;
 let lastForegroundRunning = false;
+let foregroundCancelTimers = [];
 
 function isAndroidDevice() {
   return ANDROID_USER_AGENT.test(navigator.userAgent);
@@ -18,6 +21,10 @@ function currentTimerPhase() {
     .querySelector(".workout-screen .time-strip span")
     ?.textContent?.trim()
     .toUpperCase();
+}
+
+function currentNativePhase() {
+  return currentTimerPhase() === "PAUSA" ? "pause" : "exercise";
 }
 
 function currentTimerSeconds() {
@@ -38,6 +45,14 @@ function timerIsRunning() {
     ?.classList?.contains("running");
 }
 
+function currentExerciseName() {
+  return (
+    document
+      .querySelector(".workout-screen .sheet-row.mayfit-selected .exercise-col>strong")
+      ?.textContent?.trim() || ""
+  );
+}
+
 function suppressObsoleteAlarmWarning() {
   const originalAlert = window.alert.bind(window);
   window.alert = (message) => {
@@ -46,43 +61,72 @@ function suppressObsoleteAlarmWarning() {
   };
 }
 
-function unlockForegroundAudio() {
+function portugueseVoice() {
   try {
-    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextCtor) return null;
-    foregroundAudioContext = foregroundAudioContext || new AudioContextCtor();
-    if (foregroundAudioContext.state === "suspended") {
-      void foregroundAudioContext.resume();
-    }
-    return foregroundAudioContext;
+    const voices = window.speechSynthesis?.getVoices?.() || [];
+    return (
+      voices.find((voice) => /^pt-BR$/i.test(voice.lang)) ||
+      voices.find((voice) => /^pt/i.test(voice.lang)) ||
+      null
+    );
   } catch {
     return null;
   }
 }
 
-function playForegroundTimerSound(phase) {
-  const ctx = unlockForegroundAudio();
-  if (!ctx || ctx.state === "closed") return;
-  const tones = phase === "PAUSA" ? REST_TONES : EXERCISE_TONES;
-  const start = ctx.currentTime + 0.02;
+function speakTimerPhase(phase) {
+  try {
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+      if (navigator.vibrate) navigator.vibrate([500, 160, 700]);
+      return;
+    }
 
-  tones.forEach((frequency, index) => {
-    const offset = index * 0.24;
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(frequency, start + offset);
-    gain.gain.setValueAtTime(0.68, start + offset);
-    gain.gain.exponentialRampToValueAtTime(0.001, start + offset + 0.18);
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.start(start + offset);
-    oscillator.stop(start + offset + 0.2);
-  });
+    const text = phase === "PAUSA" ? "Iniciando treino" : "Descanso";
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pt-BR";
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    const voice = portugueseVoice();
+    if (voice) utterance.voice = voice;
 
-  if (navigator.vibrate) {
-    navigator.vibrate([450, 140, 450, 140, 650]);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    if (navigator.vibrate) navigator.vibrate([350, 120, 350]);
+  } catch {
+    if (navigator.vibrate) navigator.vibrate([500, 160, 700]);
   }
+}
+
+function clearForegroundCancelTimers() {
+  foregroundCancelTimers.forEach((timer) => clearTimeout(timer));
+  foregroundCancelTimers = [];
+}
+
+function suppressNativeAlertWhileForeground() {
+  if (document.hidden) return;
+  clearForegroundCancelTimers();
+  void cancelTimerNotification({ delivered: true });
+
+  // O agendamento nativo e assincrono. Repete o cancelamento por um curto
+  // periodo para impedir que o som da notificacao se misture com a voz.
+  foregroundCancelTimers = [120, 400, 900].map((delay) =>
+    setTimeout(() => {
+      if (!document.hidden) void cancelTimerNotification({ delivered: true });
+    }, delay),
+  );
+}
+
+function scheduleNativeAlertForBackground() {
+  clearForegroundCancelTimers();
+  const seconds = currentTimerSeconds();
+  if (!timerIsRunning() || seconds == null || seconds <= 0) return;
+
+  void scheduleTimerNotification({
+    deadline: Date.now() + seconds * 1000,
+    phase: currentNativePhase(),
+    exerciseName: currentExerciseName(),
+  });
 }
 
 function syncForegroundTimerState({ allowAlert = true } = {}) {
@@ -99,14 +143,20 @@ function syncForegroundTimerState({ allowAlert = true } = {}) {
     return;
   }
 
+  if (running && !lastForegroundRunning && seconds > 0) {
+    suppressNativeAlertWhileForeground();
+  }
+
   if (
     allowAlert &&
     lastForegroundRunning &&
     lastForegroundSeconds > 0 &&
     seconds === 0
   ) {
-    // Usa a fase anterior porque o React pode trocar TEMPO/PAUSA logo após zerar.
-    playForegroundTimerSound(lastForegroundPhase || phase);
+    // Usa a fase anterior: TEMPO terminou -> "Descanso";
+    // PAUSA terminou -> "Iniciando treino".
+    speakTimerPhase(lastForegroundPhase || phase);
+    void cancelTimerNotification({ delivered: true });
   }
 
   lastForegroundSeconds = seconds;
@@ -114,69 +164,58 @@ function syncForegroundTimerState({ allowAlert = true } = {}) {
   lastForegroundRunning = running;
 }
 
-function installForegroundTimerSound() {
-  const unlock = () => unlockForegroundAudio();
-  document.addEventListener("pointerdown", unlock, { capture: true, passive: true });
-  document.addEventListener("touchstart", unlock, { capture: true, passive: true });
-  document.addEventListener("click", unlock, { capture: true, passive: true });
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      // Se o aviso nativo tocar em segundo plano, evita repetir ao voltar ao app.
-      lastForegroundSeconds = null;
-      lastForegroundPhase = null;
-      lastForegroundRunning = false;
-      return;
-    }
-    syncForegroundTimerState({ allowAlert: false });
-  });
-
-  setInterval(() => syncForegroundTimerState(), 100);
-}
-
-function patchAudioContext(AudioContextCtor) {
+function muteLegacyForegroundTimerTones(AudioContextCtor) {
   const prototype = AudioContextCtor?.prototype;
   const originalCreateOscillator = prototype?.createOscillator;
   if (!prototype || !originalCreateOscillator) return;
-  if (originalCreateOscillator.__mayfitAndroidDistinctSounds) return;
+  if (originalCreateOscillator.__mayfitAndroidVoiceAlerts) return;
 
-  let toneIndex = 0;
-  let lastToneAt = 0;
-
-  function createOscillatorWithMayfitSounds(...args) {
+  function createOscillatorWithoutLegacyTimerTone(...args) {
     const oscillator = originalCreateOscillator.apply(this, args);
     const frequency = oscillator?.frequency;
     const originalSetValueAtTime = frequency?.setValueAtTime?.bind(frequency);
     if (!originalSetValueAtTime) return oscillator;
 
     frequency.setValueAtTime = (value, startTime) => {
-      const isMayfitTimerTone =
+      const legacyTimerTone =
         oscillator.type === "square" && (value === 760 || value === 980);
-      if (!isMayfitTimerTone) return originalSetValueAtTime(value, startTime);
-
-      const now = performance.now();
-      if (now - lastToneAt > 2000) toneIndex = 0;
-      lastToneAt = now;
-
-      const tones =
-        currentTimerPhase() === "PAUSA" ? REST_TONES : EXERCISE_TONES;
-      const selectedTone = tones[toneIndex % tones.length];
-      toneIndex += 1;
-      return originalSetValueAtTime(selectedTone, startTime);
+      return originalSetValueAtTime(legacyTimerTone ? 0 : value, startTime);
     };
-
     return oscillator;
   }
 
-  createOscillatorWithMayfitSounds.__mayfitAndroidDistinctSounds = true;
-  prototype.createOscillator = createOscillatorWithMayfitSounds;
+  createOscillatorWithoutLegacyTimerTone.__mayfitAndroidVoiceAlerts = true;
+  prototype.createOscillator = createOscillatorWithoutLegacyTimerTone;
+}
+
+function installForegroundVoiceAlerts() {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      scheduleNativeAlertForBackground();
+      lastForegroundSeconds = null;
+      lastForegroundPhase = null;
+      lastForegroundRunning = false;
+      return;
+    }
+
+    suppressNativeAlertWhileForeground();
+    syncForegroundTimerState({ allowAlert: false });
+  });
+
+  window.addEventListener("pagehide", scheduleNativeAlertForBackground);
+  window.addEventListener("pageshow", () => {
+    suppressNativeAlertWhileForeground();
+    syncForegroundTimerState({ allowAlert: false });
+  });
+
+  setInterval(() => syncForegroundTimerState(), 100);
 }
 
 if (isAndroidDevice()) {
   suppressObsoleteAlarmWarning();
-  patchAudioContext(window.AudioContext);
+  muteLegacyForegroundTimerTones(window.AudioContext);
   if (window.webkitAudioContext !== window.AudioContext) {
-    patchAudioContext(window.webkitAudioContext);
+    muteLegacyForegroundTimerTones(window.webkitAudioContext);
   }
-  installForegroundTimerSound();
+  installForegroundVoiceAlerts();
 }
