@@ -16,7 +16,7 @@ test("calcula o cronômetro pelo horário real após suspensão da tela", () => 
   assert.equal(timerSecondsRemaining(deadline, 90_000), 0);
 });
 
-test("mantém os alarmes nativos sem abrir configurações do Android", async () => {
+test("mantém os alarmes nativos e a voz embutida do Android", async () => {
   const [
     main,
     notifications,
@@ -53,16 +53,25 @@ test("mantém os alarmes nativos sem abrir configurações do Android", async ()
   assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
 
   assert.match(studentEntry, /android-timer-runtime-fix\.js\?v=1/);
-  assert.match(androidRuntimeFix, /BLOCKED_WARNING/);
-  assert.match(androidRuntimeFix, /SpeechSynthesisUtterance/);
-  assert.match(androidRuntimeFix, /"Iniciando treino"/);
-  assert.match(androidRuntimeFix, /"Descanso"/);
-  assert.match(androidRuntimeFix, /speechSynthesis\.cancel\(\)/);
+  assert.match(androidRuntimeFix, /DESCANSO_AUDIO/);
+  assert.match(androidRuntimeFix, /INICIANDO_AUDIO/);
+  assert.match(androidRuntimeFix, /new Audio\(DESCANSO_AUDIO\)/);
+  assert.match(androidRuntimeFix, /new Audio\(INICIANDO_AUDIO\)/);
+  assert.match(androidRuntimeFix, /playEmbeddedVoice/);
+  assert.doesNotMatch(androidRuntimeFix, /SpeechSynthesisUtterance/);
   assert.match(androidRuntimeFix, /cancelTimerNotification/);
   assert.match(androidRuntimeFix, /scheduleNativeAlertForBackground/);
   assert.match(androidRuntimeFix, /scheduleTimerNotification/);
   assert.match(androidRuntimeFix, /document\.hidden/);
   assert.match(androidRuntimeFix, /legacyTimerTone \? 0 : value/);
+
+  const embedded = [...androidRuntimeFix.matchAll(/data:audio\/mpeg;base64,([A-Za-z0-9+/=]+)/g)];
+  assert.equal(embedded.length, 2);
+  const decoded = embedded.map((match) => Buffer.from(match[1], "base64"));
+  assert.equal(decoded[0].subarray(0, 3).toString("ascii"), "ID3");
+  assert.equal(decoded[1].subarray(0, 3).toString("ascii"), "ID3");
+  assert.equal(decoded[0].length, 3896);
+  assert.equal(decoded[1].length, 5300);
 
   assert.match(manifest, /android\.permission\.USE_EXACT_ALARM/);
   assert.equal(
