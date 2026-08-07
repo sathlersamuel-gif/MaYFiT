@@ -4,9 +4,9 @@ const SETTINGS_KEY = "mayfit_workout_sound_settings_v2";
 const LEGACY_SETTINGS_KEY = "mayfit_workout_sound_settings_v1";
 const ANDROID_USER_AGENT = /Android/i;
 const VOICE_SOURCES = {
-  start: "/audio/iniciando-treino.base64.txt?v=3",
-  rest: "/audio/descanso.base64.txt?v=3",
-  finish: "/audio/fim-treino.base64.txt?v=2",
+  start: "/audio/iniciando-treino.base64.txt?v=4",
+  rest: "/audio/descanso.base64.txt?v=4",
+  finish: "/audio/fim-treino.base64.txt?v=3",
 };
 
 function isNativeAndroid() {
@@ -80,12 +80,34 @@ function installHeaderStability() {
 }
 
 function installEmbeddedWorkoutVoice() {
-  const synthesis = window.speechSynthesis;
-  if (!synthesis || synthesis.__mayfitAndroidEmbeddedWorkoutVoice) return;
+  if (window.__mayfitAndroidEmbeddedWorkoutVoiceInstalled) return;
+  const originalSynthesis = window.speechSynthesis;
+  if (!originalSynthesis) return;
 
   let players = null;
   let playersPromise = null;
   let activeAudio = null;
+
+  const originalSpeak =
+    typeof originalSynthesis.speak === "function"
+      ? originalSynthesis.speak.bind(originalSynthesis)
+      : null;
+  const originalCancel =
+    typeof originalSynthesis.cancel === "function"
+      ? originalSynthesis.cancel.bind(originalSynthesis)
+      : null;
+  const originalPause =
+    typeof originalSynthesis.pause === "function"
+      ? originalSynthesis.pause.bind(originalSynthesis)
+      : null;
+  const originalResume =
+    typeof originalSynthesis.resume === "function"
+      ? originalSynthesis.resume.bind(originalSynthesis)
+      : null;
+  const originalGetVoices =
+    typeof originalSynthesis.getVoices === "function"
+      ? originalSynthesis.getVoices.bind(originalSynthesis)
+      : null;
 
   const validBase64 = (value) => {
     const clean = String(value || "").trim();
@@ -101,6 +123,7 @@ function installEmbeddedWorkoutVoice() {
     audio.preload = "auto";
     audio.volume = 1;
     audio.setAttribute("playsinline", "");
+    audio.load?.();
     return audio;
   };
 
@@ -167,14 +190,67 @@ function installEmbeddedWorkoutVoice() {
     return "";
   };
 
-  const originalSpeak = synthesis.speak.bind(synthesis);
-  const originalCancel = synthesis.cancel.bind(synthesis);
+  const synthesis = new EventTarget();
+  Object.defineProperties(synthesis, {
+    speaking: {
+      configurable: true,
+      get: () => Boolean(activeAudio && !activeAudio.paused),
+    },
+    pending: {
+      configurable: true,
+      get: () => false,
+    },
+    paused: {
+      configurable: true,
+      get: () => Boolean(originalSynthesis.paused),
+    },
+  });
 
-  const embeddedSpeak = (utterance) => {
+  synthesis.getVoices = () => {
+    try {
+      return originalGetVoices?.() || [];
+    } catch {
+      return [];
+    }
+  };
+
+  synthesis.pause = () => {
+    try {
+      activeAudio?.pause();
+    } catch {}
+    try {
+      originalPause?.();
+    } catch {}
+  };
+
+  synthesis.resume = () => {
+    try {
+      originalResume?.();
+    } catch {}
+  };
+
+  synthesis.cancel = () => {
+    try {
+      if (activeAudio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+      }
+    } catch {}
+    activeAudio = null;
+    try {
+      originalCancel?.();
+    } catch {}
+  };
+
+  synthesis.speak = (utterance) => {
     const cue = cueForText(utterance?.text);
     const selected = storedSettings()[cue] || "voice";
     if (!cue || selected !== "voice") {
-      originalSpeak(utterance);
+      try {
+        originalSpeak?.(utterance);
+      } catch {
+        emitUtterance(utterance, "error", { error: "original-tts-error" });
+      }
       return;
     }
 
@@ -182,7 +258,11 @@ function installEmbeddedWorkoutVoice() {
       const ready = players || (await preparePlayers());
       const audio = ready?.[cue];
       if (!audio) {
-        originalSpeak(utterance);
+        try {
+          originalSpeak?.(utterance);
+        } catch {
+          emitUtterance(utterance, "error", { error: "embedded-voice-unavailable" });
+        }
         return;
       }
 
@@ -196,8 +276,12 @@ function installEmbeddedWorkoutVoice() {
         audio.currentTime = 0;
         audio.muted = false;
         audio.volume = 1;
-        audio.onended = () => emitUtterance(utterance, "end");
-        audio.onerror = () => emitUtterance(utterance, "error", { error: "embedded-audio-error" });
+        audio.onended = () => {
+          if (activeAudio === audio) activeAudio = null;
+          emitUtterance(utterance, "end");
+        };
+        audio.onerror = () =>
+          emitUtterance(utterance, "error", { error: "embedded-audio-error" });
         await audio.play();
         emitUtterance(utterance, "start");
       } catch (error) {
@@ -206,43 +290,24 @@ function installEmbeddedWorkoutVoice() {
     })();
   };
 
-  const embeddedCancel = () => {
-    try {
-      if (activeAudio) {
-        activeAudio.pause();
-        activeAudio.currentTime = 0;
-      }
-    } catch {}
-    activeAudio = null;
-    try {
-      originalCancel();
-    } catch {}
-  };
+  synthesis.__mayfitAndroidEmbeddedWorkoutVoice = true;
 
   try {
-    Object.defineProperty(synthesis, "speak", {
+    Object.defineProperty(window, "speechSynthesis", {
       configurable: true,
-      value: embeddedSpeak,
-    });
-    Object.defineProperty(synthesis, "cancel", {
-      configurable: true,
-      value: embeddedCancel,
-    });
-    Object.defineProperty(synthesis, "__mayfitAndroidEmbeddedWorkoutVoice", {
-      configurable: false,
-      value: true,
+      value: synthesis,
     });
   } catch {
     try {
-      synthesis.speak = embeddedSpeak;
-      synthesis.cancel = embeddedCancel;
-      synthesis.__mayfitAndroidEmbeddedWorkoutVoice = true;
+      window.speechSynthesis = synthesis;
     } catch {
       return;
     }
   }
 
+  window.__mayfitAndroidEmbeddedWorkoutVoiceInstalled = true;
   void preparePlayers();
+
   const unlock = () => {
     if (players) unlockPlayers();
     else void preparePlayers().then(() => unlockPlayers());
