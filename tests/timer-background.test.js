@@ -16,7 +16,7 @@ test("calcula o cronômetro pelo horário real após suspensão da tela", () => 
   assert.equal(timerSecondsRemaining(deadline, 90_000), 0);
 });
 
-test("mantém os alarmes nativos e a voz embutida do Android", async () => {
+test("mantém os alarmes nativos e os arquivos de voz do Android", async () => {
   const [
     main,
     notifications,
@@ -25,6 +25,8 @@ test("mantém os alarmes nativos e a voz embutida do Android", async () => {
     manifest,
     exerciseSound,
     restSound,
+    descansoBase64,
+    iniciandoBase64,
   ] = await Promise.all([
     readFile("src/main.jsx", "utf8"),
     readFile("src/lib/workout-timer-notifications.js", "utf8"),
@@ -33,6 +35,8 @@ test("mantém os alarmes nativos e a voz embutida do Android", async () => {
     readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
     readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
     readFile("android/app/src/main/res/raw/mayfit_rest.wav"),
+    readFile("public/audio/descanso.base64.txt", "utf8"),
+    readFile("public/audio/iniciando-treino.base64.txt", "utf8"),
   ]);
   const capacitor = JSON.parse(
     await readFile("capacitor.config.json", "utf8"),
@@ -53,10 +57,9 @@ test("mantém os alarmes nativos e a voz embutida do Android", async () => {
   assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
 
   assert.match(studentEntry, /android-timer-runtime-fix\.js\?v=1/);
-  assert.match(androidRuntimeFix, /DESCANSO_AUDIO/);
-  assert.match(androidRuntimeFix, /INICIANDO_AUDIO/);
-  assert.match(androidRuntimeFix, /new Audio\(DESCANSO_AUDIO\)/);
-  assert.match(androidRuntimeFix, /new Audio\(INICIANDO_AUDIO\)/);
+  assert.match(androidRuntimeFix, /descanso\.base64\.txt/);
+  assert.match(androidRuntimeFix, /iniciando-treino\.base64\.txt/);
+  assert.match(androidRuntimeFix, /new Audio\(`data:audio\/mpeg;base64,\$\{base64\}`\)/);
   assert.match(androidRuntimeFix, /playEmbeddedVoice/);
   assert.doesNotMatch(androidRuntimeFix, /SpeechSynthesisUtterance/);
   assert.match(androidRuntimeFix, /cancelTimerNotification/);
@@ -65,13 +68,12 @@ test("mantém os alarmes nativos e a voz embutida do Android", async () => {
   assert.match(androidRuntimeFix, /document\.hidden/);
   assert.match(androidRuntimeFix, /legacyTimerTone \? 0 : value/);
 
-  const embedded = [...androidRuntimeFix.matchAll(/data:audio\/mpeg;base64,([A-Za-z0-9+/=]+)/g)];
-  assert.equal(embedded.length, 2);
-  const decoded = embedded.map((match) => Buffer.from(match[1], "base64"));
-  assert.equal(decoded[0].subarray(0, 3).toString("ascii"), "ID3");
-  assert.equal(decoded[1].subarray(0, 3).toString("ascii"), "ID3");
-  assert.equal(decoded[0].length, 3896);
-  assert.equal(decoded[1].length, 5300);
+  const descanso = Buffer.from(descansoBase64.trim(), "base64");
+  const iniciando = Buffer.from(iniciandoBase64.trim(), "base64");
+  assert.equal(descanso.subarray(0, 3).toString("ascii"), "ID3");
+  assert.equal(iniciando.subarray(0, 3).toString("ascii"), "ID3");
+  assert.equal(descanso.length, 3896);
+  assert.equal(iniciando.length, 5300);
 
   assert.match(manifest, /android\.permission\.USE_EXACT_ALARM/);
   assert.equal(
