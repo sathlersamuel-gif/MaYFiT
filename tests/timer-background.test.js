@@ -16,11 +16,11 @@ test("calcula o cronômetro pelo horário real após suspensão da tela", () => 
   assert.equal(timerSecondsRemaining(deadline, 90_000), 0);
 });
 
-test("usa um único controlador de voz no Android", async () => {
+test("usa um único motor de sons configurável no Android", async () => {
   const [
     main,
     notifications,
-    androidVoice,
+    androidSounds,
     studentEntry,
     manifest,
     exerciseSound,
@@ -31,7 +31,7 @@ test("usa um único controlador de voz no Android", async () => {
   ] = await Promise.all([
     readFile("src/main.jsx", "utf8"),
     readFile("src/lib/workout-timer-notifications.js", "utf8"),
-    readFile("src/android-workout-voice.js", "utf8"),
+    readFile("src/android-workout-sounds.js", "utf8"),
     readFile("src/student-area-entry.js", "utf8"),
     readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
     readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
@@ -57,30 +57,48 @@ test("usa um único controlador de voz no Android", async () => {
   assert.match(notifications, /mayfit_rest\.wav/);
   assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
 
-  assert.match(studentEntry, /android-workout-voice\.js\?v=1/);
+  assert.match(studentEntry, /android-workout-sounds\.js\?v=1/);
+  assert.doesNotMatch(studentEntry, /android-workout-voice/);
   assert.doesNotMatch(studentEntry, /android-timer-runtime-fix/);
+  await assert.rejects(
+    () => readFile("src/android-workout-voice.js", "utf8"),
+    (error) => error?.code === "ENOENT",
+  );
   await assert.rejects(
     () => readFile("src/android-timer-runtime-fix.js", "utf8"),
     (error) => error?.code === "ENOENT",
   );
 
-  assert.match(androidVoice, /iniciando-treino\.base64\.txt/);
-  assert.match(androidVoice, /descanso\.base64\.txt/);
-  assert.match(androidVoice, /fim-treino\.base64\.txt/);
-  assert.match(androidVoice, /playVoice\("start"\)/);
-  assert.match(androidVoice, /playVoice\("rest"\)/);
-  assert.match(androidVoice, /playVoice\("finish"\)/);
-  assert.match(androidVoice, /INICIAR TREINO/);
-  assert.match(androidVoice, /lastPhase === "TEMPO" && phase === "PAUSA"/);
-  assert.match(androidVoice, /lastPhase === "PAUSA" &&/);
-  assert.match(androidVoice, /allWorkoutRowsDone/);
-  assert.match(androidVoice, /MutationObserver/);
-  assert.doesNotMatch(androidVoice, /setInterval/);
-  assert.doesNotMatch(androidVoice, /SpeechSynthesisUtterance/);
-  assert.match(androidVoice, /cancelTimerNotification/);
-  assert.match(androidVoice, /scheduleNativeAlertForBackground/);
-  assert.match(androidVoice, /scheduleTimerNotification/);
-  assert.match(androidVoice, /visibilitychange/);
+  assert.match(androidSounds, /iniciando-treino\.base64\.txt/);
+  assert.match(androidSounds, /descanso\.base64\.txt/);
+  assert.match(androidSounds, /fim-treino\.base64\.txt/);
+  assert.match(androidSounds, /SpeechSynthesisUtterance/);
+  assert.match(androidSounds, /preferredPortugueseVoice/);
+  assert.match(androidSounds, /playEmbeddedVoice/);
+  assert.match(androidSounds, /decodeAudioData/);
+  assert.match(androidSounds, /playCue\("start"\)/);
+  assert.match(androidSounds, /playCue\("rest"\)/);
+  assert.match(androidSounds, /playCue\("finish"\)/);
+  assert.match(androidSounds, /INICIAR TREINO/);
+  assert.match(androidSounds, /label === "START"/);
+  assert.match(androidSounds, /allWorkoutRowsDone/);
+  assert.match(androidSounds, /lastPhase === "TEMPO" && phase === "PAUSA"/);
+  assert.match(androidSounds, /lastPhase === "PAUSA" &&/);
+  assert.match(androidSounds, /Bip esportivo/);
+  assert.match(androidSounds, /Sinos/);
+  assert.match(androidSounds, /Apito/);
+  assert.match(androidSounds, /Alerta digital/);
+  assert.match(androidSounds, /Voz natural \(assistente\)/);
+  assert.match(androidSounds, /mayfit_workout_sound_settings_v1/);
+  assert.match(androidSounds, /Sons do treino/);
+  assert.match(androidSounds, /data-sound-preset/);
+  assert.match(androidSounds, /data-sound-select/);
+  assert.match(androidSounds, /MutationObserver/);
+  assert.doesNotMatch(androidSounds, /setInterval/);
+  assert.match(androidSounds, /cancelTimerNotification/);
+  assert.match(androidSounds, /scheduleNativeAlertForBackground/);
+  assert.match(androidSounds, /scheduleTimerNotification/);
+  assert.match(androidSounds, /legacyTimerTone \? 0 : value/);
 
   const descanso = Buffer.from(descansoBase64.trim(), "base64");
   const iniciando = Buffer.from(iniciandoBase64.trim(), "base64");
