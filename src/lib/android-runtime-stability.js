@@ -3,6 +3,11 @@ import { Capacitor } from "@capacitor/core";
 const SETTINGS_KEY = "mayfit_workout_sound_settings_v2";
 const LEGACY_SETTINGS_KEY = "mayfit_workout_sound_settings_v1";
 const ANDROID_USER_AGENT = /Android/i;
+const VOICE_SOURCES = {
+  start: "/audio/iniciando-treino.base64.txt?v=3",
+  rest: "/audio/descanso.base64.txt?v=3",
+  finish: "/audio/fim-treino.base64.txt?v=2",
+};
 
 function isNativeAndroid() {
   try {
@@ -74,119 +79,180 @@ function installHeaderStability() {
   requestAnimationFrame(syncHeaderActions);
 }
 
-function installSeriesVoiceFallback() {
-  let audioContext = null;
-  let lastPhase = "";
-  let syncQueued = false;
-  let lastSeriesStartAt = 0;
-  let lastFallbackAt = 0;
+function installEmbeddedWorkoutVoice() {
+  const synthesis = window.speechSynthesis;
+  if (!synthesis || synthesis.__mayfitAndroidEmbeddedWorkoutVoice) return;
 
-  const getAudioContext = () => {
-    try {
-      const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextCtor) return null;
-      audioContext = audioContext || new AudioContextCtor();
-      return audioContext;
-    } catch {
-      return null;
-    }
+  let players = null;
+  let playersPromise = null;
+  let activeAudio = null;
+
+  const validBase64 = (value) => {
+    const clean = String(value || "").trim();
+    return /^[A-Za-z0-9+/]+={0,2}$/.test(clean) ? clean : "";
   };
 
-  const ensureAudioReady = async () => {
-    const context = getAudioContext();
-    if (!context) return null;
+  const loadVoice = async (source) => {
+    const response = await fetch(source, { cache: "no-store" });
+    if (!response.ok) throw new Error("Falha ao carregar voz do treino");
+    const base64 = validBase64(await response.text());
+    if (!base64) throw new Error("Arquivo de voz inválido");
+    const audio = new Audio(`data:audio/mpeg;base64,${base64}`);
+    audio.preload = "auto";
+    audio.volume = 1;
+    audio.setAttribute("playsinline", "");
+    return audio;
+  };
+
+  const preparePlayers = () => {
+    if (players) return Promise.resolve(players);
+    if (playersPromise) return playersPromise;
+
+    playersPromise = Promise.all([
+      loadVoice(VOICE_SOURCES.start),
+      loadVoice(VOICE_SOURCES.rest),
+      loadVoice(VOICE_SOURCES.finish),
+    ])
+      .then(([start, rest, finish]) => {
+        players = { start, rest, finish };
+        return players;
+      })
+      .catch(() => null)
+      .finally(() => {
+        playersPromise = null;
+      });
+
+    return playersPromise;
+  };
+
+  const unlockPlayers = () => {
+    if (!players) return;
+    Object.values(players).forEach((audio) => {
+      try {
+        audio.muted = true;
+        audio.currentTime = 0;
+        const attempt = audio.play();
+        Promise.resolve(attempt)
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = false;
+          })
+          .catch(() => {
+            audio.muted = false;
+          });
+      } catch {
+        audio.muted = false;
+      }
+    });
+  };
+
+  const emitUtterance = (utterance, type, detail = {}) => {
+    const event = new Event(type);
+    Object.assign(event, detail);
     try {
-      if (context.state === "suspended") await context.resume();
+      const handler = utterance?.[`on${type}`];
+      if (typeof handler === "function") handler.call(utterance, event);
     } catch {}
-    return context.state === "closed" ? null : context;
-  };
-
-  const tone = (context, frequency, start) => {
     try {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.type = "triangle";
-      oscillator.frequency.setValueAtTime(frequency, context.currentTime + start);
-      gain.gain.setValueAtTime(0.2, context.currentTime + start);
-      gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        context.currentTime + start + 0.15,
-      );
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start(context.currentTime + start);
-      oscillator.stop(context.currentTime + start + 0.18);
+      utterance?.dispatchEvent?.(event);
     } catch {}
   };
 
-  const playFallback = async () => {
-    const now = Date.now();
-    if (now - lastFallbackAt < 900) return;
-    lastFallbackAt = now;
-    const context = await ensureAudioReady();
-    if (!context) return;
-    [540, 810, 1080].forEach((frequency, index) =>
-      tone(context, frequency, index * 0.13),
-    );
+  const cueForText = (text) => {
+    const normalized = normalizeText(text);
+    if (normalized === "INICIANDO TREINO") return "start";
+    if (normalized === "DESCANSO") return "rest";
+    if (normalized === "FIM DE TREINO" || normalized === "FIM DO TREINO") return "finish";
+    return "";
   };
 
-  const phaseNow = () =>
-    normalizeText(
-      document.querySelector(".workout-screen .time-strip span")?.textContent,
-    );
+  const originalSpeak = synthesis.speak.bind(synthesis);
+  const originalCancel = synthesis.cancel.bind(synthesis);
 
-  const sync = () => {
-    syncQueued = false;
-    if (document.hidden) return;
-    const phase = phaseNow();
-    if (!phase) {
-      lastPhase = "";
+  const embeddedSpeak = (utterance) => {
+    const cue = cueForText(utterance?.text);
+    const selected = storedSettings()[cue] || "voice";
+    if (!cue || selected !== "voice") {
+      originalSpeak(utterance);
       return;
     }
 
-    if (lastPhase === "PAUSA" && phase === "TEMPO") {
-      lastSeriesStartAt = Date.now();
-      const startSound = storedSettings().start || "voice";
-      if (startSound === "voice" && !window.__mayfitAndroidNativeSpeechBridge) {
-        void playFallback();
+    void (async () => {
+      const ready = players || (await preparePlayers());
+      const audio = ready?.[cue];
+      if (!audio) {
+        originalSpeak(utterance);
+        return;
       }
+
+      try {
+        if (activeAudio && activeAudio !== audio) {
+          activeAudio.pause();
+          activeAudio.currentTime = 0;
+        }
+        activeAudio = audio;
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+        audio.volume = 1;
+        audio.onended = () => emitUtterance(utterance, "end");
+        audio.onerror = () => emitUtterance(utterance, "error", { error: "embedded-audio-error" });
+        await audio.play();
+        emitUtterance(utterance, "start");
+      } catch (error) {
+        emitUtterance(utterance, "error", { error });
+      }
+    })();
+  };
+
+  const embeddedCancel = () => {
+    try {
+      if (activeAudio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+      }
+    } catch {}
+    activeAudio = null;
+    try {
+      originalCancel();
+    } catch {}
+  };
+
+  try {
+    Object.defineProperty(synthesis, "speak", {
+      configurable: true,
+      value: embeddedSpeak,
+    });
+    Object.defineProperty(synthesis, "cancel", {
+      configurable: true,
+      value: embeddedCancel,
+    });
+    Object.defineProperty(synthesis, "__mayfitAndroidEmbeddedWorkoutVoice", {
+      configurable: false,
+      value: true,
+    });
+  } catch {
+    try {
+      synthesis.speak = embeddedSpeak;
+      synthesis.cancel = embeddedCancel;
+      synthesis.__mayfitAndroidEmbeddedWorkoutVoice = true;
+    } catch {
+      return;
     }
-    lastPhase = phase;
-  };
+  }
 
-  const queueSync = () => {
-    if (syncQueued) return;
-    syncQueued = true;
-    requestAnimationFrame(sync);
+  void preparePlayers();
+  const unlock = () => {
+    if (players) unlockPlayers();
+    else void preparePlayers().then(() => unlockPlayers());
   };
-
-  const unlock = () => void ensureAudioReady();
   document.addEventListener("pointerdown", unlock, { capture: true, passive: true });
   document.addEventListener("touchstart", unlock, { capture: true, passive: true });
-
-  window.addEventListener("mayfit-native-tts-error", (event) => {
-    const text = normalizeText(event?.detail?.text);
-    if (text !== "INICIANDO TREINO") return;
-    if (Date.now() - lastSeriesStartAt > 1800) return;
-    if ((storedSettings().start || "voice") !== "voice") return;
-    void playFallback();
-  });
-
-  const observer = new MutationObserver(queueSync);
-  observer.observe(document.documentElement, {
-    subtree: true,
-    childList: true,
-    characterData: true,
-  });
-  window.addEventListener("pageshow", queueSync);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) queueSync();
-  });
-
-  queueSync();
+  document.addEventListener("click", unlock, { capture: true, passive: true });
 }
 
 if (isNativeAndroid()) {
   installHeaderStability();
-  installSeriesVoiceFallback();
+  installEmbeddedWorkoutVoice();
 }
