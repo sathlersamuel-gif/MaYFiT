@@ -278,9 +278,8 @@ function installEmbeddedWorkoutVoice() {
         };
         audio.onerror = () =>
           emitUtterance(utterance, "error", { error: "embedded-audio-error" });
-        const playAttempt = audio.play();
         emitUtterance(utterance, "start");
-        await playAttempt;
+        await audio.play();
       } catch (error) {
         try {
           originalSpeak?.(utterance);
