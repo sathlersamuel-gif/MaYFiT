@@ -4,18 +4,23 @@ import './workout-state-sync-fix.js';
 const style=document.createElement('style');
 style.id='mayfit-workout-photo-modal-style';
 style.textContent=`
+html,body,#root,.app{min-height:100%;}
+body:has(.workout-screen){overflow:hidden!important;}
+.workout-screen{position:relative!important;width:100%!important;height:100dvh!important;max-height:100dvh!important;overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important;touch-action:pan-y!important;transform:none!important;}
+.workout-screen .sheet,.workout-screen .sheet-row,.workout-screen .exercise-col,.workout-screen .exercise-photo{touch-action:pan-y!important;transform:none!important;}
+.workout-screen button,.workout-screen input{touch-action:manipulation!important;}
 html.mayfit-workout-zoom-open,html.mayfit-workout-zoom-open body{overflow:hidden!important;overscroll-behavior:none!important}
-.mayfit-workout-image-zoom{position:fixed!important;inset:0!important;z-index:400000!important;display:grid!important;place-items:center!important;width:100vw!important;height:100dvh!important;padding:max(14px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom))!important;background:rgba(0,0,0,.96)!important;overflow:hidden!important;box-sizing:border-box!important;overscroll-behavior:none!important;touch-action:none!important}
-.mayfit-workout-image-card{position:relative!important;display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;width:min(920px,100%)!important;height:min(760px,100%)!important;max-height:100%!important;padding:54px 8px 8px!important;border:1px solid #49664f!important;border-radius:18px!important;background:#07100a!important;overflow:hidden!important;box-sizing:border-box!important}
+.mayfit-workout-image-zoom{position:fixed!important;inset:0!important;z-index:400000!important;display:block!important;width:100vw!important;height:100dvh!important;padding:max(14px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom))!important;background:rgba(0,0,0,.96)!important;overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;box-sizing:border-box!important;overscroll-behavior-y:contain!important;touch-action:pan-y!important}
+.mayfit-workout-image-card{position:relative!important;display:grid!important;grid-template-rows:auto minmax(520px,1fr)!important;width:min(920px,100%)!important;min-height:min(760px,calc(100dvh - 28px))!important;height:auto!important;margin:0 auto!important;padding:54px 8px 8px!important;border:1px solid #49664f!important;border-radius:18px!important;background:#07100a!important;overflow:visible!important;box-sizing:border-box!important}
 .mayfit-workout-image-title{position:absolute!important;top:16px!important;left:16px!important;right:72px!important;margin:0!important;color:#fff!important;font:900 18px/1.2 system-ui,-apple-system,sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 .mayfit-workout-image-close{position:absolute!important;top:10px!important;right:10px!important;z-index:2!important;display:grid!important;place-items:center!important;width:42px!important;height:42px!important;margin:0!important;padding:0!important;border:1px solid #49664f!important;border-radius:13px!important;background:#17231b!important;color:#fff!important;font:900 24px/1 system-ui,-apple-system,sans-serif!important;touch-action:manipulation!important}
-.mayfit-workout-image-pair{min-height:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;width:100%!important;height:100%!important;border:1px solid #3b5142!important;border-radius:14px!important;background:#050706!important;overflow:hidden!important}
-.mayfit-workout-image-pair figure{position:relative!important;min-width:0!important;min-height:0!important;height:100%!important;margin:0!important;background:#fff!important;overflow:hidden!important}
+.mayfit-workout-image-pair{min-height:520px!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;width:100%!important;height:auto!important;border:1px solid #3b5142!important;border-radius:14px!important;background:#050706!important;overflow:hidden!important}
+.mayfit-workout-image-pair figure{position:relative!important;min-width:0!important;min-height:520px!important;height:auto!important;margin:0!important;background:#fff!important;overflow:hidden!important}
 .mayfit-workout-image-pair figure+figure{border-left:1px solid #3b5142!important}
 .mayfit-workout-image-pair b{position:absolute!important;inset:0 0 auto 0!important;z-index:2!important;display:grid!important;place-items:center!important;height:32px!important;background:#111512!important;color:#fff!important;font:950 11px/1 system-ui,-apple-system,sans-serif!important}
 .mayfit-workout-image-pair figure:first-child b{background:#83e400!important;color:#071108!important}
-.mayfit-workout-image-pair img{display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;padding-top:32px!important;object-fit:contain!important;object-position:center!important;background:#fff!important;box-sizing:border-box!important;pointer-events:none!important;user-select:none!important;-webkit-user-drag:none!important}
-@media(max-width:620px){.mayfit-workout-image-zoom{padding:0!important}.mayfit-workout-image-card{width:100%!important;height:100dvh!important;max-height:100dvh!important;border:0!important;border-radius:0!important;padding:max(54px,calc(env(safe-area-inset-top) + 44px)) 6px max(6px,env(safe-area-inset-bottom))!important}.mayfit-workout-image-title{top:max(16px,env(safe-area-inset-top))!important;font-size:17px!important}.mayfit-workout-image-close{top:max(8px,env(safe-area-inset-top))!important;right:8px!important}}
+.mayfit-workout-image-pair img{display:block!important;width:100%!important;height:auto!important;min-width:0!important;min-height:520px!important;padding-top:32px!important;object-fit:contain!important;object-position:top center!important;background:#fff!important;box-sizing:border-box!important;pointer-events:none!important;user-select:none!important;-webkit-user-drag:none!important}
+@media(max-width:620px){.mayfit-workout-image-zoom{padding:0!important}.mayfit-workout-image-card{width:100%!important;min-height:100dvh!important;height:auto!important;border:0!important;border-radius:0!important;padding:max(54px,calc(env(safe-area-inset-top) + 44px)) 6px max(18px,env(safe-area-inset-bottom))!important}.mayfit-workout-image-title{top:max(16px,env(safe-area-inset-top))!important;font-size:17px!important}.mayfit-workout-image-close{top:max(8px,env(safe-area-inset-top))!important;right:8px!important}.mayfit-workout-image-pair{grid-template-columns:1fr!important;min-height:0!important}.mayfit-workout-image-pair figure{min-height:72dvh!important}.mayfit-workout-image-pair figure+figure{border-left:0!important;border-top:1px solid #3b5142!important}.mayfit-workout-image-pair img{min-height:72dvh!important}}
 `;
 document.head.appendChild(style);
 
@@ -62,9 +67,9 @@ function openZoom(photo){
   targetImages[1].src=images[1].currentSrc||images[1].src;
   zoom.querySelector('.mayfit-workout-image-close').addEventListener('click',closeZoom);
   zoom.addEventListener('click',event=>{if(event.target===zoom)closeZoom()});
-  zoom.addEventListener('touchmove',event=>event.preventDefault(),{passive:false});
   document.body.appendChild(zoom);
   lockPage();
+  zoom.scrollTop=0;
 }
 
 function interceptWorkoutPhoto(event){

@@ -54,8 +54,8 @@ test("gera uma atualização Android de produção", async () => {
     readFile("android/app/build.gradle", "utf8"),
     readFile("package.json", "utf8").then(JSON.parse),
   ]);
-  assert.match(gradle, /versionCode 2/);
-  assert.match(gradle, /versionName "1\.1\.0"/);
+  assert.match(gradle, /versionCode 3/);
+  assert.match(gradle, /versionName "1\.2\.0"/);
   assert.match(packageJson.scripts["android:apk"], /assembleRelease/);
   assert.doesNotMatch(packageJson.scripts["android:apk"], /assembleDebug/);
   assert.equal(packageJson.dependencies["@capacitor/app"], "^8.1.1");
