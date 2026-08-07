@@ -75,6 +75,7 @@ test("mantém treino e histórico isolados por aluno", () => {
 
   login("student-b", "Aluno B");
   assert.equal(readWorkoutData().workoutName, "Treino B");
+  assert.equal(readWorkoutData().exercises[0].name, "Remada B");
   assert.notEqual(workoutStorageKey("student-a"), workoutStorageKey("student-b"));
 });
 
