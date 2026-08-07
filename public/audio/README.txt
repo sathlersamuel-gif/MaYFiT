@@ -1,0 +1,1 @@
+Arquivos de áudio usados pelos avisos do cronômetro no Android.
