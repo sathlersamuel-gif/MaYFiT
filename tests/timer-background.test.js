@@ -16,13 +16,15 @@ test("calcula o cronômetro pelo horário real após suspensão da tela", () => 
   assert.equal(timerSecondsRemaining(deadline, 90_000), 0);
 });
 
-test("mantém o alarme nativo configurado para tela apagada", async () => {
-  const [main, notifications, manifest, sound] = await Promise.all([
-    readFile("src/main.jsx", "utf8"),
-    readFile("src/lib/workout-timer-notifications.js", "utf8"),
-    readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
-    readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
-  ]);
+test("mantém os alarmes nativos sem abrir configurações do Android", async () => {
+  const [main, notifications, manifest, exerciseSound, restSound] =
+    await Promise.all([
+      readFile("src/main.jsx", "utf8"),
+      readFile("src/lib/workout-timer-notifications.js", "utf8"),
+      readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
+      readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
+      readFile("android/app/src/main/res/raw/mayfit_rest.wav"),
+    ]);
   const capacitor = JSON.parse(
     await readFile("capacitor.config.json", "utf8"),
   );
@@ -33,9 +35,13 @@ test("mantém o alarme nativo configurado para tela apagada", async () => {
   assert.doesNotMatch(main, /setSeconds\(\(s\) => Math\.max\(0, s - 1\)\)/);
 
   assert.match(notifications, /LocalNotifications\.schedule/);
-  assert.match(notifications, /allowWhileIdle: true/);
   assert.match(notifications, /checkExactNotificationSetting/);
+  assert.doesNotMatch(notifications, /changeExactNotificationSetting/);
+  assert.match(notifications, /mayfit-workout-exercise-v2/);
+  assert.match(notifications, /mayfit-workout-rest-v2/);
   assert.match(notifications, /mayfit_timer\.wav/);
+  assert.match(notifications, /mayfit_rest\.wav/);
+  assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
   assert.match(manifest, /android\.permission\.USE_EXACT_ALARM/);
   assert.equal(
     capacitor.plugins.LocalNotifications.smallIcon,
@@ -45,8 +51,11 @@ test("mantém o alarme nativo configurado para tela apagada", async () => {
     capacitor.plugins.LocalNotifications.sound,
     "mayfit_timer.wav",
   );
-  assert.equal(sound.subarray(0, 4).toString("ascii"), "RIFF");
-  assert.equal(sound.subarray(8, 12).toString("ascii"), "WAVE");
+  for (const sound of [exerciseSound, restSound]) {
+    assert.equal(sound.subarray(0, 4).toString("ascii"), "RIFF");
+    assert.equal(sound.subarray(8, 12).toString("ascii"), "WAVE");
+  }
+  assert.notDeepEqual(exerciseSound, restSound);
 });
 
 test("gera uma atualização Android de produção", async () => {
@@ -54,8 +63,8 @@ test("gera uma atualização Android de produção", async () => {
     readFile("android/app/build.gradle", "utf8"),
     readFile("package.json", "utf8").then(JSON.parse),
   ]);
-  assert.match(gradle, /versionCode 2/);
-  assert.match(gradle, /versionName "1\.1\.0"/);
+  assert.match(gradle, /versionCode 3/);
+  assert.match(gradle, /versionName "1\.2\.0"/);
   assert.match(packageJson.scripts["android:apk"], /assembleRelease/);
   assert.doesNotMatch(packageJson.scripts["android:apk"], /assembleDebug/);
   assert.equal(packageJson.dependencies["@capacitor/app"], "^8.1.1");
