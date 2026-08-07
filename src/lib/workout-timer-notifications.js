@@ -3,37 +3,57 @@ import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 
 const TIMER_NOTIFICATION_ID = 81005;
-const TIMER_CHANNEL_ID = "mayfit-workout-timer-v1";
-const TIMER_SOUND = "mayfit_timer.wav";
-let channelReady = false;
+const EXERCISE_CHANNEL_ID = "mayfit-workout-exercise-v2";
+const REST_CHANNEL_ID = "mayfit-workout-rest-v2";
+const EXERCISE_SOUND = "mayfit_timer.wav";
+const REST_SOUND = "mayfit_rest.wav";
+let channelsReady = false;
+let exactAlarmEnabled = false;
 
 export function hasNativeTimerNotifications() {
   return Capacitor.isNativePlatform();
 }
 
-async function createTimerChannel() {
-  if (channelReady || Capacitor.getPlatform() !== "android") return;
-  await LocalNotifications.createChannel({
-    id: TIMER_CHANNEL_ID,
-    name: "Cronômetro MaYFiT",
-    description: "Sino e vibração ao finalizar cada cronômetro do treino.",
-    sound: TIMER_SOUND,
-    importance: 5,
-    visibility: 1,
-    lights: true,
-    lightColor: "#9DF20F",
-    vibration: true,
-  });
-  channelReady = true;
+async function createTimerChannels() {
+  if (channelsReady || Capacitor.getPlatform() !== "android") return;
+  await Promise.all([
+    LocalNotifications.createChannel({
+      id: EXERCISE_CHANNEL_ID,
+      name: "Fim do exercício",
+      description:
+        "Som usado quando o tempo do exercício termina e a pausa começa.",
+      sound: EXERCISE_SOUND,
+      importance: 5,
+      visibility: 1,
+      lights: true,
+      lightColor: "#9DF20F",
+      vibration: true,
+    }),
+    LocalNotifications.createChannel({
+      id: REST_CHANNEL_ID,
+      name: "Fim do descanso",
+      description:
+        "Som diferente usado quando a pausa termina e o exercício recomeça.",
+      sound: REST_SOUND,
+      importance: 5,
+      visibility: 1,
+      lights: true,
+      lightColor: "#9DF20F",
+      vibration: true,
+    }),
+  ]);
+  channelsReady = true;
 }
 
-async function hasExactAlarmPermission({ request = false } = {}) {
+async function readExactAlarmSetting() {
   if (Capacitor.getPlatform() !== "android") return true;
-  let permission = await LocalNotifications.checkExactNotificationSetting();
-  if (permission.exact_alarm !== "granted" && request) {
-    permission = await LocalNotifications.changeExactNotificationSetting();
+  try {
+    const permission =
+      await LocalNotifications.checkExactNotificationSetting();
+    return permission.exact_alarm === "granted";
+  } catch {
+    return false;
   }
-  return permission.exact_alarm === "granted";
 }
 
 export async function prepareTimerNotifications({ request = false } = {}) {
@@ -44,8 +64,10 @@ export async function prepareTimerNotifications({ request = false } = {}) {
       permission = await LocalNotifications.requestPermissions();
     }
     if (permission.display !== "granted") return false;
-    if (!(await hasExactAlarmPermission({ request }))) return false;
-    await createTimerChannel();
+
+    // Apenas consulta o recurso. Nunca abre a tela de configurações do Android.
+    exactAlarmEnabled = await readExactAlarmSetting();
+    await createTimerChannels();
     return true;
   } catch {
     return false;
@@ -74,20 +96,31 @@ export async function scheduleTimerNotification({
   if (!(await prepareTimerNotifications())) return false;
   const at = new Date(Number(deadline));
   if (!Number.isFinite(at.getTime()) || at.getTime() <= Date.now()) return false;
+
+  const restFinished = phase === "pause";
+  const channelId = restFinished ? REST_CHANNEL_ID : EXERCISE_CHANNEL_ID;
+  const sound = restFinished ? REST_SOUND : EXERCISE_SOUND;
+
   try {
     await cancelTimerNotification({ delivered: true });
     await LocalNotifications.schedule({
       notifications: [
         {
           id: TIMER_NOTIFICATION_ID,
-          title: "MaYFiT — tempo finalizado",
-          body:
-            phase === "pause"
-              ? "A pausa terminou. Continue o treino."
-              : `Cronômetro finalizado${exerciseName ? `: ${exerciseName}` : "."}`,
-          schedule: { at, allowWhileIdle: true },
-          channelId: TIMER_CHANNEL_ID,
-          sound: TIMER_SOUND,
+          title: restFinished
+            ? "MaYFiT — descanso finalizado"
+            : "MaYFiT — tempo finalizado",
+          body: restFinished
+            ? "O descanso terminou. Hora de voltar ao exercício."
+            : `Contagem finalizada${exerciseName ? `: ${exerciseName}` : "."}`,
+          schedule: {
+            at,
+            // Sem permissão de alarme exato, usa o agendamento normal sem
+            // direcionar o aluno para outra tela.
+            allowWhileIdle: exactAlarmEnabled,
+          },
+          channelId,
+          sound,
           autoCancel: true,
           extra: { source: "mayfit-workout-timer", phase },
         },
