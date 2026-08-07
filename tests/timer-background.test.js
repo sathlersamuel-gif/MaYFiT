@@ -17,14 +17,23 @@ test("calcula o cronômetro pelo horário real após suspensão da tela", () => 
 });
 
 test("mantém os alarmes nativos sem abrir configurações do Android", async () => {
-  const [main, notifications, manifest, exerciseSound, restSound] =
-    await Promise.all([
-      readFile("src/main.jsx", "utf8"),
-      readFile("src/lib/workout-timer-notifications.js", "utf8"),
-      readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
-      readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
-      readFile("android/app/src/main/res/raw/mayfit_rest.wav"),
-    ]);
+  const [
+    main,
+    notifications,
+    androidRuntimeFix,
+    studentEntry,
+    manifest,
+    exerciseSound,
+    restSound,
+  ] = await Promise.all([
+    readFile("src/main.jsx", "utf8"),
+    readFile("src/lib/workout-timer-notifications.js", "utf8"),
+    readFile("src/android-timer-runtime-fix.js", "utf8"),
+    readFile("src/student-area-entry.js", "utf8"),
+    readFile("android/app/src/main/AndroidManifest.xml", "utf8"),
+    readFile("android/app/src/main/res/raw/mayfit_timer.wav"),
+    readFile("android/app/src/main/res/raw/mayfit_rest.wav"),
+  ]);
   const capacitor = JSON.parse(
     await readFile("capacitor.config.json", "utf8"),
   );
@@ -42,6 +51,13 @@ test("mantém os alarmes nativos sem abrir configurações do Android", async ()
   assert.match(notifications, /mayfit_timer\.wav/);
   assert.match(notifications, /mayfit_rest\.wav/);
   assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
+
+  assert.match(studentEntry, /android-timer-runtime-fix\.js\?v=1/);
+  assert.match(androidRuntimeFix, /BLOCKED_WARNING/);
+  assert.match(androidRuntimeFix, /EXERCISE_TONES/);
+  assert.match(androidRuntimeFix, /REST_TONES/);
+  assert.match(androidRuntimeFix, /currentTimerPhase\(\) === "PAUSA"/);
+
   assert.match(manifest, /android\.permission\.USE_EXACT_ALARM/);
   assert.equal(
     capacitor.plugins.LocalNotifications.smallIcon,
@@ -58,15 +74,17 @@ test("mantém os alarmes nativos sem abrir configurações do Android", async ()
   assert.notDeepEqual(exerciseSound, restSound);
 });
 
-test("gera uma atualização Android de produção", async () => {
-  const [gradle, packageJson] = await Promise.all([
+test("gera a atualização Android 1.2.1 e um APK instalável", async () => {
+  const [gradle, packageJson, workflow] = await Promise.all([
     readFile("android/app/build.gradle", "utf8"),
     readFile("package.json", "utf8").then(JSON.parse),
+    readFile(".github/workflows/build-android-apk.yml", "utf8"),
   ]);
-  assert.match(gradle, /versionCode 3/);
-  assert.match(gradle, /versionName "1\.2\.0"/);
+  assert.match(gradle, /versionCode 4/);
+  assert.match(gradle, /versionName "1\.2\.1"/);
   assert.match(packageJson.scripts["android:apk"], /assembleRelease/);
-  assert.doesNotMatch(packageJson.scripts["android:apk"], /assembleDebug/);
+  assert.match(workflow, /assembleDebug/);
+  assert.match(workflow, /MaYFiT-Android-Instalavel-1\.2\.1/);
   assert.equal(packageJson.dependencies["@capacitor/app"], "^8.1.1");
   assert.equal(
     packageJson.dependencies["@capacitor/local-notifications"],
