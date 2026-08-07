@@ -1,4 +1,6 @@
+import "./android-native-tts-bridge.js";
 import "./mobile-keyboard-recovery.js";
+import "./mobile-series-start-cue.js";
 import "./mobile-speech-stability.js";
 import { App as NativeApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
