@@ -5,13 +5,8 @@ import {
 
 const ANDROID_USER_AGENT = /Android/i;
 const IOS_USER_AGENT = /iPad|iPhone|iPod/i;
-const SETTINGS_KEY = "mayfit_workout_sound_settings_v1";
-
-const VOICE_SOURCES = {
-  start: "/audio/iniciando-treino.base64.txt?v=2",
-  rest: "/audio/descanso.base64.txt?v=2",
-  finish: "/audio/fim-treino.base64.txt?v=1",
-};
+const SETTINGS_KEY = "mayfit_workout_sound_settings_v2";
+const LEGACY_SETTINGS_KEY = "mayfit_workout_sound_settings_v1";
 
 const VOICE_TEXT = {
   start: "Iniciando treino",
@@ -23,10 +18,11 @@ const DEFAULT_SETTINGS = {
   start: "voice",
   rest: "voice",
   finish: "voice",
+  voiceName: "auto",
 };
 
 const SOUND_OPTIONS = [
-  ["voice", "Voz natural (assistente)"],
+  ["voice", "Voz natural do aparelho"],
   ["beep", "Bip esportivo"],
   ["bells", "Sinos"],
   ["whistle", "Apito"],
@@ -47,6 +43,10 @@ const PRESETS = {
     label: "Sinos",
     settings: { start: "bells", rest: "bells", finish: "bells" },
   },
+  whistle: {
+    label: "Apito",
+    settings: { start: "whistle", rest: "whistle", finish: "whistle" },
+  },
   discreet: {
     label: "Discreto",
     settings: { start: "digital", rest: "digital", finish: "digital" },
@@ -55,8 +55,6 @@ const PRESETS = {
 
 let settings = loadSettings();
 let audioContext = null;
-let voiceBuffers = null;
-let voiceBuffersPromise = null;
 let lastScreen = null;
 let lastPhase = null;
 let lastAllDone = false;
@@ -65,6 +63,7 @@ let settingsModal = null;
 let cancelTimers = [];
 let speechToken = 0;
 let pendingStartButton = null;
+let pendingStartTimer = null;
 
 function isAndroidDevice() {
   return ANDROID_USER_AGENT.test(navigator.userAgent);
@@ -89,23 +88,43 @@ function normalizeText(value) {
     .toUpperCase();
 }
 
-function loadSettings() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
-    if (!saved || typeof saved !== "object") return { ...DEFAULT_SETTINGS };
-    const valid = new Set(SOUND_OPTIONS.map(([value]) => value));
-    return {
-      start: valid.has(saved.start) ? saved.start : DEFAULT_SETTINGS.start,
-      rest: valid.has(saved.rest) ? saved.rest : DEFAULT_SETTINGS.rest,
-      finish: valid.has(saved.finish) ? saved.finish : DEFAULT_SETTINGS.finish,
-    };
-  } catch {
-    return { ...DEFAULT_SETTINGS };
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]);
+}
+
+function readStoredSettings() {
+  for (const key of [SETTINGS_KEY, LEGACY_SETTINGS_KEY]) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || "null");
+      if (saved && typeof saved === "object") return saved;
+    } catch {}
   }
+  return null;
+}
+
+function loadSettings() {
+  const saved = readStoredSettings();
+  if (!saved) return { ...DEFAULT_SETTINGS };
+  const valid = new Set(SOUND_OPTIONS.map(([value]) => value));
+  return {
+    start: valid.has(saved.start) ? saved.start : DEFAULT_SETTINGS.start,
+    rest: valid.has(saved.rest) ? saved.rest : DEFAULT_SETTINGS.rest,
+    finish: valid.has(saved.finish) ? saved.finish : DEFAULT_SETTINGS.finish,
+    voiceName:
+      typeof saved.voiceName === "string" && saved.voiceName.trim()
+        ? saved.voiceName
+        : DEFAULT_SETTINGS.voiceName,
+  };
 }
 
 function saveSettings(next) {
-  settings = { ...DEFAULT_SETTINGS, ...next };
+  settings = { ...DEFAULT_SETTINGS, ...settings, ...next };
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch {}
@@ -130,91 +149,46 @@ function unlockAudio() {
   } catch {}
 }
 
-function base64ToArrayBuffer(value) {
-  const clean = String(value || "").trim();
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(clean)) {
-    throw new Error("Arquivo de áudio inválido");
+function voiceScore(voice) {
+  let score = 0;
+  const lang = String(voice?.lang || "");
+  const name = String(voice?.name || "");
+  if (/^pt-BR$/i.test(lang)) score += 100;
+  else if (/^pt/i.test(lang)) score += 60;
+  if (voice?.localService) score += 20;
+  if (/luciana|joana|francisca|camila|vit[oó]ria|maria|google.*portugu|microsoft.*portugu|samsung.*portugu/i.test(name)) {
+    score += 35;
   }
-  const binary = atob(clean);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes.buffer;
+  return score;
 }
 
-async function loadVoiceBuffer(source) {
-  const response = await fetch(source, { cache: "no-store" });
-  if (!response.ok) throw new Error("Falha ao carregar voz do treino");
-  const context = getAudioContext();
-  if (!context) throw new Error("Áudio indisponível");
-  const encoded = await response.text();
-  return context.decodeAudioData(base64ToArrayBuffer(encoded));
-}
-
-function prepareVoiceBuffers() {
-  if (voiceBuffers) return Promise.resolve(voiceBuffers);
-  if (voiceBuffersPromise) return voiceBuffersPromise;
-
-  voiceBuffersPromise = Promise.all([
-    loadVoiceBuffer(VOICE_SOURCES.start),
-    loadVoiceBuffer(VOICE_SOURCES.rest),
-    loadVoiceBuffer(VOICE_SOURCES.finish),
-  ])
-    .then(([start, rest, finish]) => {
-      voiceBuffers = { start, rest, finish };
-      return voiceBuffers;
-    })
-    .catch(() => null)
-    .finally(() => {
-      voiceBuffersPromise = null;
-    });
-
-  return voiceBuffersPromise;
-}
-
-function playBuffer(buffer) {
-  const context = getAudioContext();
-  if (!context || !buffer) return false;
+function portugueseVoices() {
   try {
-    const source = context.createBufferSource();
-    const gain = context.createGain();
-    source.buffer = buffer;
-    gain.gain.value = 1;
-    source.connect(gain);
-    gain.connect(context.destination);
-    source.start();
-    return true;
+    const voices = window.speechSynthesis?.getVoices?.() || [];
+    return voices
+      .filter((voice) => /^pt(?:-|_)/i.test(String(voice.lang || "")))
+      .sort((a, b) => voiceScore(b) - voiceScore(a));
   } catch {
-    return false;
+    return [];
   }
 }
 
 function preferredPortugueseVoice() {
-  try {
-    const voices = window.speechSynthesis?.getVoices?.() || [];
-    const portuguese = voices.filter((voice) => /^pt(?:-|_)/i.test(voice.lang));
-    if (!portuguese.length) return null;
-    const preferredNames = /(google|microsoft|samsung|maria|francisca|luciana|brasil|vitoria|vitória|camila)/i;
-    return portuguese.find((voice) => preferredNames.test(voice.name)) || portuguese[0];
-  } catch {
-    return null;
+  const voices = portugueseVoices();
+  if (!voices.length) return null;
+  if (settings.voiceName && settings.voiceName !== "auto") {
+    const selected = voices.find((voice) => voice.name === settings.voiceName);
+    if (selected) return selected;
   }
-}
-
-async function playEmbeddedVoice(cue) {
-  const buffers = voiceBuffers || (await prepareVoiceBuffers());
-  const buffer = buffers?.[cue];
-  if (buffer && playBuffer(buffer)) return true;
-  playSynthetic("digital", cue);
-  return false;
+  return voices[0];
 }
 
 function playNaturalVoice(cue) {
   const token = ++speechToken;
   return new Promise((resolve) => {
     if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
-      void playEmbeddedVoice(cue).then(resolve);
+      playSynthetic("digital", cue);
+      resolve(false);
       return;
     }
 
@@ -229,8 +203,8 @@ function playNaturalVoice(cue) {
     try {
       const utterance = new SpeechSynthesisUtterance(VOICE_TEXT[cue]);
       utterance.lang = "pt-BR";
-      utterance.rate = 0.96;
-      utterance.pitch = 1;
+      utterance.rate = 0.98;
+      utterance.pitch = 1.02;
       utterance.volume = 1;
       const voice = preferredPortugueseVoice();
       if (voice) utterance.voice = voice;
@@ -240,8 +214,9 @@ function playNaturalVoice(cue) {
         try {
           window.speechSynthesis.cancel();
         } catch {}
-        void playEmbeddedVoice(cue).then((worked) => finish(worked));
-      }, 450);
+        playSynthetic("digital", cue);
+        finish(false);
+      }, 900);
 
       utterance.onstart = () => {
         started = true;
@@ -250,13 +225,15 @@ function playNaturalVoice(cue) {
       };
       utterance.onerror = () => {
         clearTimeout(fallbackTimer);
-        void playEmbeddedVoice(cue).then((worked) => finish(worked));
+        playSynthetic("digital", cue);
+        finish(false);
       };
 
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
     } catch {
-      void playEmbeddedVoice(cue).then(resolve);
+      playSynthetic("digital", cue);
+      resolve(false);
     }
   });
 }
@@ -285,10 +262,11 @@ function playSynthetic(kind, cue) {
   unlockAudio();
 
   if (kind === "beep") {
-    [0, 0.16, 0.32].forEach((start, index) =>
+    const frequencies = cue === "rest" ? [680, 820, 960] : [1040, 1180, 1320];
+    frequencies.forEach((frequency, index) =>
       tone({
-        frequency: cue === "rest" ? 720 : 980 + index * 80,
-        start,
+        frequency,
+        start: index * 0.16,
         duration: 0.1,
         type: "square",
         volume: 0.22,
@@ -298,11 +276,11 @@ function playSynthetic(kind, cue) {
   }
 
   if (kind === "bells") {
-    [0, 0.18, 0.38].forEach((start, index) =>
+    [0, 0.2, 0.44].forEach((start, index) =>
       tone({
-        frequency: [660, 880, 1100][index],
+        frequency: [620, 830, 1110][index],
         start,
-        duration: 0.52,
+        duration: 0.62,
         type: "sine",
         volume: 0.24,
       }),
@@ -311,11 +289,11 @@ function playSynthetic(kind, cue) {
   }
 
   if (kind === "whistle") {
-    [0, 0.22].forEach((start, index) =>
+    [0, 0.24].forEach((start, index) =>
       tone({
-        frequency: index ? 1550 : 1320,
+        frequency: index ? 1580 : 1360,
         start,
-        duration: 0.18,
+        duration: 0.19,
         type: "sine",
         volume: 0.2,
       }),
@@ -323,11 +301,11 @@ function playSynthetic(kind, cue) {
     return;
   }
 
-  [0, 0.12, 0.26].forEach((start, index) =>
+  [0, 0.13, 0.28].forEach((start, index) =>
     tone({
-      frequency: [520, 780, 1040][index],
+      frequency: [540, 810, 1080][index],
       start,
-      duration: 0.14,
+      duration: 0.15,
       type: "triangle",
       volume: 0.2,
     }),
@@ -340,11 +318,8 @@ async function playCue(cue, forcedSound = null) {
   const selected = forcedSound || settings[cue] || DEFAULT_SETTINGS[cue];
   if (selected === "silent") return;
 
-  if (selected === "voice") {
-    await playNaturalVoice(cue);
-  } else {
-    playSynthetic(selected, cue);
-  }
+  if (selected === "voice") await playNaturalVoice(cue);
+  else playSynthetic(selected, cue);
 
   try {
     if (navigator.vibrate) navigator.vibrate([180, 70, 180]);
@@ -417,6 +392,7 @@ function resetScreenState(screen) {
 
 function syncWorkoutState() {
   if (document.hidden) return;
+  confirmPendingTimerStart();
   const screen = workoutScreen();
 
   if (screen !== lastScreen) {
@@ -449,6 +425,7 @@ function queueSyncWorkoutState() {
     syncQueued = false;
     syncWorkoutState();
     ensureSettingsTrigger();
+    ensureProfileSoundSettings();
   });
 }
 
@@ -459,31 +436,44 @@ function isRealTimerStartButton(button) {
   );
 }
 
-function confirmTimerActuallyStarted(button) {
-  if (button !== pendingStartButton) return;
+function clearPendingStart() {
+  if (pendingStartTimer) clearTimeout(pendingStartTimer);
+  pendingStartTimer = null;
   pendingStartButton = null;
-  if (!document.contains(button)) return;
+}
+
+function armPendingTimerStart(button) {
+  clearPendingStart();
+  pendingStartButton = button;
+  pendingStartTimer = setTimeout(clearPendingStart, 5000);
+}
+
+function confirmPendingTimerStart() {
+  const button = pendingStartButton;
+  if (!button) return;
+  if (!document.contains(button)) {
+    clearPendingStart();
+    return;
+  }
   if (!button.classList.contains("running")) return;
+
+  clearPendingStart();
   void playCue("start");
   keepNativeAlertSilentWhileVisible();
 }
 
 function handlePointerDown(event) {
   unlockAudio();
-  void prepareVoiceBuffers();
-
   const button = event.target?.closest?.("button");
   if (!isRealTimerStartButton(button)) return;
-
-  pendingStartButton = button;
-  setTimeout(() => confirmTimerActuallyStarted(button), 0);
+  armPendingTimerStart(button);
 }
 
 function muteLegacyForegroundTimerTones(AudioContextCtor) {
   const prototype = AudioContextCtor?.prototype;
   const originalCreateOscillator = prototype?.createOscillator;
   if (!prototype || !originalCreateOscillator) return;
-  if (originalCreateOscillator.__mayfitMobileWorkoutSounds) return;
+  if (originalCreateOscillator.__mayfitMobileWorkoutSoundsV2) return;
 
   function createOscillatorWithoutLegacyTimerTone(...args) {
     const oscillator = originalCreateOscillator.apply(this, args);
@@ -499,7 +489,7 @@ function muteLegacyForegroundTimerTones(AudioContextCtor) {
     return oscillator;
   }
 
-  createOscillatorWithoutLegacyTimerTone.__mayfitMobileWorkoutSounds = true;
+  createOscillatorWithoutLegacyTimerTone.__mayfitMobileWorkoutSoundsV2 = true;
   prototype.createOscillator = createOscillatorWithoutLegacyTimerTone;
 }
 
@@ -508,6 +498,20 @@ function optionMarkup(selected) {
     ([value, label]) =>
       `<option value="${value}"${selected === value ? " selected" : ""}>${label}</option>`,
   ).join("");
+}
+
+function voiceOptionMarkup() {
+  const voices = portugueseVoices();
+  const automatic = `<option value="auto"${settings.voiceName === "auto" ? " selected" : ""}>Automática (mais natural disponível)</option>`;
+  return (
+    automatic +
+    voices
+      .map(
+        (voice) =>
+          `<option value="${escapeHtml(voice.name)}"${settings.voiceName === voice.name ? " selected" : ""}>${escapeHtml(voice.name)} — ${escapeHtml(voice.lang)}</option>`,
+      )
+      .join("")
+  );
 }
 
 function currentPreset() {
@@ -555,9 +559,18 @@ function settingsMarkup() {
         <span>Perfil de sons</span>
         <select data-sound-preset>${presetOptions}</select>
       </label>
-      ${row("start", "START", "Somente quando o botão START do cronômetro realmente inicia o treino.")}
-      ${row("rest", "Descanso", "Quando o cronômetro termina o tempo e entra no descanso.")}
-      ${row("finish", "Fim de treino", "Quando todas as séries e exercícios ficam concluídos.")}
+      <div class="mayfit-voice-choice">
+        <div>
+          <strong>Voz do aparelho</strong>
+          <span>Escolha uma das vozes em português disponíveis no seu iPhone ou Android.</span>
+        </div>
+        <select data-voice-select aria-label="Voz do aparelho">${voiceOptionMarkup()}</select>
+        <button type="button" class="mayfit-sound-preview" data-preview-voice>Ouvir voz</button>
+      </div>
+      ${row("start", "START", "Somente quando o botão START do cronômetro realmente iniciar.")}
+      ${row("rest", "Descanso", "Quando o tempo terminar e o cronômetro entrar no descanso.")}
+      ${row("finish", "Fim de treino", "Quando todas as séries e exercícios forem concluídos.")}
+      <p class="mayfit-sound-note">As escolhas ficam salvas neste aparelho. A voz natural depende das vozes instaladas no sistema.</p>
       <button type="button" class="mayfit-sound-done">Concluído</button>
     </div>`;
 }
@@ -567,24 +580,23 @@ function installSettingsStyles() {
   const style = document.createElement("style");
   style.id = "mayfit-workout-sound-styles";
   style.textContent = `
-    .mayfit-sound-settings-trigger{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:0;border-radius:14px;background:rgba(255,255,255,.08);color:inherit;font-size:20px;cursor:pointer;margin-left:6px}
+    .mayfit-sound-settings-trigger{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:0;border-radius:14px;background:rgba(255,255,255,.08);color:inherit;font-size:19px;cursor:pointer;margin-left:6px}
     .mayfit-sound-settings-trigger:active{transform:scale(.96)}
+    .mayfit-profile-sounds{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;box-sizing:border-box;margin:18px 0 12px;padding:14px;border:1px solid rgba(157,242,15,.28);border-radius:16px;background:rgba(157,242,15,.07);text-align:left}
+    .mayfit-profile-sounds-copy{display:grid;gap:3px;min-width:0}.mayfit-profile-sounds-copy strong{font-size:15px}.mayfit-profile-sounds-copy span{font-size:12px;opacity:.65;line-height:1.35}
+    .mayfit-profile-sounds button{flex:0 0 auto;border:0;border-radius:12px;background:#9df20f;color:#111;padding:10px 12px;font-weight:900}
     .mayfit-sound-overlay{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center;padding:14px}
     .mayfit-sound-dialog{width:min(560px,100%);max-height:88vh;overflow:auto;background:#141414;color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:18px;box-shadow:0 22px 70px rgba(0,0,0,.45)}
-    .mayfit-sound-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
-    .mayfit-sound-head small{font-size:11px;letter-spacing:.12em;opacity:.6}
-    .mayfit-sound-head h2{margin:3px 0 0;font-size:23px}
+    .mayfit-sound-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}.mayfit-sound-head small{font-size:11px;letter-spacing:.12em;opacity:.6}.mayfit-sound-head h2{margin:3px 0 0;font-size:23px}
     .mayfit-sound-close{border:0;background:rgba(255,255,255,.08);color:#fff;border-radius:12px;width:38px;height:38px;font-size:27px;line-height:1;cursor:pointer}
-    .mayfit-sound-preset{display:grid;gap:7px;margin-bottom:14px;padding:13px;border-radius:16px;background:rgba(157,242,15,.08);border:1px solid rgba(157,242,15,.18)}
-    .mayfit-sound-preset span{font-size:13px;font-weight:700}
+    .mayfit-sound-preset,.mayfit-voice-choice{display:grid;gap:7px;margin-bottom:14px;padding:13px;border-radius:16px;background:rgba(157,242,15,.08);border:1px solid rgba(157,242,15,.18)}
+    .mayfit-sound-preset span,.mayfit-voice-choice strong{font-size:13px;font-weight:800}.mayfit-voice-choice>div{display:grid;gap:3px}.mayfit-voice-choice>div span{font-size:11px;opacity:.62;line-height:1.35}
     .mayfit-sound-dialog select{width:100%;min-height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:#222;color:#fff;padding:0 12px;font-size:14px}
-    .mayfit-sound-row{display:grid;grid-template-columns:minmax(0,1fr) 150px 68px;gap:9px;align-items:center;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.09)}
-    .mayfit-sound-row-copy{display:grid;gap:3px;min-width:0}
-    .mayfit-sound-row-copy strong{font-size:14px}
-    .mayfit-sound-row-copy span{font-size:12px;opacity:.62;line-height:1.35}
-    .mayfit-sound-preview{height:42px;border:0;border-radius:11px;background:#9df20f;color:#111;font-weight:800;cursor:pointer}
-    .mayfit-sound-done{width:100%;height:48px;border:0;border-radius:14px;background:#9df20f;color:#111;font-weight:900;font-size:15px;cursor:pointer;margin-top:14px}
-    @media(max-width:520px){.mayfit-sound-row{grid-template-columns:1fr 72px}.mayfit-sound-row-copy{grid-column:1/-1}.mayfit-sound-dialog select{min-width:0}.mayfit-sound-overlay{padding:8px}.mayfit-sound-dialog{border-radius:20px 20px 12px 12px}}
+    .mayfit-sound-row{display:grid;grid-template-columns:minmax(0,1fr) 150px 72px;gap:9px;align-items:center;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.09)}
+    .mayfit-sound-row-copy{display:grid;gap:3px;min-width:0}.mayfit-sound-row-copy strong{font-size:14px}.mayfit-sound-row-copy span{font-size:12px;opacity:.62;line-height:1.35}
+    .mayfit-sound-preview{min-height:42px;border:0;border-radius:11px;background:#9df20f;color:#111;font-weight:800;cursor:pointer;padding:0 10px}
+    .mayfit-sound-note{font-size:11px;line-height:1.45;opacity:.58;margin:14px 0 0}.mayfit-sound-done{width:100%;height:48px;border:0;border-radius:14px;background:#9df20f;color:#111;font-weight:900;font-size:15px;cursor:pointer;margin-top:14px}
+    @media(max-width:520px){.mayfit-sound-row{grid-template-columns:1fr 76px}.mayfit-sound-row-copy{grid-column:1/-1}.mayfit-sound-dialog select{min-width:0}.mayfit-sound-overlay{padding:8px}.mayfit-sound-dialog{border-radius:20px 20px 12px 12px}}
   `;
   document.head.appendChild(style);
 }
@@ -592,6 +604,14 @@ function installSettingsStyles() {
 function closeSettings() {
   settingsModal?.remove();
   settingsModal = null;
+}
+
+function refreshVoiceSelector() {
+  if (!settingsModal) return;
+  const voiceSelect = settingsModal.querySelector("[data-voice-select]");
+  if (!voiceSelect) return;
+  voiceSelect.innerHTML = voiceOptionMarkup();
+  voiceSelect.value = settings.voiceName || "auto";
 }
 
 function refreshSettingsControls() {
@@ -602,12 +622,17 @@ function refreshSettingsControls() {
   }
   const preset = settingsModal.querySelector("[data-sound-preset]");
   if (preset) preset.value = currentPreset();
+  refreshVoiceSelector();
 }
 
 function openSettings() {
+  if (!isSupportedMobileDevice()) return;
   closeSettings();
   unlockAudio();
   installSettingsStyles();
+  try {
+    window.speechSynthesis?.getVoices?.();
+  } catch {}
 
   const overlay = document.createElement("div");
   overlay.className = "mayfit-sound-overlay";
@@ -622,6 +647,11 @@ function openSettings() {
       event.target.closest(".mayfit-sound-done")
     ) {
       closeSettings();
+      return;
+    }
+
+    if (event.target.closest("[data-preview-voice]")) {
+      void playCue("start", "voice");
       return;
     }
 
@@ -644,27 +674,58 @@ function openSettings() {
       return;
     }
 
+    const voiceSelect = event.target.closest("[data-voice-select]");
+    if (voiceSelect) {
+      saveSettings({ voiceName: voiceSelect.value || "auto" });
+      return;
+    }
+
     const select = event.target.closest("[data-sound-select]");
     if (!select) return;
-    saveSettings({ ...settings, [select.dataset.soundSelect]: select.value });
+    saveSettings({ [select.dataset.soundSelect]: select.value });
     refreshSettingsControls();
   });
 }
 
+function studentAreaVisible() {
+  return [...document.querySelectorAll(".app > nav span")].some(
+    (span) => normalizeText(span.textContent) === "PERFIL",
+  );
+}
+
 function ensureSettingsTrigger() {
-  if (!isSupportedMobileDevice()) return;
+  if (!isSupportedMobileDevice() || !studentAreaVisible()) return;
   const header = document.querySelector(".app > header");
-  if (!header) return;
-  if (header.querySelector(".mayfit-sound-settings-trigger")) return;
+  if (!header || header.querySelector(".mayfit-sound-settings-trigger")) return;
 
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.className = "mayfit-sound-settings-trigger";
-  trigger.setAttribute("aria-label", "Configurações de sons do treino");
+  trigger.setAttribute("aria-label", "Sons do treino");
   trigger.title = "Sons do treino";
-  trigger.textContent = "⚙";
+  trigger.textContent = "🔊";
   trigger.addEventListener("click", openSettings);
   header.appendChild(trigger);
+}
+
+function ensureProfileSoundSettings() {
+  if (!isSupportedMobileDevice()) return;
+  const profile = document.querySelector(".profile");
+  if (!profile || profile.querySelector(".mayfit-profile-sounds")) return;
+
+  const section = document.createElement("div");
+  section.className = "mayfit-profile-sounds";
+  section.innerHTML = `
+    <div class="mayfit-profile-sounds-copy">
+      <strong>🔊 Sons do treino</strong>
+      <span>Escolha voz, bip, sinos, apito ou alerta digital.</span>
+    </div>
+    <button type="button">Configurar</button>`;
+  section.querySelector("button").addEventListener("click", openSettings);
+
+  const logout = profile.querySelector(".danger");
+  if (logout) profile.insertBefore(section, logout);
+  else profile.appendChild(section);
 }
 
 function handleVisibilityChange() {
@@ -681,7 +742,6 @@ function installMobileWorkoutSounds() {
 
   installSettingsStyles();
   getAudioContext();
-  void prepareVoiceBuffers();
 
   muteLegacyForegroundTimerTones(window.AudioContext);
   if (window.webkitAudioContext !== window.AudioContext) {
@@ -706,6 +766,8 @@ function installMobileWorkoutSounds() {
     keepNativeAlertSilentWhileVisible();
     queueSyncWorkoutState();
   });
+  window.addEventListener("mayfit-open-workout-sound-settings", openSettings);
+  window.speechSynthesis?.addEventListener?.("voiceschanged", refreshVoiceSelector);
 
   const observer = new MutationObserver(queueSyncWorkoutState);
   observer.observe(document.body, {
@@ -717,6 +779,7 @@ function installMobileWorkoutSounds() {
   });
 
   ensureSettingsTrigger();
+  ensureProfileSoundSettings();
   queueSyncWorkoutState();
 }
 
