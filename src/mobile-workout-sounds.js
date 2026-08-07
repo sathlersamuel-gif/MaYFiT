@@ -55,15 +55,20 @@ const PRESETS = {
 
 let settings = loadSettings();
 let audioContext = null;
+let keepAliveOscillator = null;
+let keepAliveGain = null;
 let lastScreen = null;
 let lastPhase = null;
 let lastAllDone = false;
+let completedRows = new Set();
 let syncQueued = false;
 let settingsModal = null;
 let cancelTimers = [];
 let speechToken = 0;
 let pendingStartButton = null;
 let pendingStartTimer = null;
+let lastCueKey = "";
+let lastCueAt = 0;
 
 function isAndroidDevice() {
   return ANDROID_USER_AGENT.test(navigator.userAgent);
@@ -141,12 +146,44 @@ function getAudioContext() {
   }
 }
 
-function unlockAudio() {
+async function ensureAudioReady() {
   const context = getAudioContext();
+  if (!context) return null;
+  try {
+    if (context.state === "suspended") await context.resume();
+  } catch {}
+  return context.state === "closed" ? null : context;
+}
+
+function unlockAudio() {
+  void ensureAudioReady();
+}
+
+async function startAudioKeepAlive() {
+  if (keepAliveOscillator) return;
+  const context = await ensureAudioReady();
   if (!context) return;
   try {
-    if (context.state === "suspended") void context.resume();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    gain.gain.value = 0.00001;
+    oscillator.frequency.value = 24;
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    keepAliveOscillator = oscillator;
+    keepAliveGain = gain;
   } catch {}
+}
+
+function stopAudioKeepAlive() {
+  try {
+    keepAliveOscillator?.stop();
+    keepAliveOscillator?.disconnect();
+    keepAliveGain?.disconnect();
+  } catch {}
+  keepAliveOscillator = null;
+  keepAliveGain = null;
 }
 
 function voiceScore(voice) {
@@ -183,64 +220,61 @@ function preferredPortugueseVoice() {
   return voices[0];
 }
 
-function playNaturalVoice(cue) {
-  const token = ++speechToken;
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function attemptSpeech(cue, voice, token, timeoutMs) {
   return new Promise((resolve) => {
     if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
-      playSynthetic("digital", cue);
       resolve(false);
       return;
     }
 
     let settled = false;
-    let started = false;
     const finish = (worked) => {
-      if (settled || token !== speechToken) return;
+      if (settled) return;
       settled = true;
-      resolve(worked);
+      clearTimeout(timeout);
+      resolve(worked && token === speechToken);
     };
 
+    let timeout = null;
     try {
       const utterance = new SpeechSynthesisUtterance(VOICE_TEXT[cue]);
       utterance.lang = "pt-BR";
       utterance.rate = 0.98;
       utterance.pitch = 1.02;
       utterance.volume = 1;
-      const voice = preferredPortugueseVoice();
       if (voice) utterance.voice = voice;
-
-      const fallbackTimer = setTimeout(() => {
-        if (started || settled || token !== speechToken) return;
-        try {
-          window.speechSynthesis.cancel();
-        } catch {}
-        playSynthetic("digital", cue);
-        finish(false);
-      }, 900);
-
-      utterance.onstart = () => {
-        started = true;
-        clearTimeout(fallbackTimer);
-        finish(true);
-      };
-      utterance.onerror = () => {
-        clearTimeout(fallbackTimer);
-        playSynthetic("digital", cue);
-        finish(false);
-      };
+      utterance.onstart = () => finish(true);
+      utterance.onerror = () => finish(false);
+      timeout = setTimeout(() => finish(false), timeoutMs);
 
       window.speechSynthesis.cancel();
+      window.speechSynthesis.resume?.();
       window.speechSynthesis.speak(utterance);
     } catch {
-      playSynthetic("digital", cue);
-      resolve(false);
+      finish(false);
     }
   });
 }
 
-function tone({ frequency, start, duration, type = "sine", volume = 0.28 }) {
-  const context = getAudioContext();
-  if (!context) return;
+async function playNaturalVoice(cue) {
+  const token = ++speechToken;
+  const selectedVoice = preferredPortugueseVoice();
+  if (await attemptSpeech(cue, selectedVoice, token, 850)) return true;
+  if (token !== speechToken) return false;
+
+  await playSynthetic("digital", cue);
+  await delay(100);
+  if (token !== speechToken) return false;
+
+  const alternate = portugueseVoices().find((voice) => voice !== selectedVoice) || null;
+  return attemptSpeech(cue, alternate, token, 1100);
+}
+
+function tone(context, { frequency, start, duration, type = "sine", volume = 0.28 }) {
   try {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
@@ -258,13 +292,14 @@ function tone({ frequency, start, duration, type = "sine", volume = 0.28 }) {
   } catch {}
 }
 
-function playSynthetic(kind, cue) {
-  unlockAudio();
+async function playSynthetic(kind, cue) {
+  const context = await ensureAudioReady();
+  if (!context) return false;
 
   if (kind === "beep") {
     const frequencies = cue === "rest" ? [680, 820, 960] : [1040, 1180, 1320];
     frequencies.forEach((frequency, index) =>
-      tone({
+      tone(context, {
         frequency,
         start: index * 0.16,
         duration: 0.1,
@@ -272,12 +307,12 @@ function playSynthetic(kind, cue) {
         volume: 0.22,
       }),
     );
-    return;
+    return true;
   }
 
   if (kind === "bells") {
     [0, 0.2, 0.44].forEach((start, index) =>
-      tone({
+      tone(context, {
         frequency: [620, 830, 1110][index],
         start,
         duration: 0.62,
@@ -285,12 +320,12 @@ function playSynthetic(kind, cue) {
         volume: 0.24,
       }),
     );
-    return;
+    return true;
   }
 
   if (kind === "whistle") {
     [0, 0.24].forEach((start, index) =>
-      tone({
+      tone(context, {
         frequency: index ? 1580 : 1360,
         start,
         duration: 0.19,
@@ -298,11 +333,11 @@ function playSynthetic(kind, cue) {
         volume: 0.2,
       }),
     );
-    return;
+    return true;
   }
 
   [0, 0.13, 0.28].forEach((start, index) =>
-    tone({
+    tone(context, {
       frequency: [540, 810, 1080][index],
       start,
       duration: 0.15,
@@ -310,16 +345,23 @@ function playSynthetic(kind, cue) {
       volume: 0.2,
     }),
   );
+  return true;
 }
 
 async function playCue(cue, forcedSound = null) {
   if (!isSupportedMobileDevice()) return;
-  unlockAudio();
   const selected = forcedSound || settings[cue] || DEFAULT_SETTINGS[cue];
   if (selected === "silent") return;
 
+  const now = Date.now();
+  const cueKey = `${cue}:${selected}`;
+  if (cueKey === lastCueKey && now - lastCueAt < 650) return;
+  lastCueKey = cueKey;
+  lastCueAt = now;
+
+  await ensureAudioReady();
   if (selected === "voice") await playNaturalVoice(cue);
-  else playSynthetic(selected, cue);
+  else await playSynthetic(selected, cue);
 
   try {
     if (navigator.vibrate) navigator.vibrate([180, 70, 180]);
@@ -354,6 +396,31 @@ function allWorkoutRowsDone(screen = workoutScreen()) {
   return rows.length > 0 && rows.every((row) => row.classList.contains("done"));
 }
 
+function workoutRows(screen = workoutScreen()) {
+  return screen ? [...screen.querySelectorAll(".sheet-row")] : [];
+}
+
+function resetCompletedRows(screen) {
+  completedRows = new Set(
+    workoutRows(screen).filter((row) => row.classList.contains("done")),
+  );
+}
+
+function newlyCompletedRow(screen) {
+  let completed = null;
+  for (const row of workoutRows(screen)) {
+    if (row.classList.contains("done")) {
+      if (!completedRows.has(row)) {
+        completedRows.add(row);
+        completed = row;
+      }
+    } else {
+      completedRows.delete(row);
+    }
+  }
+  return completed;
+}
+
 function clearCancelTimers() {
   cancelTimers.forEach((timer) => clearTimeout(timer));
   cancelTimers = [];
@@ -363,10 +430,10 @@ function keepNativeAlertSilentWhileVisible() {
   if (!isAndroidDevice() || document.hidden) return;
   clearCancelTimers();
   void cancelTimerNotification({ delivered: true });
-  cancelTimers = [80, 220, 500, 900, 1500, 2500].map((delay) =>
+  cancelTimers = [80, 220, 500, 900, 1500, 2500].map((delayMs) =>
     setTimeout(() => {
       if (!document.hidden) void cancelTimerNotification({ delivered: true });
-    }, delay),
+    }, delayMs),
   );
 }
 
@@ -388,6 +455,8 @@ function resetScreenState(screen) {
   lastScreen = screen;
   lastPhase = timerPhase(screen);
   lastAllDone = allWorkoutRowsDone(screen);
+  resetCompletedRows(screen);
+  if (!screen) stopAudioKeepAlive();
 }
 
 function syncWorkoutState() {
@@ -410,8 +479,8 @@ function syncWorkoutState() {
     }
   }
 
-  if (!lastAllDone && allDone) {
-    void playCue("finish");
+  if (newlyCompletedRow(screen)) {
+    void playCue("finish").finally(stopAudioKeepAlive);
   }
 
   lastPhase = phase;
@@ -458,6 +527,7 @@ function confirmPendingTimerStart() {
   if (!button.classList.contains("running")) return;
 
   clearPendingStart();
+  void startAudioKeepAlive();
   void playCue("start");
   keepNativeAlertSilentWhileVisible();
 }
@@ -473,7 +543,7 @@ function muteLegacyForegroundTimerTones(AudioContextCtor) {
   const prototype = AudioContextCtor?.prototype;
   const originalCreateOscillator = prototype?.createOscillator;
   if (!prototype || !originalCreateOscillator) return;
-  if (originalCreateOscillator.__mayfitMobileWorkoutSoundsV2) return;
+  if (originalCreateOscillator.__mayfitMobileWorkoutSoundsV3) return;
 
   function createOscillatorWithoutLegacyTimerTone(...args) {
     const oscillator = originalCreateOscillator.apply(this, args);
@@ -489,7 +559,7 @@ function muteLegacyForegroundTimerTones(AudioContextCtor) {
     return oscillator;
   }
 
-  createOscillatorWithoutLegacyTimerTone.__mayfitMobileWorkoutSoundsV2 = true;
+  createOscillatorWithoutLegacyTimerTone.__mayfitMobileWorkoutSoundsV3 = true;
   prototype.createOscillator = createOscillatorWithoutLegacyTimerTone;
 }
 
@@ -568,9 +638,9 @@ function settingsMarkup() {
         <button type="button" class="mayfit-sound-preview" data-preview-voice>Ouvir voz</button>
       </div>
       ${row("start", "START", "Somente quando o botão START do cronômetro realmente iniciar.")}
-      ${row("rest", "Descanso", "Quando o tempo terminar e o cronômetro entrar no descanso.")}
-      ${row("finish", "Fim de treino", "Quando todas as séries e exercícios forem concluídos.")}
-      <p class="mayfit-sound-note">As escolhas ficam salvas neste aparelho. A voz natural depende das vozes instaladas no sistema.</p>
+      ${row("rest", "Descanso", "Quando uma série terminar e entrar no descanso.")}
+      ${row("finish", "Fim de treino", "Quando todas as séries do exercício em andamento forem concluídas.")}
+      <p class="mayfit-sound-note">As escolhas ficam salvas neste aparelho. Se a voz do sistema falhar, o MaYFiT toca um alerta digital para não deixar a troca de série muda.</p>
       <button type="button" class="mayfit-sound-done">Concluído</button>
     </div>`;
 }
@@ -733,6 +803,7 @@ function handleVisibilityChange() {
     scheduleNativeAlertForBackground();
     return;
   }
+  unlockAudio();
   keepNativeAlertSilentWhileVisible();
   queueSyncWorkoutState();
 }
@@ -763,6 +834,7 @@ function installMobileWorkoutSounds() {
   document.addEventListener("visibilitychange", handleVisibilityChange);
   window.addEventListener("pagehide", scheduleNativeAlertForBackground);
   window.addEventListener("pageshow", () => {
+    unlockAudio();
     keepNativeAlertSilentWhileVisible();
     queueSyncWorkoutState();
   });
