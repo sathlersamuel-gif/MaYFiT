@@ -41,8 +41,35 @@ function installHeaderStability() {
   style.textContent = `
     .app>header>.icon{margin-left:auto!important;flex:0 0 42px!important}
     .app>header>.mayfit-sound-settings-trigger{flex:0 0 42px!important;margin-left:6px!important}
+    .app>header>.mayfit-header-actions{margin-left:auto!important;flex:0 0 auto!important}
+    .app>header>.mayfit-header-actions>.mayfit-sound-settings-trigger{margin-left:0!important}
   `;
   document.head.appendChild(style);
+
+  const syncHeaderActions = () => {
+    const header = document.querySelector(".app > header");
+    const actions = header?.querySelector(".mayfit-header-actions");
+    const sound = header?.querySelector(".mayfit-sound-settings-trigger");
+    if (!header || !actions || !sound) return;
+
+    const gear = actions.querySelector("[data-mayfit-settings]");
+    if (sound.parentElement !== actions) {
+      actions.insertBefore(sound, gear || null);
+      return;
+    }
+    if (gear && sound.nextElementSibling !== gear) {
+      actions.insertBefore(sound, gear);
+    }
+  };
+
+  const observer = new MutationObserver(syncHeaderActions);
+  observer.observe(document.documentElement, {
+    subtree: true,
+    childList: true,
+  });
+  window.addEventListener("pageshow", syncHeaderActions);
+  window.addEventListener("focus", syncHeaderActions);
+  syncHeaderActions();
 }
 
 function installSeriesVoiceFallback() {
