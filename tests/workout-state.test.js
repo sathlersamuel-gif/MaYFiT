@@ -174,5 +174,6 @@ test("mantém o ícone do MayFit configurado no site e no Android", async () => 
   );
   assert.match(workflow, /\.\/gradlew assembleRelease --no-daemon/);
   assert.match(workflow, /app-release-unsigned\.apk/);
-  assert.doesNotMatch(workflow, /assembleDebug/);
+  assert.match(workflow, /\.\/gradlew assembleDebug --no-daemon/);
+  assert.match(workflow, /MaYFiT-Android-Instalavel-1\.2\.1/);
 });
