@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v24-workout-name-direct-load';
+const VERSION='mayfit-sw-v25-mobile-sounds-direct';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
