@@ -770,7 +770,7 @@ function Workout({ data, setData, onBack }) {
                   ) : activeId === e.id && started ? (
                     "Em andamento"
                   ) : (
-                    "Inic​iar"
+                    "Iniciar"
                   )}
                 </button>
               </div>
@@ -1164,7 +1164,7 @@ function App() {
           <span>MaY</span>FiT
           <small>{admin ? "Gerenciamento" : "Área do aluno"}</small>
         </div>
-        <button className="icon">
+        <button type="button" className="icon">
           <Bell />
         </button>
       </header>
