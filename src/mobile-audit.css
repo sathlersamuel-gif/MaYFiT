@@ -117,6 +117,13 @@ nav{
   padding-bottom:calc(11px + var(--mayfit-safe-bottom))!important;
 }
 
+/* Na tela inicial do aluno a navegação é relativa ao fluxo. Nesse caso a área
+   segura deve deslocar a barra inteira, e não aumentar a altura dela duas vezes. */
+html body.mayfit-tab-inicio .app>nav{
+  margin-bottom:max(8px,var(--mayfit-safe-bottom))!important;
+  padding-bottom:10px!important;
+}
+
 /* Corrige o zoom automático ao focar os campos de login em celulares e WebViews.
    Mantém a escala normal sem bloquear o zoom de acessibilidade do usuário. */
 html{
@@ -201,6 +208,11 @@ html{
   .summary article{
     min-width:0;
     padding:13px!important;
+  }
+
+  html body.mayfit-tab-inicio .app>nav{
+    margin-bottom:max(6px,var(--mayfit-safe-bottom))!important;
+    padding-bottom:5px!important;
   }
 }
 
