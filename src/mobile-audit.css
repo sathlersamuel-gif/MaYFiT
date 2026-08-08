@@ -1,7 +1,7 @@
 /* Auditoria de responsividade — painel Gerenciador e navegação móvel */
 :root{
   --mayfit-safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
-  --mayfit-safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --mayfit-safe-bottom: max(var(--mayfit-runtime-bottom, 0px), var(--mayfit-native-bottom, 0px), var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 html,body,#root{
