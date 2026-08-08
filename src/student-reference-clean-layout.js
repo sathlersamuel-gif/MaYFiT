@@ -18,7 +18,7 @@ body.mayfit-tab-inicio .app>header.mayfit-reference-header{
   min-height:82px!important;
   height:auto!important;
   box-sizing:border-box!important;
-  padding:calc(max(12px,env(safe-area-inset-top)) + 8px) 24px 16px!important;
+  padding:calc(max(12px,var(--mayfit-safe-top,env(safe-area-inset-top,0px))) + 8px) 24px 16px!important;
   display:flex!important;
   align-items:center!important;
   justify-content:space-between!important;
@@ -85,8 +85,8 @@ body.mayfit-tab-inicio .app>nav{
   position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;
   width:calc(100% - 48px)!important;max-width:712px!important;
   min-height:92px!important;height:auto!important;
-  margin:0 auto max(8px,env(safe-area-inset-bottom))!important;
-  padding:10px 16px max(10px,env(safe-area-inset-bottom))!important;
+  margin:0 auto max(8px,var(--mayfit-safe-bottom,env(safe-area-inset-bottom,0px)))!important;
+  padding:10px 16px max(10px,var(--mayfit-safe-bottom,env(safe-area-inset-bottom,0px)))!important;
   border-radius:22px!important;box-sizing:border-box!important
 }
 body.mayfit-tab-inicio .app>nav button{min-height:64px!important;font-size:16px!important}
@@ -95,7 +95,7 @@ body.mayfit-tab-inicio .app::after,
 body.mayfit-tab-inicio .app>main::after{display:none!important;content:none!important}
 
 @media(max-width:620px){
-  body.mayfit-tab-inicio .app>header.mayfit-reference-header{min-height:68px!important;padding:calc(max(8px,env(safe-area-inset-top)) + 5px) 16px 10px!important}
+  body.mayfit-tab-inicio .app>header.mayfit-reference-header{min-height:68px!important;padding:calc(max(8px,var(--mayfit-safe-top,env(safe-area-inset-top,0px))) + 5px) 16px 10px!important}
   body.mayfit-tab-inicio .mayfit-reference-logo{font-size:32px!important}
   body.mayfit-tab-inicio .mayfit-header-actions button{width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;padding:4px!important}
   body.mayfit-tab-inicio .app>main.mayfit-reference-home{padding:0 12px 8px!important}
@@ -132,7 +132,7 @@ body.mayfit-tab-inicio .app>main::after{display:none!important;content:none!impo
   body.mayfit-tab-inicio .mayfit-reference-summary article svg{width:27px!important;height:27px!important}
   body.mayfit-tab-inicio .mayfit-reference-summary strong{font-size:22px!important}
   body.mayfit-tab-inicio .mayfit-reference-summary span{font-size:10px!important}
-  body.mayfit-tab-inicio .app>nav{width:calc(100% - 24px)!important;min-height:66px!important;margin:0 12px max(6px,env(safe-area-inset-bottom))!important;padding:5px 10px max(5px,env(safe-area-inset-bottom))!important;border-radius:14px!important}
+  body.mayfit-tab-inicio .app>nav{width:calc(100% - 24px)!important;min-height:66px!important;margin:0 12px max(6px,var(--mayfit-safe-bottom,env(safe-area-inset-bottom,0px)))!important;padding:5px 10px max(5px,var(--mayfit-safe-bottom,env(safe-area-inset-bottom,0px)))!important;border-radius:14px!important}
   body.mayfit-tab-inicio .app>nav button{height:54px!important;min-height:54px!important;font-size:11px!important;gap:2px!important}
   body.mayfit-tab-inicio .app>nav svg{width:22px!important;height:22px!important}
 }
