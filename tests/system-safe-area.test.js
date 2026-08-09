@@ -36,7 +36,12 @@ test("safe area universal permanece conectada do Android nativo ao rodape", asyn
   assert.match(safeArea, /\\bwv\\b/);
   assert.match(safeArea, /mayfitAndroidWebview/);
   assert.match(safeArea, /bottom:var\(--mayfit-safe-bottom\)!important/);
-  assert.match(safeArea, /margin-bottom:0!important/);
+
+  // Na tela inicial a barra fica no fluxo: reserva espaco abaixo em vez de subir
+  // sobre os cartoes de Exercicios/Evolucao.
+  assert.match(safeArea, /body\.mayfit-tab-inicio \.app>nav\{/);
+  assert.match(safeArea, /bottom:auto!important/);
+  assert.match(safeArea, /margin-bottom:calc\(var\(--mayfit-safe-bottom\) \+ 8px\)!important/);
 
   // O rodape e o conteudo reservam exatamente a area segura calculada.
   assert.match(mobileCss, /--mayfit-safe-bottom:\s*max\(/);
@@ -44,7 +49,7 @@ test("safe area universal permanece conectada do Android nativo ao rodape", asyn
   assert.match(mobileCss, /padding-bottom:calc\(88px \+ var\(--mayfit-safe-bottom\)\)/);
 
   // Garante que o modulo de safe area continua realmente carregado pelo app.
-  assert.match(studentEntry, /import '\.\/system-safe-area\.js\?v=1'/);
+  assert.match(studentEntry, /import '\.\/system-safe-area\.js\?v=2'/);
   assert.match(adminThumbs, /import '\.\/student-area-entry\.js\?v=4'/);
   assert.match(history, /import '\.\/admin-exercise-thumbnails\.js\?v=4'/);
   assert.match(index, /src\/workout-history\.js\?v=3/);
