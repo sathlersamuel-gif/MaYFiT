@@ -40,18 +40,19 @@ function installAndroidNavInsetStyle(){
   style.textContent=`
 html[data-mayfit-android="1"] .app>nav{
   bottom:var(--mayfit-safe-bottom)!important;
+  margin-bottom:0!important;
   padding-bottom:11px!important;
 }
 html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
-  bottom:auto!important;
-  margin-bottom:calc(var(--mayfit-safe-bottom) + 8px)!important;
+  bottom:var(--mayfit-safe-bottom)!important;
+  margin-bottom:0!important;
   padding-bottom:10px!important;
 }
 @media(max-width:620px){
   html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
-    bottom:auto!important;
-    margin-bottom:calc(var(--mayfit-safe-bottom) + 6px)!important;
-    padding-bottom:5px!important;
+    bottom:var(--mayfit-safe-bottom)!important;
+    margin-bottom:0!important;
+    padding-bottom:7px!important;
   }
 }`;
   document.head.appendChild(style);
@@ -63,9 +64,9 @@ function resolveBottomInset(){
   const viewportGap=viewportBottomGap();
   let bottom=Math.max(native,cssSafe,viewportGap);
 
-  // WebViews/PWAs Android podem esconder do CSS a altura da barra de navegacao.
-  // Nesse caso reservamos uma margem segura generica, sem depender de marca/modelo.
-  if(isAndroid()&&isStandalone()&&bottom<12)bottom=56;
+  // Alguns WebViews Android/MIUI/HyperOS não expõem corretamente a barra de 3 botões.
+  // Reserva uma altura segura apenas no app/standalone quando a leitura nativa vier pequena.
+  if(isAndroid()&&isStandalone()&&bottom<24)bottom=64;
 
   return Math.round(bottom);
 }
