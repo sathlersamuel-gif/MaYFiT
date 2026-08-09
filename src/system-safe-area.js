@@ -42,17 +42,26 @@ html[data-mayfit-android="1"] .app>nav{
   bottom:var(--mayfit-safe-bottom)!important;
   margin-bottom:0!important;
   padding-bottom:11px!important;
+  min-height:72px!important;
+  background:#070807!important;
+  border-top:1px solid #293d30!important;
 }
 html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
   bottom:var(--mayfit-safe-bottom)!important;
   margin-bottom:0!important;
   padding-bottom:10px!important;
 }
+html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>main{
+  padding-bottom:calc(96px + var(--mayfit-safe-bottom))!important;
+}
 @media(max-width:620px){
   html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
     bottom:var(--mayfit-safe-bottom)!important;
     margin-bottom:0!important;
     padding-bottom:7px!important;
+  }
+  html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>main{
+    padding-bottom:calc(104px + var(--mayfit-safe-bottom))!important;
   }
 }`;
   document.head.appendChild(style);
