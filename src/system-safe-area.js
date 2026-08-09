@@ -43,14 +43,14 @@ html[data-mayfit-android="1"] .app>nav{
   padding-bottom:11px!important;
 }
 html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
-  bottom:max(8px,var(--mayfit-safe-bottom))!important;
-  margin-bottom:0!important;
+  bottom:auto!important;
+  margin-bottom:calc(var(--mayfit-safe-bottom) + 8px)!important;
   padding-bottom:10px!important;
 }
 @media(max-width:620px){
   html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
-    bottom:max(6px,var(--mayfit-safe-bottom))!important;
-    margin-bottom:0!important;
+    bottom:auto!important;
+    margin-bottom:calc(var(--mayfit-safe-bottom) + 6px)!important;
     padding-bottom:5px!important;
   }
 }`;
