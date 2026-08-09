@@ -1,4 +1,4 @@
-import './system-safe-area.js?v=1';
+import './system-safe-area.js?v=2';
 import './body-evolution.js?v=4';
 import './body-evolution-save-fix.js?v=4';
 import './body-evolution-full-report-fix.js?v=2';
