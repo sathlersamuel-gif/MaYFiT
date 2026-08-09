@@ -25,8 +25,36 @@ function viewportBottomGap(){
 }
 
 function isAndroid(){return /Android/i.test(navigator.userAgent||'')}
+function isAndroidWebView(){
+  const userAgent=navigator.userAgent||'';
+  return isAndroid()&&(/\bwv\b/i.test(userAgent)||/;\s*wv\)/i.test(userAgent)||Boolean(window.Capacitor));
+}
 function isStandalone(){
-  return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||Boolean(window.Capacitor?.isNativePlatform?.());
+  return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||Boolean(window.Capacitor?.isNativePlatform?.())||isAndroidWebView();
+}
+
+function installAndroidNavInsetStyle(){
+  if(document.getElementById('mayfit-android-nav-inset-style'))return;
+  const style=document.createElement('style');
+  style.id='mayfit-android-nav-inset-style';
+  style.textContent=`
+html[data-mayfit-android="1"] .app>nav{
+  bottom:var(--mayfit-safe-bottom)!important;
+  padding-bottom:11px!important;
+}
+html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
+  bottom:max(8px,var(--mayfit-safe-bottom))!important;
+  margin-bottom:0!important;
+  padding-bottom:10px!important;
+}
+@media(max-width:620px){
+  html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
+    bottom:max(6px,var(--mayfit-safe-bottom))!important;
+    margin-bottom:0!important;
+    padding-bottom:5px!important;
+  }
+}`;
+  document.head.appendChild(style);
 }
 
 function resolveBottomInset(){
@@ -35,17 +63,20 @@ function resolveBottomInset(){
   const viewportGap=viewportBottomGap();
   let bottom=Math.max(native,cssSafe,viewportGap);
 
-  // Alguns WebViews/PWAs Android não expõem a barra de navegação para CSS nem visualViewport.
-  // Nesse único caso usamos uma reserva conservadora em CSS px. Não depende de marca/modelo.
+  // WebViews/PWAs Android podem esconder do CSS a altura da barra de navegacao.
+  // Nesse caso reservamos uma margem segura generica, sem depender de marca/modelo.
   if(isAndroid()&&isStandalone()&&bottom<12)bottom=56;
 
   return Math.round(bottom);
 }
 
 function apply(){
+  installAndroidNavInsetStyle();
   const bottom=resolveBottomInset();
   root.style.setProperty('--mayfit-runtime-bottom',`${bottom}px`);
   root.dataset.mayfitBottomInset=String(bottom);
+  root.dataset.mayfitAndroid=isAndroid()?'1':'0';
+  root.dataset.mayfitAndroidWebview=isAndroidWebView()?'1':'0';
 }
 
 let raf=0;
