@@ -114,13 +114,16 @@ body{
 }
 
 nav{
-  padding-bottom:calc(11px + var(--mayfit-safe-bottom))!important;
+  bottom:var(--mayfit-safe-bottom)!important;
+  margin-bottom:0!important;
+  padding-bottom:11px!important;
 }
 
-/* Na tela inicial do aluno a navegação é relativa ao fluxo. Nesse caso a área
-   segura deve deslocar a barra inteira, e não aumentar a altura dela duas vezes. */
+/* A barra do MaYFiT fica sempre acima da navegação do Android.
+   Não usamos margin-bottom em elemento fixed, pois alguns WebViews/MIUI ignoram o deslocamento. */
 html body.mayfit-tab-inicio .app>nav{
-  margin-bottom:max(8px,var(--mayfit-safe-bottom))!important;
+  bottom:var(--mayfit-safe-bottom)!important;
+  margin-bottom:0!important;
   padding-bottom:10px!important;
 }
 
@@ -211,8 +214,9 @@ html{
   }
 
   html body.mayfit-tab-inicio .app>nav{
-    margin-bottom:max(6px,var(--mayfit-safe-bottom))!important;
-    padding-bottom:5px!important;
+    bottom:var(--mayfit-safe-bottom)!important;
+    margin-bottom:0!important;
+    padding-bottom:7px!important;
   }
 }
 
