@@ -25,8 +25,12 @@ function viewportBottomGap(){
 }
 
 function isAndroid(){return /Android/i.test(navigator.userAgent||'')}
+function isAndroidWebView(){
+  const userAgent=navigator.userAgent||'';
+  return isAndroid()&&(/\bwv\b/i.test(userAgent)||/;\s*wv\)/i.test(userAgent)||Boolean(window.Capacitor));
+}
 function isStandalone(){
-  return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||Boolean(window.Capacitor?.isNativePlatform?.());
+  return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||Boolean(window.Capacitor?.isNativePlatform?.())||isAndroidWebView();
 }
 
 function resolveBottomInset(){
@@ -35,8 +39,8 @@ function resolveBottomInset(){
   const viewportGap=viewportBottomGap();
   let bottom=Math.max(native,cssSafe,viewportGap);
 
-  // Alguns WebViews/PWAs Android não expõem a barra de navegação para CSS nem visualViewport.
-  // Nesse único caso usamos uma reserva conservadora em CSS px. Não depende de marca/modelo.
+  // WebViews/PWAs Android podem esconder do CSS a altura da barra de navegacao.
+  // Nesse caso reservamos uma margem segura generica, sem depender de marca/modelo.
   if(isAndroid()&&isStandalone()&&bottom<12)bottom=56;
 
   return Math.round(bottom);
@@ -46,6 +50,8 @@ function apply(){
   const bottom=resolveBottomInset();
   root.style.setProperty('--mayfit-runtime-bottom',`${bottom}px`);
   root.dataset.mayfitBottomInset=String(bottom);
+  root.dataset.mayfitAndroid=isAndroid()?'1':'0';
+  root.dataset.mayfitAndroidWebview=isAndroidWebView()?'1':'0';
 }
 
 let raf=0;
