@@ -30,6 +30,14 @@ test("safe area universal permanece conectada do Android nativo ao rodape", asyn
   assert.match(safeArea, /orientationchange/);
   assert.match(safeArea, /mayfit-native-insets/);
 
+  // WebView Android (incluindo POCO/MIUI) tambem e reconhecido mesmo quando
+  // a ponte global do Capacitor nao estiver disponivel no primeiro carregamento.
+  assert.match(safeArea, /isAndroidWebView/);
+  assert.match(safeArea, /\\bwv\\b/);
+  assert.match(safeArea, /mayfitAndroidWebview/);
+  assert.match(safeArea, /bottom:var\(--mayfit-safe-bottom\)!important/);
+  assert.match(safeArea, /margin-bottom:0!important/);
+
   // O rodape e o conteudo reservam exatamente a area segura calculada.
   assert.match(mobileCss, /--mayfit-safe-bottom:\s*max\(/);
   assert.match(mobileCss, /padding-bottom:calc\(11px \+ var\(--mayfit-safe-bottom\)\)/);
