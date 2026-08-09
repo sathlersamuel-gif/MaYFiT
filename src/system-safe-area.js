@@ -33,6 +33,30 @@ function isStandalone(){
   return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||Boolean(window.Capacitor?.isNativePlatform?.())||isAndroidWebView();
 }
 
+function installAndroidNavInsetStyle(){
+  if(document.getElementById('mayfit-android-nav-inset-style'))return;
+  const style=document.createElement('style');
+  style.id='mayfit-android-nav-inset-style';
+  style.textContent=`
+html[data-mayfit-android="1"] .app>nav{
+  bottom:var(--mayfit-safe-bottom)!important;
+  padding-bottom:11px!important;
+}
+html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
+  bottom:max(8px,var(--mayfit-safe-bottom))!important;
+  margin-bottom:0!important;
+  padding-bottom:10px!important;
+}
+@media(max-width:620px){
+  html[data-mayfit-android="1"] body.mayfit-tab-inicio .app>nav{
+    bottom:max(6px,var(--mayfit-safe-bottom))!important;
+    margin-bottom:0!important;
+    padding-bottom:5px!important;
+  }
+}`;
+  document.head.appendChild(style);
+}
+
 function resolveBottomInset(){
   const native=nativeBottom();
   const cssSafe=readCssLength('env(safe-area-inset-bottom,0px)');
@@ -47,6 +71,7 @@ function resolveBottomInset(){
 }
 
 function apply(){
+  installAndroidNavInsetStyle();
   const bottom=resolveBottomInset();
   root.style.setProperty('--mayfit-runtime-bottom',`${bottom}px`);
   root.dataset.mayfitBottomInset=String(bottom);
