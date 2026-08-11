@@ -46,7 +46,7 @@ function cleanLegacySettings(){
 
   const settingsModal=document.getElementById('mayfit-settings-modal');
   if(settingsModal){
-    [...settingsModal.querySelectorAll('button,label,span,div')].forEach(element=>{
+    [...settingsModal.querySelectorAll('button,label,option')].forEach(element=>{
       const text=String(element.textContent||'').trim().toLowerCase();
       if(text.includes('tema claro')||text.includes('tema escuro')||text.includes('claro/escuro'))element.remove();
     });
