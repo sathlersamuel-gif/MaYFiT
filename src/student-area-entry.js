@@ -9,3 +9,4 @@ import './student-tab-isolation.js?v=1';
 import './student-workout-list-back-button.js?v=1';
 import './student-reference-dashboard.js?v=2';
 import './student-reference-clean-layout.js?v=1';
+import './student-settings-fix.js?v=1';
