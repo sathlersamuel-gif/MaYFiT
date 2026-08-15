@@ -1,4 +1,4 @@
-import './student-area-entry.js?v=4';
+import './student-area-entry.js?v=5';
 
 const MAYFIT_EXERCISE_DB='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 const MAYFIT_IMAGE_BASE='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
