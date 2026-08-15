@@ -1,5 +1,10 @@
 const STYLE_ID='mayfit-admin-mobile-viewport-fix';
 
+function isIosStandalone(){
+  const isiOS=/iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+  return isiOS&&(matchMedia('(display-mode: standalone)').matches||navigator.standalone===true);
+}
+
 function installStyle(){
   if(document.getElementById(STYLE_ID))return;
   const style=document.createElement('style');
@@ -28,6 +33,9 @@ body.mayfit-admin-preview-mobile.mayfit-tab-inicio .app>header.mayfit-reference-
   padding-bottom:10px!important;
   gap:6px!important;
   overflow:hidden!important;
+}
+html[data-mayfit-ios-standalone="1"] body.mayfit-admin-preview-mobile.mayfit-tab-inicio .app>header.mayfit-reference-header{
+  padding-top:max(64px,calc(env(safe-area-inset-top,0px) + 8px))!important;
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-reference-logo{
   flex:0 1 auto!important;
@@ -101,6 +109,9 @@ body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-reference-summary>*{
     padding-right:8px!important;
     gap:3px!important;
   }
+  html[data-mayfit-ios-standalone="1"] body.mayfit-admin-preview-mobile.mayfit-tab-inicio .app>header.mayfit-reference-header{
+    padding-top:max(64px,calc(env(safe-area-inset-top,0px) + 8px))!important;
+  }
   body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-reference-logo{
     max-width:28%!important;
     font-size:24px!important;
@@ -135,6 +146,7 @@ function normalizeAdminPreview(){
   const actions=header?.querySelector('.mayfit-header-actions');
   const isPreview=Boolean(adminReturn&&header);
 
+  document.documentElement.dataset.mayfitIosStandalone=isIosStandalone()?'1':'0';
   document.body.classList.toggle('mayfit-admin-preview-mobile',isPreview);
   if(!isPreview||!actions)return;
 
