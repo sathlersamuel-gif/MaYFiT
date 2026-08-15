@@ -6,9 +6,10 @@ if(isIOS&&isStandalone){
   document.getElementById('mayfit-ios-standalone-admin-top-v1')?.remove();
   document.getElementById('mayfit-ios-standalone-admin-top-v2')?.remove();
   document.getElementById('mayfit-ios-standalone-admin-top-v3')?.remove();
+  document.getElementById('mayfit-ios-standalone-admin-top-v4')?.remove();
 
   const style=document.createElement('style');
-  style.id='mayfit-ios-standalone-admin-top-v3';
+  style.id='mayfit-ios-standalone-admin-top-v4';
   style.textContent=`
 @media(max-width:620px){
   html[data-mayfit-ios-standalone="1"] body.mayfit-tab-inicio .app:has([data-admin-return])>header.mayfit-reference-header{
@@ -23,14 +24,6 @@ if(isIOS&&isStandalone){
 
   html[data-mayfit-ios-standalone="1"] #mse-modal .mse-top{
     padding-top:23px!important;
-  }
-
-  html[data-mayfit-ios-standalone="1"] .be-modal{
-    padding-top:calc(max(18px,env(safe-area-inset-top,0px)) + 8px)!important;
-  }
-
-  html[data-mayfit-ios-standalone="1"] .be-photo-viewer{
-    padding-top:calc(max(16px,env(safe-area-inset-top,0px)) + 8px)!important;
   }
 }
 `;
