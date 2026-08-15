@@ -1,9 +1,5 @@
 const STYLE_ID='mayfit-admin-mobile-viewport-fix';
 
-function currentUser(){
-  try{return JSON.parse(sessionStorage.getItem('mayfit_user')||'null')}catch{return null}
-}
-
 function installStyle(){
   if(document.getElementById(STYLE_ID))return;
   const style=document.createElement('style');
@@ -23,18 +19,23 @@ body.mayfit-admin-preview-mobile.mayfit-tab-inicio .app{
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio .app>header.mayfit-reference-header{
   width:100%!important;
-  max-width:100%!important;
+  max-width:100vw!important;
   min-width:0!important;
   box-sizing:border-box!important;
-  padding-left:max(12px,env(safe-area-inset-left,0px))!important;
-  padding-right:max(12px,env(safe-area-inset-right,0px))!important;
-  gap:8px!important;
+  padding-top:calc(max(12px,var(--mayfit-safe-top,env(safe-area-inset-top,0px))) + 6px)!important;
+  padding-left:max(10px,env(safe-area-inset-left,0px))!important;
+  padding-right:max(10px,env(safe-area-inset-right,0px))!important;
+  padding-bottom:10px!important;
+  gap:6px!important;
+  overflow:hidden!important;
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-reference-logo{
   flex:0 1 auto!important;
   min-width:0!important;
-  font-size:clamp(27px,7.4vw,32px)!important;
+  max-width:30%!important;
+  font-size:clamp(25px,7vw,31px)!important;
   letter-spacing:-2.5px!important;
+  white-space:nowrap!important;
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-header-actions{
   display:flex!important;
@@ -42,39 +43,42 @@ body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-header-actions{
   justify-content:flex-end!important;
   flex:1 1 auto!important;
   min-width:0!important;
-  gap:6px!important;
+  max-width:70%!important;
+  gap:4px!important;
+  overflow:hidden!important;
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-header-actions>[data-admin-return]{
   width:auto!important;
-  min-width:66px!important;
-  max-width:76px!important;
-  height:38px!important;
-  min-height:38px!important;
+  min-width:58px!important;
+  max-width:68px!important;
+  height:36px!important;
+  min-height:36px!important;
   flex:0 0 auto!important;
-  padding:0 7px!important;
-  gap:4px!important;
-  font-size:12px!important;
-  border-radius:11px!important;
+  padding:0 5px!important;
+  gap:3px!important;
+  font-size:11px!important;
+  border-radius:10px!important;
+  white-space:nowrap!important;
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-header-actions>[data-admin-return] span:first-child{
-  font-size:15px!important;
+  font-size:14px!important;
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-header-actions button:not([data-admin-return]){
-  width:32px!important;
-  height:32px!important;
-  min-width:32px!important;
-  min-height:32px!important;
-  flex:0 0 32px!important;
-  padding:4px!important;
+  width:30px!important;
+  height:30px!important;
+  min-width:30px!important;
+  min-height:30px!important;
+  flex:0 0 30px!important;
+  padding:3px!important;
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio .app>main.mayfit-reference-home{
   width:100%!important;
-  max-width:100%!important;
+  max-width:100vw!important;
   min-width:0!important;
   box-sizing:border-box!important;
   overflow-x:hidden!important;
-  padding-left:max(12px,env(safe-area-inset-left,0px))!important;
-  padding-right:max(12px,env(safe-area-inset-right,0px))!important;
+  padding-left:max(10px,env(safe-area-inset-left,0px))!important;
+  padding-right:max(10px,env(safe-area-inset-right,0px))!important;
 }
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio #mayfit-feature-grid,
 body.mayfit-admin-preview-mobile.mayfit-tab-inicio #mayfit-motivation-banner,
@@ -85,30 +89,40 @@ body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-reference-summary{
   min-width:0!important;
   box-sizing:border-box!important;
 }
+body.mayfit-admin-preview-mobile.mayfit-tab-inicio #mayfit-feature-grid>* ,
+body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-reference-summary>*{
+  min-width:0!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+}
 @media(max-width:390px){
   body.mayfit-admin-preview-mobile.mayfit-tab-inicio .app>header.mayfit-reference-header{
-    padding-left:9px!important;
-    padding-right:9px!important;
-    gap:5px!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+    gap:3px!important;
   }
   body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-reference-logo{
-    font-size:27px!important;
+    max-width:28%!important;
+    font-size:24px!important;
   }
   body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-header-actions{
-    gap:4px!important;
+    max-width:72%!important;
+    gap:3px!important;
   }
   body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-header-actions>[data-admin-return]{
-    min-width:61px!important;
-    max-width:68px!important;
-    padding:0 5px!important;
-    font-size:11px!important;
+    min-width:55px!important;
+    max-width:62px!important;
+    height:34px!important;
+    min-height:34px!important;
+    padding:0 4px!important;
+    font-size:10px!important;
   }
   body.mayfit-admin-preview-mobile.mayfit-tab-inicio .mayfit-header-actions button:not([data-admin-return]){
-    width:30px!important;
-    height:30px!important;
-    min-width:30px!important;
-    min-height:30px!important;
-    flex-basis:30px!important;
+    width:28px!important;
+    height:28px!important;
+    min-width:28px!important;
+    min-height:28px!important;
+    flex-basis:28px!important;
   }
 }
 `;
@@ -119,7 +133,7 @@ function normalizeAdminPreview(){
   const adminReturn=document.querySelector('[data-admin-return]');
   const header=document.querySelector('.app>header.mayfit-reference-header');
   const actions=header?.querySelector('.mayfit-header-actions');
-  const isPreview=Boolean(adminReturn&&header&&currentUser()?.role!=='admin');
+  const isPreview=Boolean(adminReturn&&header);
 
   document.body.classList.toggle('mayfit-admin-preview-mobile',isPreview);
   if(!isPreview||!actions)return;
