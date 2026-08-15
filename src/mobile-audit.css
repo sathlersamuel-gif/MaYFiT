@@ -213,10 +213,89 @@ html{
     padding:13px!important;
   }
 
-  html body.mayfit-tab-inicio .app>nav{
-    bottom:var(--mayfit-safe-bottom)!important;
-    margin-bottom:0!important;
-    padding-bottom:7px!important;
+  /* Correção isolada do painel administrativo em telas móveis.
+     O :has(.admin-list) limita estas regras ao Gerenciador e evita afetar aluno/treino. */
+  .app:has(.admin-list){
+    width:100%!important;
+    max-width:100vw!important;
+    min-width:0!important;
+    margin:0 auto!important;
+    overflow-x:hidden!important;
+  }
+
+  .app:has(.admin-list)>header{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding-top:max(16px,calc(12px + env(safe-area-inset-top,0px)))!important;
+    padding-left:max(14px,env(safe-area-inset-left,0px))!important;
+    padding-right:max(14px,env(safe-area-inset-right,0px))!important;
+    padding-bottom:10px!important;
+    gap:10px!important;
+  }
+
+  .app:has(.admin-list)>header .logo{
+    min-width:0!important;
+    max-width:calc(100% - 52px)!important;
+    flex:1 1 auto!important;
+    overflow:visible!important;
+  }
+
+  .app:has(.admin-list)>header>.icon{
+    width:42px!important;
+    height:42px!important;
+    flex:0 0 42px!important;
+    margin-left:auto!important;
+  }
+
+  .app:has(.admin-list)>main{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow-x:hidden!important;
+    padding-top:10px!important;
+  }
+
+  .app:has(.admin-list) .section-title{
+    width:100%!important;
+    min-width:0!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:10px!important;
+  }
+
+  .app:has(.admin-list) .section-title h1{
+    min-width:0!important;
+    max-width:100%!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .app:has(.admin-list) .section-title .small{
+    max-width:100%!important;
+    flex:0 1 auto!important;
+    white-space:normal!important;
+  }
+
+  .app:has(.admin-list) .admin-list,
+  .app:has(.admin-list) .admin-card,
+  .app:has(.admin-list) .admin-head{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+
+  .app:has(.admin-list) .admin-head>div:nth-child(2){
+    min-width:0!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .app:has(.admin-list) .admin-actions{
+    flex:0 0 auto!important;
   }
 }
 
@@ -236,5 +315,14 @@ html{
 
   .summary article{
     padding:11px 9px!important;
+  }
+
+  .app:has(.admin-list)>header{
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+
+  .app:has(.admin-list) .section-title{
+    align-items:flex-start!important;
   }
 }
