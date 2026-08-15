@@ -11,4 +11,4 @@ import './student-reference-dashboard.js?v=2';
 import './student-reference-clean-layout.js?v=2';
 import './admin-mobile-viewport-fix.js?v=4';
 import './student-settings-fix.js?v=1';
-import './ios-standalone-admin-top.js?v=1';
+import './ios-standalone-admin-top.js?v=2';
