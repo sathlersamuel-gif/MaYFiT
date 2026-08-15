@@ -42,9 +42,9 @@ function installStyles() {
   style.textContent = `
     .be-modal{overflow:hidden!important;padding:0!important}
     .be-modal .be-wrap{width:min(900px,100%)!important;height:100dvh!important;max-height:100dvh!important;margin:0 auto!important;padding:0 14px!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important}
-    .be-modal .be-top{position:relative!important;inset:auto!important;transform:none!important;flex:0 0 auto!important;width:100%!important;min-height:0!important;margin:0!important;padding:max(18px,env(safe-area-inset-top)) 0 14px!important;box-sizing:border-box!important;background:#050806!important;border-bottom:1px solid #23382a!important;box-shadow:none!important;z-index:2!important}
+    .be-modal .be-top{position:relative!important;inset:auto!important;transform:none!important;flex:0 0 auto!important;width:100%!important;min-height:0!important;margin:0!important;padding:calc(max(18px,env(safe-area-inset-top,0px)) + 8px) 0 14px!important;box-sizing:border-box!important;background:#050806!important;border-bottom:1px solid #23382a!important;box-shadow:none!important;z-index:2!important}
     .be-modal .be-top h1{margin:0!important}
-    .be-modal .be-scroll{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;padding:14px 0 max(24px,env(safe-area-inset-bottom))!important;box-sizing:border-box!important}
+    .be-modal .be-scroll{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;overscroll-behavior-y:contain!important;padding:14px 0 max(24px,env(safe-area-inset-bottom,0px))!important;box-sizing:border-box!important}
     .be-modal .be-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;column-gap:12px!important;row-gap:10px!important;width:100%!important}
     .be-modal .be-grid label{display:block!important;min-width:0!important;max-width:100%!important;overflow:visible!important}
     .be-modal .be-grid input{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}
