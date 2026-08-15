@@ -135,6 +135,13 @@ body.mayfit-tab-inicio .app>main::after{display:none!important;content:none!impo
   body.mayfit-tab-inicio .app>nav{width:calc(100% - 24px)!important;min-height:66px!important;margin:0 12px max(6px,var(--mayfit-safe-bottom,env(safe-area-inset-bottom,0px)))!important;padding:5px 10px max(5px,var(--mayfit-safe-bottom,env(safe-area-inset-bottom,0px)))!important;border-radius:14px!important}
   body.mayfit-tab-inicio .app>nav button{height:54px!important;min-height:54px!important;font-size:11px!important;gap:2px!important}
   body.mayfit-tab-inicio .app>nav svg{width:22px!important;height:22px!important}
+
+  /* iPhone aberto pela Tela de Início: reserva o topo do PWA diretamente no cabeçalho real. */
+  html[data-mayfit-ios-standalone="1"] body.mayfit-tab-inicio .app:has([data-admin-return])>header.mayfit-reference-header{
+    min-height:108px!important;
+    padding-top:max(72px,calc(env(safe-area-inset-top,0px) + 18px))!important;
+    padding-bottom:12px!important;
+  }
 }
 `;
 document.head.appendChild(style);
