@@ -213,6 +213,12 @@ html{
     padding:13px!important;
   }
 
+  html body.mayfit-tab-inicio .app>nav{
+    bottom:var(--mayfit-safe-bottom)!important;
+    margin-bottom:0!important;
+    padding-bottom:7px!important;
+  }
+
   /* Correção isolada do painel administrativo em telas móveis.
      O :has(.admin-list) limita estas regras ao Gerenciador e evita afetar aluno/treino. */
   .app:has(.admin-list){
