@@ -31,7 +31,6 @@ async function repairLegacyDemoSession(){
     .maybeSingle();
 
   if(error||!data)return;
-  if(String(data.full_name||'').trim()==='Aluno Teste')return;
 
   const repaired={
     ...current,
@@ -43,6 +42,6 @@ async function repairLegacyDemoSession(){
   sessionStorage.setItem(USER_KEY,JSON.stringify(repaired));
 }
 
-repairLegacyDemoSession();
+await repairLegacyDemoSession();
 window.addEventListener('pageshow',repairLegacyDemoSession);
 window.addEventListener('focus',repairLegacyDemoSession);
