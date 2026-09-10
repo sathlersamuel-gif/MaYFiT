@@ -42,6 +42,6 @@ async function repairLegacyDemoSession(){
   sessionStorage.setItem(USER_KEY,JSON.stringify(repaired));
 }
 
-await repairLegacyDemoSession();
+repairLegacyDemoSession().catch(() => {});
 window.addEventListener('pageshow',repairLegacyDemoSession);
 window.addEventListener('focus',repairLegacyDemoSession);
