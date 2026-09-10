@@ -1,0 +1,67 @@
+name: Manter MaYFIT online
+
+on:
+  schedule:
+    - cron: "17 */12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mayfit-availability
+  cancel-in-progress: true
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verificar aplicativo e consultar banco
+        shell: bash
+        run: |
+          node <<'NODE'
+          const appUrl = 'https://ma-y-fi-t.vercel.app';
+
+          const getText = async (url, options = {}) => {
+            const response = await fetch(url, {
+              ...options,
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!response.ok) {
+              throw new Error(`${url} respondeu HTTP ${response.status}`);
+            }
+            return response.text();
+          };
+
+          const html = await getText(appUrl);
+          const assetPath = html.match(/<script[^>]+src="([^"]+\.js)"/)?.[1];
+          if (!assetPath) throw new Error('Arquivo principal do aplicativo não encontrado');
+
+          const bundle = await getText(new URL(assetPath, appUrl));
+          const supabaseUrl = bundle.match(/https:\/\/[a-z0-9-]+\.supabase\.co/)?.[0];
+          const publishableKey =
+            bundle.match(/sb_publishable_[A-Za-z0-9_-]+/)?.[0] ??
+            bundle.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/)?.[0];
+
+          if (!supabaseUrl || !publishableKey) {
+            throw new Error('Configuração pública do Supabase não encontrada');
+          }
+
+          const response = await fetch(
+            `${supabaseUrl}/rest/v1/profiles?select=id&limit=1`,
+            {
+              headers: {
+                apikey: publishableKey,
+                Authorization: `Bearer ${publishableKey}`,
+              },
+              signal: AbortSignal.timeout(30000),
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error(`Banco de dados respondeu HTTP ${response.status}`);
+          }
+
+          console.log('MaYFIT e banco de dados estão respondendo normalmente.');
+          NODE
