@@ -50,7 +50,7 @@ test("safe area universal permanece conectada do Android nativo ao rodape", asyn
 
   // Garante que o modulo de safe area continua realmente carregado pelo app.
   assert.match(studentEntry, /import '\.\/system-safe-area\.js\?v=2'/);
-  assert.match(adminThumbs, /import '\.\/student-area-entry\.js\?v=4'/);
+  assert.match(adminThumbs, /import '\.\/student-area-entry\.js\?v=5'/);
   assert.match(history, /import '\.\/admin-exercise-thumbnails\.js\?v=4'/);
   assert.match(index, /src\/workout-history\.js\?v=3/);
 
