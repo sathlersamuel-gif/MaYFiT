@@ -40,6 +40,29 @@ function friendlyAuthError(error) {
   return message;
 }
 
+function isTransientConnectionError(error) {
+  const message = String(error?.message || error || '');
+  return /failed to fetch|fetch failed|network|load failed|database error querying schema|timeout|HTTP 50[234]/i.test(message);
+}
+
+function wait(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function withTransientRetry(task, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await task();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientConnectionError(error) || attempt === attempts) throw error;
+      await wait(attempt * 800);
+    }
+  }
+  throw lastError;
+}
+
 async function activateOwnPendingProfile(profile) {
   if (!profile || profile.status !== 'pending') return profile;
   const { error } = await supabase
@@ -76,22 +99,32 @@ async function login(form) {
   const button = form.querySelector('button.primary');
   button.disabled = true;
   button.textContent = 'Entrando...';
+  setNotice(form, 'Conectando com segurança...');
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: emailInput.value.trim(),
+    const credentials = {
+      email: emailInput.value.trim().toLowerCase(),
       password: passwordInput.value
+    };
+    const { data } = await withTransientRetry(async () => {
+      const result = await supabase.auth.signInWithPassword(credentials);
+      if (result.error) throw result.error;
+      return result;
     });
-    if (error) throw error;
 
-    const profile = await profileFor(data.user);
+    const profile = await withTransientRetry(() => profileFor(data.user));
     sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
     location.reload();
   } catch (error) {
-    await supabase.auth.signOut();
-    const message = /Invalid login credentials/i.test(error.message)
+    const invalidCredentials = /Invalid login credentials/i.test(error.message);
+    const blockedAccount = /conta está bloqueada/i.test(error.message);
+    if (invalidCredentials || blockedAccount) await supabase.auth.signOut();
+
+    const message = invalidCredentials
       ? 'E-mail ou senha incorretos.'
-      : error.message;
+      : isTransientConnectionError(error)
+        ? 'A conexão oscilou. Aguarde alguns segundos e toque em Entrar novamente.'
+        : error.message;
     setNotice(form, message);
     button.disabled = false;
     button.textContent = 'Entrar';
@@ -296,11 +329,11 @@ async function restoreSession() {
   if (!data.session?.user) return;
 
   try {
-    const profile = await profileFor(data.session.user);
+    const profile = await withTransientRetry(() => profileFor(data.session.user));
     sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
     location.reload();
-  } catch {
-    await supabase.auth.signOut();
+  } catch (error) {
+    if (!isTransientConnectionError(error)) await supabase.auth.signOut();
   }
 }
 
