@@ -50,7 +50,7 @@ test("mantem Android e iPhone com motor unico e configuracoes reais", async () =
   assert.match(notifications, /allowWhileIdle: exactAlarmEnabled/);
 
   assert.match(index, /mobile-workout-sounds\.js\?v=3/);
-  assert.match(index, /sw\.js\?v=44/);
+  assert.match(index, /sw\.js\?v=45/);
   assert.doesNotMatch(studentEntry, /mobile-workout-sounds/);
 
   for (const removed of [
