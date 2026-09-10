@@ -1,4 +1,4 @@
-const VERSION='mayfit-sw-v25-mobile-sounds-direct';
+const VERSION='mayfit-sw-v26-login-resiliente';
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
