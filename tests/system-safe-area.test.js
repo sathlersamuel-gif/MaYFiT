@@ -45,7 +45,7 @@ test("safe area universal permanece conectada do Android nativo ao rodape", asyn
 
   // O rodape e o conteudo reservam exatamente a area segura calculada.
   assert.match(mobileCss, /--mayfit-safe-bottom:\s*max\(/);
-  assert.match(mobileCss, /padding-bottom:calc\(11px \+ var\(--mayfit-safe-bottom\)\)/);
+  assert.match(mobileCss, /padding-bottom:11px!important/);
   assert.match(mobileCss, /padding-bottom:calc\(88px \+ var\(--mayfit-safe-bottom\)\)/);
 
   // Garante que o modulo de safe area continua realmente carregado pelo app.
