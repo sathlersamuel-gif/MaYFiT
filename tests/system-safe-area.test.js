@@ -37,11 +37,11 @@ test("safe area universal permanece conectada do Android nativo ao rodape", asyn
   assert.match(safeArea, /mayfitAndroidWebview/);
   assert.match(safeArea, /bottom:var\(--mayfit-safe-bottom\)!important/);
 
-  // Na tela inicial a barra fica no fluxo: reserva espaco abaixo em vez de subir
-  // sobre os cartoes de Exercicios/Evolucao.
+  // Na tela inicial Android a barra respeita a area segura do sistema
+  // e o conteudo reserva espaco para não cobrir os cartões.
   assert.match(safeArea, /body\.mayfit-tab-inicio \.app>nav\{/);
-  assert.match(safeArea, /bottom:auto!important/);
-  assert.match(safeArea, /margin-bottom:calc\(var\(--mayfit-safe-bottom\) \+ 8px\)!important/);
+  assert.match(safeArea, /bottom:var\(--mayfit-safe-bottom\)!important/);
+  assert.match(safeArea, /padding-bottom:calc\(104px \+ var\(--mayfit-safe-bottom\)\)!important/);
 
   // O rodape e o conteudo reservam exatamente a area segura calculada.
   assert.match(mobileCss, /--mayfit-safe-bottom:\s*max\(/);
